@@ -4,47 +4,84 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Painel de Controle | Hospedaria Central</title>
+    
+    <!-- CSS Global e CSS Admin -->
+    <link rel="stylesheet" href="css/global.css">
+    <link rel="stylesheet" href="css/admin.css">
+    
+    <!-- Fontes e Ícones -->
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;600;700&family=Playfair+Display:wght@700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- Flatpickr (Calendário) -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
     <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
     <script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/l10n/pt.js"></script>
-    <link rel="stylesheet" href="css/global.css">
-    <link rel="stylesheet" href="css/admin.css">
- 
 </head>
 <body>
 
-    <h2 style="color: var(--brown-dark); text-align: center; margin-bottom: 20px;">Painel de Controle</h2>
-
-    <!-- FORMULÁRIO DE BLOQUEIO PRESENCIAL -->
-    <div class="admin-card">
-        <h3><i class="fa-solid fa-lock" style="color: var(--terracotta);"></i> Travar Data (Balcão / Presencial)</h3>
-        <form id="form-bloqueio">
-            <div class="form-group">
-                <label>Selecione o Quarto:</label>
-                <select id="bloqueio-quarto" required>
-                    <option value="1">Quarto 01 - Padrão</option>
-                    <option value="2">Quarto 02 - Padrão</option>
-                    <option value="3">Quarto 03 - Suíte Master</option>
-                    <option value="4">Quarto 04 - Padrão</option>
-                </select>
+    <!-- NAVEGAÇÃO -->
+    <header>
+        <div class="navbar">
+            <a href="index.html" class="logo">
+                <i class="fa-solid fa-hotel"></i> Hospedaria Central
+            </a>
+            <div class="nav-right">
+                <a href="index.html" style="color: white; text-decoration: none; font-weight: 600; font-size: 13px;">
+                    <i class="fa-solid fa-arrow-left"></i> Voltar ao Site
+                </a>
             </div>
-            <div class="form-group">
-                <label>Período de Bloqueio:</label>
-                <input type="text" id="bloqueio-datas" placeholder="Selecione Entrada e Saída" readonly required>
-            </div>
-            <button type="submit" class="btn-reserve" style="width: 100%; margin-top: 10px;">Confirmar Bloqueio</button>
-        </form>
-    </div>
-
-    <!-- LISTA DE OCUPAÇÕES -->
-    <div class="admin-card">
-        <h3><i class="fa-solid fa-calendar-check" style="color: var(--terracotta);"></i> Ocupações e Reservas</h3>
-        <div id="lista-reservas">
-            <p style="text-align: center; color: #777;">Carregando agenda...</p>
         </div>
+    </header>
+
+    <!-- CONTAINER PRINCIPAL -->
+    <div class="admin-container">
+        
+        <h2 style="color: var(--brown-dark); text-align: center; margin-bottom: 25px; font-family: 'Playfair Display', serif;">
+            Painel Administrativo
+        </h2>
+
+        <!-- FORMULÁRIO DE BLOQUEIO PRESENCIAL -->
+        <div class="admin-card">
+            <h3><i class="fa-solid fa-lock"></i> Travar Data (Balcão / Presencial)</h3>
+            <form id="form-bloqueio">
+                <div class="admin-form-grid">
+                    <div class="form-group">
+                        <label>Selecione o Quarto:</label>
+                        <select id="bloqueio-quarto" required>
+                            <option value="1">Quarto 01 - Padrão</option>
+                            <option value="2">Quarto 02 - Padrão</option>
+                            <option value="3">Quarto 03 - Suíte Master</option>
+                            <option value="4">Quarto 04 - Padrão</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Período de Bloqueio:</label>
+                        <input type="text" id="bloqueio-datas" placeholder="Selecione Entrada e Saída" readonly required>
+                    </div>
+                    <div class="form-group">
+                        <button type="submit" class="btn-admin-action">Confirmar Bloqueio</button>
+                    </div>
+                </div>
+            </form>
+        </div>
+
+        <!-- LISTA DE OCUPAÇÕES -->
+        <div class="admin-card">
+            <h3><i class="fa-solid fa-calendar-check"></i> Ocupações e Reservas</h3>
+            <div id="lista-reservas" class="reservation-list">
+                <p style="text-align: center; color: #777;">Carregando agenda...</p>
+            </div>
+        </div>
+
     </div>
 
+    <!-- RODAPÉ -->
+    <footer>
+        <p>&copy; 2026 Hospedaria Central Morrinhos - Painel Restrito</p>
+    </footer>
+
+    <!-- JAVASCRIPT DO PAINEL -->
     <script>
         let checkinBloqueio = '', checkoutBloqueio = '';
 
@@ -68,32 +105,34 @@
                 const data = await resp.json();
                 container.innerHTML = '';
 
-                if (data.reservas.length === 0) {
-                    container.innerHTML = '<p style="text-align: center; color: #777;">Nenhuma reserva encontrada.</p>';
+                if (!data.reservas || data.reservas.length === 0) {
+                    container.innerHTML = '<p style="text-align: center; color: #777; padding: 20px;">Nenhuma reserva ou bloqueio encontrado.</p>';
                     return;
                 }
 
                 data.reservas.forEach(r => {
                     const isBloqueio = r.status_pagamento === 'bloqueado_balcao';
                     const badge = isBloqueio 
-                        ? '<span class="badge-bloqueio">Bloqueio Balcão</span>' 
-                        : '<span class="badge-pago">Pago via Pix</span>';
+                        ? '<span class="badge badge-bloqueio">Bloqueio Balcão</span>' 
+                        : '<span class="badge badge-pago">Pago via Pix</span>';
 
-                    const clienteText = isBloqueio ? 'Presencial' : `${r.cliente_nome} (${r.telefone})`;
+                    const clienteText = isBloqueio ? 'Atendimento Presencial' : `${r.cliente_nome} (${r.telefone || 'Sem Teletefone'})`;
 
                     container.innerHTML += `
                         <div class="reservation-item">
-                            <div>
-                                <strong>${r.numero_quarto}</strong> - ${badge}<br>
-                                <small style="color: #555;">${r.data_checkin.split('T')[0]} até ${r.data_checkout.split('T')[0]}</small><br>
-                                <small style="color: #777;">${clienteText}</small>
+                            <div class="reservation-info">
+                                <strong>Quarto ${r.numero_quarto} &nbsp; ${badge}</strong>
+                                <span><i class="fa-regular fa-calendar"></i> ${r.data_checkin.split('T')[0]} até ${r.data_checkout.split('T')[0]}</span>
+                                <span><i class="fa-regular fa-user"></i> ${clienteText}</span>
                             </div>
-                            <button class="btn-delete" onclick="cancelarReserva(${r.id})"><i class="fa-solid fa-trash"></i></button>
+                            <button class="btn-delete" onclick="cancelarReserva(${r.id})" title="Liberar Data">
+                                <i class="fa-solid fa-trash"></i> Liberar
+                            </button>
                         </div>
                     `;
                 });
             } catch (err) {
-                container.innerHTML = '<p style="color: red; text-align: center;">Erro ao carregar dados.</p>';
+                container.innerHTML = '<p style="color: red; text-align: center; padding: 20px;">Erro ao carregar dados do servidor.</p>';
             }
         }
 
@@ -110,25 +149,29 @@
                 checkout: checkoutBloqueio
             };
 
-            const resp = await fetch('/api/admin/bloquear', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(payload)
-            });
+            try {
+                const resp = await fetch('/api/admin/bloquear', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
 
-            const resData = await resp.json();
-            if (resp.ok) {
-                alert(resData.mensagem);
-                document.getElementById('bloqueio-datas').value = '';
-                checkinBloqueio = ''; checkoutBloqueio = '';
-                carregarAgenda();
-            } else {
-                alert(resData.erro);
+                const resData = await resp.json();
+                if (resp.ok) {
+                    alert(resData.mensagem);
+                    document.getElementById('bloqueio-datas').value = '';
+                    checkinBloqueio = ''; checkoutBloqueio = '';
+                    carregarAgenda();
+                } else {
+                    alert(resData.erro);
+                }
+            } catch (err) {
+                alert("Erro ao enviar dados do bloqueio.");
             }
         });
 
         async function cancelarReserva(id) {
-            if (confirm("Tem certeza que deseja liberar esta data?")) {
+            if (confirm("Tem certeza que deseja liberar esta data no sistema?")) {
                 await fetch(`/api/admin/reservas/${id}`, { method: 'DELETE' });
                 carregarAgenda();
             }
