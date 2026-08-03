@@ -33,7 +33,7 @@
 
         <!-- LISTA DE RESULTADOS -->
         <div id="results-container" class="results-list">
-            <p style="text-align: center; color: #777;">Carregando acomodações disponíveis...</p>
+            <p style="text-align: center; color: #777; padding: 30px;">Carregando acomodações disponíveis...</p>
         </div>
     </div>
 
@@ -47,29 +47,32 @@
             <form id="form-checkout">
                 <div style="margin-bottom: 12px;">
                     <label style="font-weight: bold; font-size: 13px;">Nome Completo:</label>
-                    <input type="text" id="nome" required style="width:100%; padding: 10px; border-radius: 4px; border:1px solid #ccc;">
+                    <input type="text" id="nome" required placeholder="Digite seu nome completo">
                 </div>
                 <div style="margin-bottom: 12px;">
                     <label style="font-weight: bold; font-size: 13px;">CPF:</label>
-                    <input type="text" id="cpf" required placeholder="000.000.000-00" style="width:100%; padding: 10px; border-radius: 4px; border:1px solid #ccc;">
+                    <input type="text" id="cpf" required placeholder="000.000.000-00">
                 </div>
                 <div style="margin-bottom: 15px;">
                     <label style="font-weight: bold; font-size: 13px;">WhatsApp de Contato:</label>
-                    <input type="tel" id="telefone" required placeholder="(64) 9 9236-2298" style="width:100%; padding: 10px; border-radius: 4px; border:1px solid #ccc;">
+                    <input type="tel" id="telefone" required placeholder="(64) 9 9236-2298">
                 </div>
 
                 <div style="background: #fdf5f2; border: 1px solid #f2d4c7; padding: 12px; border-radius: 6px; margin-bottom: 15px; font-weight: bold; color: var(--brown-dark);">
-                    Total da Estadia: <span style="font-size: 18px; color: var(--terracotta);">R$ <span id="checkout-total"></span></span>
+                    Total da Estadia: <span style="font-size: 18px; color: var(--terracotta);">R$ <span id="checkout-total">0,00</span></span>
                 </div>
 
-                <button type="submit" class="btn-reserve-action" style="width: 100%;">Confirmar e Pagar via Pix</button>
+                <button type="submit" id="btn-submit-pix" class="btn-reserve-action" style="width: 100%;">Confirmar e Pagar via Pix</button>
             </form>
 
-            <div id="area-pix" style="display: none; text-align: center; margin-top: 20px; background: #fdf8f5; padding: 15px; border-radius: 8px; border: 1px solid #eee;">
-                <h4 style="color: var(--brown-dark);">Pagamento via Pix</h4>
-                <p style="font-size: 13px; color: #666;">Escaneie o QR Code ou copie a chave abaixo:</p>
-                <img id="qr-code-img" src="" alt="QR Code Pix" style="max-width: 180px; margin: 10px 0;"><br>
-                <textarea id="pix-copia" rows="3" style="width: 100%; font-size: 11px; padding: 8px; border-radius: 4px; border: 1px solid #ccc;" readonly></textarea>
+            <!-- ÁREA DO QR CODE PIX -->
+            <div id="area-pix" style="display: none; text-align: center; margin-top: 20px; background: #fdf8f5; padding: 20px; border-radius: 8px; border: 1px solid #eee;">
+                <h4 style="color: var(--brown-dark); margin-bottom: 8px;"><i class="fa-solid fa-qrcode" style="color: var(--terracotta);"></i> Pagamento via Pix</h4>
+                <p style="font-size: 13px; color: #666; margin-bottom: 10px;">Escaneie o QR Code abaixo com o aplicativo do seu banco:</p>
+                <img id="qr-code-img" src="" alt="QR Code Pix" style="max-width: 200px; margin: 10px auto; display: block; border: 1px solid #ddd; border-radius: 6px; padding: 5px; background: white;"><br>
+                <p style="font-size: 12px; font-weight: bold; color: var(--brown-dark); margin-bottom: 5px;">Ou use o Copia e Cola:</p>
+                <textarea id="pix-copia" rows="3" style="width: 100%; font-size: 11px; padding: 8px; border-radius: 4px; border: 1px solid #ccc; font-family: monospace;" readonly></textarea>
+                <button onclick="copiarPix()" class="btn-alterar-busca" style="margin-top: 10px; width: 100%; cursor: pointer;">Copiar Chave Pix</button>
             </div>
         </div>
     </div>
@@ -130,7 +133,7 @@
                             <div class="room-result-details">
                                 <div>
                                     <h3 style="font-family: 'Playfair Display', serif; color: var(--brown-dark); margin-bottom: 8px;">${quarto.numero_quarto}</h3>
-                                    <p style="font-size: 14px; color: #666; margin-bottom: 12px;">${quarto.descricao}</p>
+                                    <p style="font-size: 14px; color: #666; margin-bottom: 12px;">${quarto.descricao || 'Acomodação confortável e equipada.'}</p>
                                     <div style="font-size: 13px; color: #777; display: flex; gap: 15px; flex-wrap: wrap;">
                                         <span><i class="fa-solid fa-wifi" style="color: var(--terracotta);"></i> Wi-Fi Grátis</span>
                                         <span><i class="fa-solid fa-snowflake" style="color: var(--terracotta);"></i> Climatizado</span>
@@ -153,7 +156,7 @@
                 container.innerHTML = `
                     <div class="no-rooms">
                         <h3 style="color: #d9534f;">Falha ao carregar as acomodações</h3>
-                        <p>Certifique-se de que o servidor Node.js está rodando no VS Code.</p>
+                        <p>Certifique-se de que o servidor Node.js e o banco de dados estão conectados.</p>
                     </div>
                 `;
             }
@@ -163,6 +166,8 @@
             quartoSelecionadoId = id;
             document.getElementById('quarto-selecionado-nome').innerText = nome;
             document.getElementById('checkout-total').innerText = Number(total).toFixed(2);
+            document.getElementById('area-pix').style.display = 'none';
+            document.getElementById('form-checkout').style.display = 'block';
             document.getElementById('modal-checkout').style.display = 'flex';
         }
 
@@ -170,8 +175,20 @@
             document.getElementById('modal-checkout').style.display = 'none';
         }
 
+        function copiarPix() {
+            const copyText = document.getElementById("pix-copia");
+            copyText.select();
+            copyText.setSelectionRange(0, 99999);
+            navigator.clipboard.writeText(copyText.value);
+            alert("Chave Pix Copia e Cola copiada para a área de transferência!");
+        }
+
         document.getElementById('form-checkout').addEventListener('submit', async (e) => {
             e.preventDefault();
+
+            const btnSubmit = document.getElementById('btn-submit-pix');
+            btnSubmit.innerText = "Gerando Pix...";
+            btnSubmit.disabled = true;
 
             const payload = {
                 quartoId: quartoSelecionadoId,
@@ -185,20 +202,33 @@
                 checkout: end
             };
 
-            const resposta = await fetch('/api/reservar', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(payload)
-            });
+            try {
+                const resposta = await fetch('/api/reservar', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
 
-            const resultado = await resposta.json();
+                const resultado = await resposta.json();
 
-            if (resposta.ok) {
-                document.getElementById('area-pix').style.display = 'block';
-                document.getElementById('qr-code-img').src = `data:image/png;base64,${resultado.qrCodeBase64}`;
-                document.getElementById('pix-copia').value = resultado.pixCopiaECola;
-            } else {
-                alert(resultado.erro);
+                if (resposta.ok) {
+                    document.getElementById('form-checkout').style.display = 'none';
+                    document.getElementById('area-pix').style.display = 'block';
+
+                    const qrSrc = resultado.qrCodeBase64.startsWith('data:') 
+                        ? resultado.qrCodeBase64 
+                        : `data:image/png;base64,${resultado.qrCodeBase64}`;
+
+                    document.getElementById('qr-code-img').src = qrSrc;
+                    document.getElementById('pix-copia').value = resultado.pixCopiaECola;
+                } else {
+                    alert(resultado.erro || "Erro interno ao gerar pagamento Pix.");
+                }
+            } catch (error) {
+                alert("Erro ao se comunicar com o servidor.");
+            } finally {
+                btnSubmit.innerText = "Confirmar e Pagar via Pix";
+                btnSubmit.disabled = false;
             }
         });
     </script>
