@@ -1,0 +1,86 @@
+.search-header { 
+    background: var(--brown-dark); 
+    color: var(--white); 
+    padding: 30px 20px; 
+    text-align: center; 
+    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+}
+
+.search-header h2 {
+    font-family: 'Playfair Display', serif;
+    font-size: 28px;
+    margin-bottom: 5px;
+}
+
+.search-header p { font-size: 14px; color: #d2c4bc; }
+
+.container { max-width: 1100px; margin: 30px auto; padding: 0 20px; }
+
+.search-summary-card {
+    background: var(--white); 
+    padding: 18px 25px; 
+    border-radius: 10px; 
+    margin-bottom: 30px; 
+    display: flex; 
+    justify-content: space-between; 
+    align-items: center; 
+    flex-wrap: wrap; 
+    gap: 15px;
+    box-shadow: 0 4px 12px rgba(92, 64, 51, 0.06);
+    border-left: 5px solid var(--terracotta);
+}
+
+.btn-alterar-busca {
+    background: var(--brown-dark);
+    color: var(--white) !important;
+    padding: 8px 18px;
+    border-radius: 6px;
+    text-decoration: none;
+    font-size: 12px;
+    font-weight: 700;
+    text-transform: uppercase;
+    transition: 0.3s;
+}
+
+.btn-alterar-busca:hover { background: var(--terracotta); }
+
+.results-list { display: flex; flex-direction: column; gap: 25px; }
+
+.room-result-card { 
+    display: flex; 
+    background: var(--white); 
+    border-radius: 12px; 
+    overflow: hidden; 
+    box-shadow: 0 4px 15px rgba(92, 64, 51, 0.08); 
+    transition: transform 0.3s ease;
+}
+
+.room-result-card:hover { transform: translateY(-3px); }
+
+.room-result-img { 
+    width: 35%; 
+    background-size: cover; 
+    background-position: center; 
+    min-height: 220px; 
+}
+
+.room-result-details { 
+    padding: 25px; 
+    width: 65%; 
+    display: flex; 
+    flex-direction: column; 
+    justify-content: space-between; 
+}
+
+.no-rooms { 
+    text-align: center; 
+    padding: 50px; 
+    background: var(--white); 
+    border-radius: 12px; 
+    box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+}
+
+@media (max-width: 768px) {
+    .room-result-card { flex-direction: column; }
+    .room-result-img, .room-result-details { width: 100%; }
+}

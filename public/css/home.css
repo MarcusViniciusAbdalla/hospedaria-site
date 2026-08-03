@@ -1,0 +1,210 @@
+/* HERO / BANNER */
+.hero { 
+    background: linear-gradient(rgba(92, 64, 51, 0.75), rgba(92, 64, 51, 0.75)), url('../images/capa-home.jpg') center/cover; 
+    height: 75vh; 
+    display: flex; 
+    flex-direction: column; 
+    justify-content: center; 
+    align-items: center; 
+    text-align: center; 
+    color: var(--white); 
+    padding: 0 20px; 
+}
+
+.hero h1 { 
+    font-family: 'Playfair Display', serif; 
+    font-size: 44px; 
+    margin-bottom: 15px; 
+}
+
+.hero p { 
+    font-size: 18px; 
+    max-width: 650px; 
+    font-weight: 300; 
+    margin-bottom: 30px; 
+    color: #f2e9e4;
+}
+
+/* BARRA RÁPIDA DE PESQUISA */
+.search-bar { 
+    background: var(--white); 
+    padding: 25px; 
+    border-radius: 12px; 
+    box-shadow: 0 10px 30px rgba(92, 64, 51, 0.12); 
+    display: flex; 
+    gap: 15px; 
+    flex-wrap: wrap; 
+    max-width: 900px; 
+    width: 90%; 
+    margin-top: -50px; 
+    position: relative; 
+    z-index: 10; 
+    margin-left: auto; 
+    margin-right: auto; 
+}
+
+.search-item { flex: 1; min-width: 200px; }
+
+.search-item label { 
+    font-size: 12px; 
+    font-weight: 700; 
+    text-transform: uppercase; 
+    color: var(--brown-dark); 
+    display: block; 
+    margin-bottom: 5px; 
+}
+
+.search-item input, .search-item select { 
+    width: 100%; 
+    padding: 10px; 
+    border: 1px solid #ddd; 
+    border-radius: 6px; 
+    font-weight: 600; 
+}
+
+.btn-search { 
+    background: var(--terracotta); 
+    color: var(--white); 
+    border: none; 
+    padding: 0 30px; 
+    border-radius: 6px; 
+    font-weight: 700; 
+    cursor: pointer; 
+    transition: 0.3s; 
+    height: 42px; 
+    align-self: flex-end; 
+    text-transform: uppercase;
+}
+
+.btn-search:hover { background: var(--terracotta-hover); }
+
+/* SEÇÕES SOBRE / ACOMODAÇÕES / CAFETERIA / CONTATO */
+section { 
+    padding: 80px 20px; 
+    max-width: 1200px; 
+    margin: 0 auto; 
+}
+
+.section-title { 
+    text-align: center; 
+    margin-bottom: 50px; 
+}
+
+.section-title h2 { 
+    font-family: 'Playfair Display', serif; 
+    font-size: 36px; 
+    color: var(--brown-dark); 
+    margin-bottom: 10px; 
+}
+
+.section-title p { color: #666; font-size: 15px; }
+
+.rooms-grid { 
+    display: grid; 
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); 
+    gap: 30px; 
+}
+
+.room-card { 
+    background: var(--white); 
+    border-radius: 12px; 
+    overflow: hidden; 
+    box-shadow: 0 5px 15px rgba(0,0,0,0.05); 
+    transition: transform 0.3s ease, box-shadow 0.3s ease; 
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+}
+
+.room-card:hover { 
+    transform: translateY(-5px); 
+    box-shadow: 0 10px 25px rgba(92, 64, 51, 0.12); 
+}
+
+.room-img { 
+    height: 200px; 
+    background-size: cover; 
+    background-position: center; 
+}
+
+.room-info { 
+    padding: 25px; 
+    display: flex;
+    flex-direction: column;
+    flex-grow: 1;
+}
+
+.room-info h3 { 
+    font-family: 'Playfair Display', serif; 
+    font-size: 22px; 
+    color: var(--brown-dark); 
+    margin-bottom: 8px; 
+}
+
+.room-info p { 
+    font-size: 14px; 
+    color: #666; 
+    margin-bottom: 20px; 
+    line-height: 1.5;
+    flex-grow: 1;
+}
+
+.room-features { 
+    display: flex; 
+    gap: 10px; 
+    font-size: 13px; 
+    color: #666; 
+    margin-bottom: 20px; 
+    padding-top: 15px;
+    border-top: 1px solid #eee;
+    flex-wrap: wrap;
+}
+
+.room-features span {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    background: #fcf5f2;
+    padding: 4px 10px;
+    border-radius: 20px;
+    font-weight: 500;
+    color: var(--brown-dark);
+}
+
+.room-features i { color: var(--terracotta); }
+
+.room-price { 
+    display: flex; 
+    justify-content: space-between; 
+    align-items: center; 
+    gap: 10px;
+    margin-top: auto;
+}
+
+.room-price-text { display: flex; flex-direction: column; }
+.room-price-text small { font-size: 11px; color: #888; text-transform: uppercase; font-weight: 600; }
+.room-price-text strong { font-size: 20px; color: var(--brown-dark); font-weight: 700; }
+
+.cafe-section { 
+    display: grid; 
+    grid-template-columns: 1fr 1fr; 
+    gap: 50px; 
+    align-items: center; 
+    background: var(--white); 
+    padding: 50px; 
+    border-radius: 12px; 
+    box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+}
+
+.cafe-img { width: 100%; height: 350px; object-fit: cover; border-radius: 8px; }
+
+.contact-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 40px; }
+.contact-info { background: var(--brown-dark); color: var(--white); padding: 40px; border-radius: 12px; }
+.contact-info h3 { font-family: 'Playfair Display', serif; font-size: 26px; margin-bottom: 20px; color: var(--terracotta); }
+.contact-item { display: flex; align-items: center; gap: 15px; margin-bottom: 20px; font-size: 15px; }
+.contact-item i { color: var(--terracotta); }
+
+@media (max-width: 768px) {
+    .hero h1 { font-size: 32px; }
+    .cafe-section, .contact-grid { grid-template-columns: 1fr; }
+}
