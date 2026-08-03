@@ -14,10 +14,10 @@ const pool = new Pool({
 });
 
 // 2. Mercado Pago Config & Instância Payment
-const client = new MercadoPagoConfig({ 
+const mpClient = new MercadoPagoConfig({ 
     accessToken: process.env.MP_ACCESS_TOKEN 
 });
-const payment = new Payment(client);
+const payment = new Payment(mpClient);
 
 // 3. Tabela de Preços por Hóspedes e Tipo de Quarto
 function calcularDiaria(quartoId, hospedes) {
@@ -114,19 +114,25 @@ app.get('/api/quartos-disponiveis', async (req, res) => {
     }
 });
 
-// ROTA 3: Criar Reserva do Site e Cobrança Pix via Mercado Pago
+// ROTA 3: Criar Reserva do Site e Cobrança Pix via Mercado Pago (COM TRANSAÇÃO)
 app.post('/api/reservar', async (req, res) => {
-    const { quartoId, hospedes, cliente, checkin, checkout } = req.body;
-
+    const client = await pool.connect();
     try {
-        const checkQuarto = await pool.query('SELECT ativo FROM quartos WHERE id = $1', [quartoId]);
+        const { quartoId, hospedes, cliente, checkin, checkout } = req.body;
+
+        if (!quartoId || !cliente || !checkin || !checkout) {
+            return res.status(400).json({ erro: 'Dados incompletos para a reserva.' });
+        }
+
+        // Verifica disponibilidade do quarto
+        const checkQuarto = await client.query('SELECT ativo FROM quartos WHERE id = $1', [quartoId]);
         if (checkQuarto.rows.length === 0 || !checkQuarto.rows[0].ativo) {
             return res.status(400).json({ erro: 'Quarto indisponível no momento.' });
         }
 
         // Bloqueia se já houver reserva paga OU bloqueio de balcão
-        const conflito = await pool.query(
-            `SELECT * FROM reservas 
+        const conflito = await client.query(
+            `SELECT id FROM reservas 
              WHERE quarto_id = $1 
              AND status_pagamento IN ('pago', 'bloqueado_balcao')
              AND (data_checkin, data_checkout) OVERLAPS ($2::date, $3::date)`,
@@ -137,59 +143,76 @@ app.post('/api/reservar', async (req, res) => {
             return res.status(400).json({ erro: 'Quarto já reservado ou indisponível nestas datas!' });
         }
 
-        let clienteResult = await pool.query('SELECT id FROM clientes WHERE cpf = $1', [cliente.cpf]);
+        await client.query('BEGIN');
+
+        // 1. Inserir ou obter o cliente
+        let clienteRes = await client.query('SELECT id FROM clientes WHERE cpf = $1', [cliente.cpf]);
         let clienteId;
 
-        if (clienteResult.rows.length === 0) {
-            const novoCliente = await pool.query(
+        if (clienteRes.rows.length > 0) {
+            clienteId = clienteRes.rows[0].id;
+        } else {
+            const novoCliente = await client.query(
                 'INSERT INTO clientes (nome, cpf, telefone, email) VALUES ($1, $2, $3, $4) RETURNING id',
                 [cliente.nome, cliente.cpf, cliente.telefone, cliente.email || 'contato@hospedariacentral.com.br']
             );
             clienteId = novoCliente.rows[0].id;
-        } else {
-            clienteId = clienteResult.rows[0].id;
         }
 
-        const dCheckin = new Date(`${checkin}T00:00:00`);
-        const dCheckout = new Date(`${checkout}T00:00:00`);
-        const dias = Math.ceil((dCheckout.getTime() - dCheckin.getTime()) / (1000 * 3600 * 24));
-
+        // 2. Calcular valor total
+        const d1 = new Date(`${checkin}T00:00:00`);
+        const d2 = new Date(`${checkout}T00:00:00`);
+        const dias = Math.ceil((d2 - d1) / (1000 * 60 * 60 * 24));
+        
         if (dias <= 0) {
+            await client.query('ROLLBACK');
             return res.status(400).json({ erro: 'Data de saída deve ser posterior à data de entrada.' });
         }
 
         const valorDiaria = calcularDiaria(quartoId, hospedes);
         const valorTotal = dias * valorDiaria;
 
-        const mpResponse = await payment.create({
+        // 3. Criar pagamento via Mercado Pago Pix
+        const paymentResponse = await payment.create({
             body: {
-                transaction_amount: valorTotal,
-                description: `Hospedaria Central - Quarto ${quartoId} (${hospedes} pessoa(s))`,
+                transaction_amount: Number(valorTotal),
+                description: `Reserva Quarto ${quartoId} - Hospedaria Central`,
                 payment_method_id: 'pix',
                 payer: {
                     email: cliente.email || 'contato@hospedariacentral.com.br',
                     first_name: cliente.nome,
-                    identification: { type: 'CPF', number: cliente.cpf.replace(/\D/g, '') }
+                    identification: {
+                        type: 'CPF',
+                        number: cliente.cpf.replace(/\D/g, '')
+                    }
                 }
             }
         });
 
-        const novaReserva = await pool.query(
+        // 4. Criar registro de reserva pendente no Banco
+        const reservaRes = await client.query(
             `INSERT INTO reservas (quarto_id, cliente_id, quantidade_hospedes, data_checkin, data_checkout, valor_total, status_pagamento, mp_payment_id) 
              VALUES ($1, $2, $3, $4, $5, $6, 'pendente', $7) RETURNING id`,
-            [quartoId, clienteId, hospedes, checkin, checkout, valorTotal, String(mpResponse.id)]
+            [quartoId, clienteId, hospedes || 1, checkin, checkout, valorTotal, String(paymentResponse.id)]
         );
 
+        await client.query('COMMIT');
+
+        // 5. Retornar dados do QR Code para o frontend
         res.json({
-            reservaId: novaReserva.rows[0].id,
-            pixCopiaECola: mpResponse.point_of_interaction.transaction_data.qr_code,
-            qrCodeBase64: mpResponse.point_of_interaction.transaction_data.qr_code_base64,
+            sucesso: true,
+            reservaId: reservaRes.rows[0].id,
+            pixCopiaECola: paymentResponse.point_of_interaction.transaction_data.qr_code,
+            qrCodeBase64: paymentResponse.point_of_interaction.transaction_data.qr_code_base64,
             valorTotal: valorTotal
         });
 
-    } catch (err) {
-        console.error("Erro ao criar reserva:", err);
-        res.status(500).json({ erro: 'Erro interno ao criar reserva.' });
+    } catch (error) {
+        await client.query('ROLLBACK');
+        console.error('ERRO DETALHADO NA RESERVA:', error);
+        res.status(500).json({ erro: 'Erro interno ao criar reserva. Verifique o servidor.' });
+    } finally {
+        client.release();
     }
 });
 
@@ -276,5 +299,6 @@ app.delete('/api/admin/reservas/:id', async (req, res) => {
     }
 });
 
+// Inicialização do Servidor (No final do arquivo)
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log(`Servidor rodando na porta ${PORT}`));
