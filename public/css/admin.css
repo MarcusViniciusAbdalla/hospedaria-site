@@ -1,25 +1,193 @@
+/* ==========================================================================
+   PAINEL ADMINISTRATIVO (ADMIN.HTML)
+   ========================================================================== */
+
+/* CONTAINER PRINCIPAL */
+.admin-container {
+    max-width: 1100px;
+    margin: 40px auto;
+    padding: 0 20px;
+}
+
+/* CARDS DO PAINEL */
 .admin-card { 
-    background: white; 
-    padding: 20px; 
+    background: var(--white); 
+    padding: 25px; 
     border-radius: 12px; 
-    margin-bottom: 20px; 
-    box-shadow: 0 4px 12px rgba(92,64,51,0.08); 
+    margin-bottom: 30px; 
+    box-shadow: 0 4px 15px rgba(92, 64, 51, 0.08); 
+    border-top: 4px solid var(--brown-dark);
 }
 
 .admin-card h3 { 
     color: var(--brown-dark); 
-    margin-bottom: 15px; 
+    font-family: 'Playfair Display', serif;
+    font-size: 22px;
+    margin-bottom: 20px; 
     border-bottom: 2px solid var(--bg-cream); 
-    padding-bottom: 8px; 
+    padding-bottom: 10px; 
+    display: flex;
+    align-items: center;
+    gap: 10px;
 }
 
-.form-group { margin-bottom: 12px; }
-.form-group label { display: block; font-size: 12px; font-weight: bold; color: var(--brown-dark); margin-bottom: 5px; }
-.form-group input, .form-group select { width: 100%; padding: 12px; border: 1px solid #ccc; border-radius: 6px; font-size: 14px; }
+.admin-card h3 i {
+    color: var(--terracotta);
+}
 
-.reservation-item { display: flex; justify-content: space-between; align-items: center; padding: 12px; border-bottom: 1px solid #eee; }
-.reservation-item:last-child { border-bottom: none; }
+/* FORMULÁRIO DE BLOQUEIO / RESERVA MANUAL */
+.admin-form-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 15px;
+    align-items: flex-end;
+}
 
-.badge-pago { background: #d4edda; color: #155724; padding: 4px 8px; border-radius: 4px; font-size: 11px; font-weight: bold; }
-.badge-bloqueio { background: #fff3cd; color: #856404; padding: 4px 8px; border-radius: 4px; font-size: 11px; font-weight: bold; }
-.btn-delete { background: #d9534f; color: white; border: none; padding: 6px 10px; border-radius: 4px; cursor: pointer; }
+.form-group { 
+    margin-bottom: 12px; 
+}
+
+.form-group label { 
+    display: block; 
+    font-size: 12px; 
+    font-weight: 700; 
+    text-transform: uppercase;
+    color: var(--brown-dark); 
+    margin-bottom: 6px; 
+}
+
+.form-group input, 
+.form-group select { 
+    width: 100%; 
+    padding: 11px; 
+    border: 1px solid #ccc; 
+    border-radius: 6px; 
+    font-size: 14px; 
+    outline: none;
+    transition: 0.3s;
+}
+
+.form-group input:focus, 
+.form-group select:focus {
+    border-color: var(--terracotta);
+}
+
+.btn-admin-action {
+    background: var(--brown-dark);
+    color: var(--white);
+    border: none;
+    padding: 12px 20px;
+    border-radius: 6px;
+    font-weight: 700;
+    text-transform: uppercase;
+    font-size: 13px;
+    cursor: pointer;
+    transition: 0.3s;
+    width: 100%;
+}
+
+.btn-admin-action:hover {
+    background: var(--terracotta);
+}
+
+/* LISTA E TABELA DE RESERVAS */
+.reservation-list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    margin-top: 15px;
+}
+
+.reservation-item { 
+    display: flex; 
+    justify-content: space-between; 
+    align-items: center; 
+    padding: 15px; 
+    background: #fdfaf8;
+    border: 1px solid #eee;
+    border-radius: 8px;
+    transition: 0.2s;
+}
+
+.reservation-item:hover {
+    border-color: var(--terracotta);
+}
+
+.reservation-info {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.reservation-info strong {
+    color: var(--brown-dark);
+    font-size: 15px;
+}
+
+.reservation-info span {
+    font-size: 13px;
+    color: #666;
+}
+
+/* BADGES DE STATUS */
+.badge {
+    padding: 5px 10px;
+    border-radius: 4px;
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    display: inline-block;
+}
+
+.badge-pago { 
+    background: #d4edda; 
+    color: #155724; 
+    border: 1px solid #c3e6cb;
+}
+
+.badge-bloqueio { 
+    background: #fff3cd; 
+    color: #856404; 
+    border: 1px solid #ffeeba;
+}
+
+.badge-pendente {
+    background: #f8d7da;
+    color: #721c24;
+    border: 1px solid #f5c6cb;
+}
+
+/* BOTÃO DE EXCLUIR / DESBLOQUEAR */
+.btn-delete { 
+    background: #d9534f; 
+    color: var(--white); 
+    border: none; 
+    padding: 8px 14px; 
+    border-radius: 6px; 
+    cursor: pointer; 
+    font-weight: 600;
+    font-size: 12px;
+    transition: 0.3s;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.btn-delete:hover {
+    background: #c9302c;
+}
+
+/* RESPONSIVO */
+@media (max-width: 768px) {
+    .reservation-item {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 12px;
+    }
+    
+    .btn-delete {
+        width: 100%;
+        justify-content: center;
+    }
+}
