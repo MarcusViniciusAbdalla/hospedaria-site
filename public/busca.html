@@ -1,0 +1,352 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Acomodações Disponíveis | Hospedaria Central Morrinhos</title>
+    
+    <!-- CSS Principal com Paleta de Cores Atualizada -->
+    <link rel="stylesheet" href="style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700&family=Playfair+Display:wght@700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <style>
+        :root {
+            --bg-cream: #F5EBE6;        /* Fundo Areia/Creme Suave */
+            --brown-dark: #5C4033;      /* Marrom Nobre/Café da Logomarca */
+            --terracotta: #E08A68;      /* Laranja Terracota/Acento */
+            --terracotta-hover: #c97554;
+            --white: #FFFFFF;
+            --text-dark: #332722;
+        }
+
+        body {
+            background-color: var(--bg-cream);
+            color: var(--text-dark);
+            font-family: 'Montserrat', sans-serif;
+            margin: 0;
+            padding: 0;
+        }
+
+        /* HEADER COM MARROM DA LOGO */
+        .search-header { 
+            background: var(--brown-dark); 
+            color: var(--white); 
+            padding: 30px 20px; 
+            text-align: center; 
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+
+        .search-header h2 {
+            font-family: 'Playfair Display', serif;
+            font-size: 28px;
+            margin-bottom: 5px;
+        }
+
+        .search-header p {
+            font-size: 14px;
+            color: #d2c4bc;
+        }
+
+        .container { 
+            max-width: 1100px; 
+            margin: 30px auto; 
+            padding: 0 20px; 
+        }
+
+        /* CARD DE RESUMO DA BUSCA */
+        .search-summary-card {
+            background: var(--white); 
+            padding: 18px 25px; 
+            border-radius: 10px; 
+            margin-bottom: 30px; 
+            display: flex; 
+            justify-content: space-between; 
+            align-items: center; 
+            flex-wrap: wrap; 
+            gap: 15px;
+            box-shadow: 0 4px 12px rgba(92, 64, 51, 0.06);
+            border-left: 5px solid var(--terracotta);
+        }
+
+        /* BOTÃO SECUNDÁRIO */
+        .btn-alterar-busca {
+            background: var(--brown-dark);
+            color: var(--white) !important;
+            padding: 8px 18px;
+            border-radius: 6px;
+            text-decoration: none;
+            font-size: 12px;
+            font-weight: 700;
+            text-transform: uppercase;
+            transition: 0.3s;
+        }
+
+        .btn-alterar-busca:hover {
+            background: var(--terracotta);
+        }
+
+        /* CARDS DE RESULTADOS */
+        .results-list { 
+            display: flex; 
+            flex-direction: column; 
+            gap: 25px; 
+        }
+
+        .room-result-card { 
+            display: flex; 
+            background: var(--white); 
+            border-radius: 12px; 
+            overflow: hidden; 
+            box-shadow: 0 4px 15px rgba(92, 64, 51, 0.08); 
+            transition: transform 0.3s ease;
+        }
+
+        .room-result-card:hover {
+            transform: translateY(-3px);
+        }
+
+        .room-result-img { 
+            width: 35%; 
+            background-size: cover; 
+            background-position: center; 
+            min-height: 220px; 
+        }
+
+        .room-result-details { 
+            padding: 25px; 
+            width: 65%; 
+            display: flex; 
+            flex-direction: column; 
+            justify-content: space-between; 
+        }
+
+        .no-rooms { 
+            text-align: center; 
+            padding: 50px; 
+            background: var(--white); 
+            border-radius: 12px; 
+            box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+        }
+
+        /* BOTÃO PRINCIPAL DE AÇÃO (TERRACOTA) */
+        .btn-reserve-action {
+            background: var(--terracotta);
+            color: var(--white) !important;
+            padding: 12px 22px;
+            border-radius: 6px;
+            font-weight: 700;
+            font-size: 13px;
+            text-transform: uppercase;
+            border: none;
+            cursor: pointer;
+            transition: 0.3s;
+            letter-spacing: 0.5px;
+        }
+
+        .btn-reserve-action:hover {
+            background: var(--terracotta-hover);
+        }
+
+        /* MODAL DE CHECKOUT */
+        .modal-content {
+            border-top: 6px solid var(--terracotta);
+        }
+
+        @media (max-width: 768px) {
+            .room-result-card { flex-direction: column; }
+            .room-result-img, .room-result-details { width: 100%; }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- CABEÇALHO DA BUSCA -->
+    <header class="search-header">
+        <h2>Hospedaria Central Morrinhos</h2>
+        <p>Acomodações disponíveis em frente ao Hospital Sylvio de Mello</p>
+    </header>
+
+    <div class="container">
+        <!-- RESUMO DA BUSCA -->
+        <div class="search-summary-card">
+            <div>
+                <strong>Período:</strong> <span id="dates-summary"></span> | 
+                <strong>Hóspedes:</strong> <span id="adults-summary"></span> pessoa(s)
+            </div>
+            <a href="index.html" class="btn-alterar-busca">Alterar Busca</a>
+        </div>
+
+        <!-- LISTA DE RESULTADOS -->
+        <div id="results-container" class="results-list">
+            <p style="text-align: center; color: #777;">Carregando acomodações disponíveis...</p>
+        </div>
+    </div>
+
+    <!-- MODAL DE FINALIZAÇÃO DE RESERVA -->
+    <div class="modal" id="modal-checkout">
+        <div class="modal-content">
+            <span class="close-modal" onclick="fecharCheckout()">&times;</span>
+            <h3 style="font-family: 'Playfair Display', serif; color: var(--brown-dark); margin-bottom: 5px;">Finalizar Reserva</h3>
+            <p id="quarto-selecionado-nome" style="font-weight: bold; color: var(--terracotta); margin-bottom: 15px;"></p>
+            
+            <form id="form-checkout">
+                <div style="margin-bottom: 12px;">
+                    <label style="font-weight: bold; font-size: 13px;">Nome Completo:</label>
+                    <input type="text" id="nome" required style="width:100%; padding: 10px; border-radius: 4px; border:1px solid #ccc;">
+                </div>
+                <div style="margin-bottom: 12px;">
+                    <label style="font-weight: bold; font-size: 13px;">CPF:</label>
+                    <input type="text" id="cpf" required placeholder="000.000.000-00" style="width:100%; padding: 10px; border-radius: 4px; border:1px solid #ccc;">
+                </div>
+                <div style="margin-bottom: 15px;">
+                    <label style="font-weight: bold; font-size: 13px;">WhatsApp de Contato:</label>
+                    <input type="tel" id="telefone" required placeholder="(64) 9 9236-2298" style="width:100%; padding: 10px; border-radius: 4px; border:1px solid #ccc;">
+                </div>
+
+                <div style="background: #fdf5f2; border: 1px solid #f2d4c7; padding: 12px; border-radius: 6px; margin-bottom: 15px; font-weight: bold; color: var(--brown-dark);">
+                    Total da Estadia: <span style="font-size: 18px; color: var(--terracotta);">R$ <span id="checkout-total"></span></span>
+                </div>
+
+                <button type="submit" class="btn-reserve-action" style="width: 100%;">Confirmar e Pagar via Pix</button>
+            </form>
+
+            <div id="area-pix" style="display: none; text-align: center; margin-top: 20px; background: #fdf8f5; padding: 15px; border-radius: 8px; border: 1px solid #eee;">
+                <h4 style="color: var(--brown-dark);">Pagamento via Pix</h4>
+                <p style="font-size: 13px; color: #666;">Escaneie o QR Code ou copie a chave abaixo:</p>
+                <img id="qr-code-img" src="" alt="QR Code Pix" style="max-width: 180px; margin: 10px 0;"><br>
+                <textarea id="pix-copia" rows="3" style="width: 100%; font-size: 11px; padding: 8px; border-radius: 4px; border: 1px solid #ccc;" readonly></textarea>
+            </div>
+        </div>
+    </div>
+
+    <!-- SCRIPT DE BUSCA E INTEGRAÇÃO -->
+    <script>
+        const urlParams = new URLSearchParams(window.location.search);
+        const start = urlParams.get('start');
+        const end = urlParams.get('end');
+        const adults = urlParams.get('adults') || 1;
+
+        let quartoSelecionadoId = null;
+
+        if (start && end) {
+            document.getElementById('dates-summary').innerText = `${start} até ${end}`;
+            document.getElementById('adults-summary').innerText = adults;
+            buscarQuartos();
+        } else {
+            document.getElementById('results-container').innerHTML = `
+                <div class="no-rooms">
+                    <h3 style="color: var(--brown-dark);">Nenhuma data selecionada!</h3>
+                    <p>Por favor, volte à página inicial e escolha o período da sua estadia.</p>
+                    <a href="index.html" class="btn-reserve-action" style="text-decoration: none; display: inline-block; margin-top: 15px;">Ir para a Home</a>
+                </div>
+            `;
+        }
+
+        async function buscarQuartos() {
+            const container = document.getElementById('results-container');
+            try {
+                const resp = await fetch(`/api/quartos-disponiveis?start=${start}&end=${end}&adults=${adults}`);
+                
+                if (!resp.ok) {
+                    throw new Error("Erro na requisição ao servidor");
+                }
+
+                const data = await resp.json();
+                container.innerHTML = '';
+
+                if (!data.disponiveis || data.disponiveis.length === 0) {
+                    container.innerHTML = `
+                        <div class="no-rooms">
+                            <i class="fa-solid fa-calendar-xmark" style="font-size: 40px; color: var(--terracotta); margin-bottom: 15px;"></i>
+                            <h3 style="color: var(--brown-dark);">Nenhuma acomodação disponível para estas datas</h3>
+                            <p>Infelizmente todos os quartos estão ocupados no período selecionado.</p>
+                            <a href="index.html" class="btn-reserve-action" style="text-decoration: none; display: inline-block; margin-top: 15px;">Escolher Outras Datas</a>
+                        </div>
+                    `;
+                    return;
+                }
+
+                data.disponiveis.forEach(quarto => {
+                    const fotoUrl = quarto.id === 3 ? 'images/suite-03.jpg' : `images/quarto-0${quarto.id}.jpg`;
+                    
+                    container.innerHTML += `
+                        <div class="room-result-card">
+                            <div class="room-result-img" style="background-image: url('${fotoUrl}');"></div>
+                            <div class="room-result-details">
+                                <div>
+                                    <h3 style="font-family: 'Playfair Display', serif; color: var(--brown-dark); margin-bottom: 8px;">${quarto.numero_quarto}</h3>
+                                    <p style="font-size: 14px; color: #666; margin-bottom: 12px;">${quarto.descricao}</p>
+                                    <div style="font-size: 13px; color: #777; display: flex; gap: 15px; flex-wrap: wrap;">
+                                        <span><i class="fa-solid fa-wifi" style="color: var(--terracotta);"></i> Wi-Fi Grátis</span>
+                                        <span><i class="fa-solid fa-snowflake" style="color: var(--terracotta);"></i> Climatizado</span>
+                                    </div>
+                                </div>
+                                <div style="display: flex; justify-content: space-between; align-items: flex-end; margin-top: 20px;">
+                                    <div>
+                                        <span style="font-size: 12px; color: #888;">${quarto.diasReservados} diária(s)</span><br>
+                                        <strong style="font-size: 22px; color: var(--brown-dark);">R$ ${Number(quarto.valorTotal).toFixed(2)}</strong>
+                                    </div>
+                                    <button class="btn-reserve-action" onclick="iniciarCheckout(${quarto.id}, '${quarto.numero_quarto}', ${quarto.valorTotal})">Escolher e Reservar</button>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                });
+
+            } catch (err) {
+                console.error("Erro ao carregar quartos:", err);
+                container.innerHTML = `
+                    <div class="no-rooms">
+                        <h3 style="color: #d9534f;">Falha ao carregar as acomodações</h3>
+                        <p>Certifique-se de que o servidor Node.js está rodando no VS Code.</p>
+                    </div>
+                `;
+            }
+        }
+
+        function iniciarCheckout(id, nome, total) {
+            quartoSelecionadoId = id;
+            document.getElementById('quarto-selecionado-nome').innerText = nome;
+            document.getElementById('checkout-total').innerText = Number(total).toFixed(2);
+            document.getElementById('modal-checkout').style.display = 'flex';
+        }
+
+        function fecharCheckout() {
+            document.getElementById('modal-checkout').style.display = 'none';
+        }
+
+        document.getElementById('form-checkout').addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            const payload = {
+                quartoId: quartoSelecionadoId,
+                hospedes: adults,
+                cliente: {
+                    nome: document.getElementById('nome').value,
+                    cpf: document.getElementById('cpf').value,
+                    telefone: document.getElementById('telefone').value
+                },
+                checkin: start,
+                checkout: end
+            };
+
+            const resposta = await fetch('/api/reservar', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+
+            const resultado = await resposta.json();
+
+            if (resposta.ok) {
+                document.getElementById('area-pix').style.display = 'block';
+                document.getElementById('qr-code-img').src = `data:image/png;base64,${resultado.qrCodeBase64}`;
+                document.getElementById('pix-copia').value = resultado.pixCopiaECola;
+            } else {
+                alert(resultado.erro);
+            }
+        });
+    </script>
+</body>
+</html>

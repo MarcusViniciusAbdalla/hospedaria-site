@@ -1,0 +1,367 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hospedaria Central Morrinhos | Hospedagem & Café</title>
+
+    <!-- CSS Separado -->
+    <link rel="stylesheet" href="style.css">
+
+    <!-- Fontes do Google e Ícones -->
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;600;700&family=Playfair+Display:wght@500;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- Flatpickr (Calendário) -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+    <script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/l10n/pt.js"></script>
+</head>
+<body>
+
+    <!-- MENU DE NAVEGAÇÃO -->
+    <header>
+        <nav class="navbar">
+            <a href="#" class="logo">
+                <i class="fa-solid fa-hotel"></i> Hospedaria Central
+            </a>
+
+            <ul class="nav-links">
+                <li><a href="#inicio">BEM-VINDO</a></li>
+                <li><a href="#sobre">A HOSPEDARIA</a></li>
+                <li><a href="#quartos">ACOMODAÇÕES</a></li>
+                <li><a href="#fotos">FOTOS</a></li>
+                <li><a href="#contato">CONTATO</a></li>
+            </ul>
+
+            <div class="nav-right">
+                <a href="https://wa.me/5564992362298" target="_blank" class="phone-link">
+                    <i class="fa-brands fa-whatsapp"></i> (64) 9 9236-2298
+                </a>
+                <a href="#" class="btn-reserve" onclick="abrirModal()">Reserve Já</a>
+            </div>
+        </nav>
+    </header>
+
+    <!-- BANNER PRINCIPAL (HERO) -->
+    <div class="hero" id="inicio">
+        <h1>Conforto e Acolhimento no Centro de Morrinhos</h1>
+        <p>Sua hospedagem ideal com ambiente familiar e localização privilegiada, em frente ao Hospital Sylvio de Mello.</p>
+    </div>
+
+    <!-- BARRA RÁPIDA DE PESQUISA (HOME) -->
+    <div class="search-bar">
+        <div class="search-item">
+            <label>Período da Estadia</label>
+            <input type="text" id="home-dates" placeholder="Entrada e Saída" readonly required>
+        </div>
+        <div class="search-item">
+            <label>Hóspedes</label>
+            <select id="home-adults">
+                <option value="1">1 Pessoa</option>
+                <option value="2">2 Pessoas</option>
+                <option value="3">3 Pessoas</option>
+            </select>
+        </div>
+        <button class="btn-search" onclick="redirecionarBusca()">Verificar Vagas</button>
+    </div>
+
+    <!-- SEÇÃO SOBRE -->
+    <section id="sobre">
+        <div class="section-title">
+            <h2>A Hospedaria Central</h2>
+            <p>Pensada para quem busca tranquilidade, praticidade e um atendimento humanizado.</p>
+        </div>
+        <p style="text-align: center; max-width: 800px; margin: 0 auto; color: #555;">
+            Localizada no coração de Morrinhos, em frente ao Hospital e Maternidade Sylvio de Mello, a Hospedaria Central oferece estrutura completa para acompanhantes, profissionais e viajantes. Acomodações higienizadas, Wi-Fi de alta velocidade e uma cafeteria exclusiva no próprio lote com quitutes fresquinhos todos os dias.
+        </p>
+    </section>
+
+    <!-- SEÇÃO QUARTOS / FOTOS -->
+    <section id="quartos">
+        <div class="section-title" id="fotos">
+            <h2>Nossas Acomodações</h2>
+            <p>Escolha a opção perfeita para a sua estada em Morrinhos.</p>
+        </div>
+
+        <div class="rooms-grid">
+            <!-- Quarto 01 -->
+            <div class="room-card">
+                <div class="room-img" style="background-image: url('images/quarto-01.jpg');"></div>
+                <div class="room-info">
+                    <h3>Quarto 01 - Padrão</h3>
+                    <p>Duas camas de solteiro aconchegantes com espaço para até 3 hóspedes.</p>
+                    <div class="room-features">
+                        <span><i class="fa-solid fa-wifi"></i> Wi-Fi</span>
+                        <span><i class="fa-solid fa-snowflake"></i> Climatizado</span>
+                    </div>
+                    <div class="room-price">
+                        <div class="room-price-text">
+                            <small>A partir de</small>
+                            <strong>R$ 75,00 <span style="font-size: 13px; font-weight: normal; color: #666;">/dia</span></strong>
+                        </div>
+                        <button class="btn-reserve" onclick="abrirModal(1)">Reservar</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Quarto 02 -->
+            <div class="room-card">
+                <div class="room-img" style="background-image: url('images/quarto-02.jpg');"></div>
+                <div class="room-info">
+                    <h3>Quarto 02 - Padrão</h3>
+                    <p>Ambiente silencioso, ideal para repouso pós-atendimentos ou viagens.</p>
+                    <div class="room-features">
+                        <span><i class="fa-solid fa-wifi"></i> Wi-Fi</span>
+                        <span><i class="fa-solid fa-tv"></i> TV Smart</span>
+                    </div>
+                    <div class="room-price">
+                        <div class="room-price-text">
+                            <small>A partir de</small>
+                            <strong>R$ 75,00 <span style="font-size: 13px; font-weight: normal; color: #666;">/dia</span></strong>
+                        </div>
+                        <button class="btn-reserve" onclick="abrirModal(2)">Reservar</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Quarto 03 (Suíte) -->
+            <div class="room-card">
+                <div class="room-img" style="background-image: url('images/suite-03.jpg');"></div>
+                <div class="room-info">
+                    <h3>Quarto 03 - Suíte Master</h3>
+                    <p>Cama de casal espaçosa, banheiro privativo e acabamento diferenciado.</p>
+                    <div class="room-features">
+                        <span><i class="fa-solid fa-bath"></i> Suíte Privativa</span>
+                        <span><i class="fa-solid fa-wifi"></i> Wi-Fi</span>
+                    </div>
+                    <div class="room-price">
+                        <div class="room-price-text">
+                            <small>A partir de</small>
+                            <strong>R$ 100,00 <span style="font-size: 13px; font-weight: normal; color: #666;">/dia</span></strong>
+                        </div>
+                        <button class="btn-reserve" onclick="abrirModal(3)">Reservar</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- SEÇÃO CAFETERIA -->
+    <section id="cafeteria">
+        <div class="cafe-section">
+            <div>
+                <h2 style="font-family: 'Playfair Display', serif; font-size: 32px; color: var(--primary); margin-bottom: 15px;">Café & Prosa na Hospedaria</h2>
+                <p style="color: #555; margin-bottom: 20px;">
+                    Sinta o cheirinho de bolo assando e pão de queijo quentinho saindo do forno! Nossa cafeteria anexada serve cafés coados na hora, sucos naturais, salgados e mini pizzas. O ambiente perfeito para começar o dia ou fazer um lanche reforçado.
+                </p>
+                <a href="#contato" class="btn-reserve" style="text-decoration: none; display: inline-block;">Ver Cardápio do Dia</a>
+            </div>
+            <img src="images/cafeteria.jpg" alt="Cafeteria Hospedaria Central" class="cafe-img">
+        </div>
+    </section>
+
+    <!-- SEÇÃO CONTATO & LOCALIZAÇÃO -->
+    <section id="contato">
+        <div class="section-title">
+            <h2>Localização & Contato</h2>
+            <p>Estamos localizados estrategicamente no centro da cidade.</p>
+        </div>
+
+        <div class="contact-grid">
+            <div class="contact-info">
+                <h3>Fale Conosco</h3>
+                <div class="contact-item">
+                    <i class="fa-solid fa-location-dot"></i>
+                    <span>Rua Senador Hermenegildo de Moraes, nº 410, Centro, Morrinhos - GO, CEP 74.650-122</span>
+                </div>
+                <div class="contact-item">
+                    <i class="fa-solid fa-hospital"></i>
+                    <span>Em frente ao Hospital e Maternidade Sylvio de Mello</span>
+                </div>
+                <div class="contact-item">
+                    <i class="fa-brands fa-whatsapp"></i>
+                    <span>(64) 9 9236-2298</span>
+                </div>
+                <div class="contact-item">
+                    <i class="fa-solid fa-envelope"></i>
+                    <span>contato@hospedariacentral.com.br</span>
+                </div>
+            </div>
+
+            <!-- MAPA INTEGRADO DO GOOGLE MAPS -->
+            <div>
+                <iframe src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3809.5878426002165!2d-49.1023612!3d-17.7303038!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x935e47854eb130f1%3A0x6a1523491d904633!2sR.%20Sen.%20Hermenegildo%20de%20Moraes%2C%20410%20-%20Centro%2C%20Morrinhos%20-%20GO%2C%2075650-000!5e0!3m2!1spt-BR!2sbr!4v1680000000000!5m2!1spt-BR!2sbr" width="100%" height="350" style="border:0; border-radius: 12px;" allowfullscreen="" loading="lazy"></iframe>
+            </div>
+        </div>
+    </section>
+
+    <!-- JANELA MODAL DE RESERVA DIRETA -->
+    <div class="modal" id="modal-reserva">
+        <div class="modal-content">
+            <span class="close-modal" onclick="fecharModal()">&times;</span>
+            <h3 style="font-family: 'Playfair Display', serif; color: var(--primary); margin-bottom: 15px;">Confirmar Sua Reserva</h3>
+            
+            <form id="form-reserva">
+                <div style="margin-bottom: 12px;">
+                    <label style="font-weight: bold; font-size: 13px;">Acomodação:</label>
+                    <select id="quartoId" style="width:100%; padding: 8px; border-radius: 4px; border:1px solid #ccc;">
+                        <option value="1">Quarto 01 (2 Camas Solteiro)</option>
+                        <option value="2">Quarto 02 (2 Camas Solteiro)</option>
+                        <option value="3">Quarto 03 - Suíte (1 Cama Casal)</option>
+                        <option value="4">Quarto 04 (2 Camas Solteiro)</option>
+                    </select>
+                </div>
+
+                <div style="margin-bottom: 12px;">
+                    <label style="font-weight: bold; font-size: 13px;">Hóspedes:</label>
+                    <select id="hospedes" style="width:100%; padding: 8px; border-radius: 4px; border:1px solid #ccc;">
+                        <option value="1">1 Pessoa</option>
+                        <option value="2">2 Pessoas</option>
+                        <option value="3">3 Pessoas</option>
+                    </select>
+                </div>
+
+                <div style="margin-bottom: 12px;">
+                    <label style="font-weight: bold; font-size: 13px;">Período da Estadia:</label>
+                    <input type="text" id="calendario-estadia" placeholder="Selecione Entrada e Saída" readonly required style="width:100%; padding: 8px; border-radius: 4px; border:1px solid #ccc;">
+                </div>
+
+                <div style="margin-bottom: 12px;">
+                    <label style="font-weight: bold; font-size: 13px;">Nome Completo:</label>
+                    <input type="text" id="nome" required style="width:100%; padding: 8px; border-radius: 4px; border:1px solid #ccc;">
+                </div>
+
+                <div style="margin-bottom: 12px;">
+                    <label style="font-weight: bold; font-size: 13px;">CPF:</label>
+                    <input type="text" id="cpf" required placeholder="000.000.000-00" style="width:100%; padding: 8px; border-radius: 4px; border:1px solid #ccc;">
+                </div>
+
+                <div style="margin-bottom: 15px;">
+                    <label style="font-weight: bold; font-size: 13px;">WhatsApp:</label>
+                    <input type="tel" id="telefone" required placeholder="(64) 9 9236-2298" style="width:100%; padding: 8px; border-radius: 4px; border:1px solid #ccc;">
+                </div>
+
+                <button type="submit" class="btn-reserve" style="width: 100%; border: none; cursor: pointer;">Gerar Pagamento Pix</button>
+            </form>
+
+            <div id="area-pix" style="display: none; text-align: center; margin-top: 20px; background: #f0f4f8; padding: 15px; border-radius: 8px;">
+                <h4>Pagamento via Pix</h4>
+                <p>Total: <strong>R$ <span id="valor-exibido"></span></strong></p>
+                <img id="qr-code-img" src="" alt="QR Code Pix" style="max-width: 180px; margin: 10px 0;"><br>
+                <textarea id="pix-copia" rows="3" style="width: 100%; font-size: 11px;" readonly></textarea>
+            </div>
+        </div>
+    </div>
+
+    <!-- RODAPÉ -->
+    <footer>
+        <p>&copy; 2026 Hospedaria Central Morrinhos. Todos os direitos reservados.</p>
+    </footer>
+
+    <!-- LÓGICA JAVASCRIPT -->
+    <script>
+        let checkinData = '', checkoutData = '';
+
+        flatpickr("#home-dates", {
+            mode: "range",
+            locale: "pt",
+            minDate: "today",
+            dateFormat: "Y-m-d",
+            onChange: function(selectedDates) {
+                if (selectedDates.length === 2) {
+                    checkinData = selectedDates[0].toISOString().split('T')[0];
+                    checkoutData = selectedDates[1].toISOString().split('T')[0];
+                }
+            }
+        });
+
+        function redirecionarBusca() {
+            if (!checkinData || !checkoutData) {
+                alert("Por favor, selecione as datas de entrada e saída.");
+                return;
+            }
+            const adults = document.getElementById('home-adults').value;
+            window.location.href = `busca.html?start=${checkinData}&end=${checkoutData}&adults=${adults}`;
+        }
+
+        function abrirModal(quartoSelect = null) {
+            if(quartoSelect) document.getElementById('quartoId').value = quartoSelect;
+            document.getElementById('modal-reserva').style.display = 'flex';
+            carregarCalendario(document.getElementById('quartoId').value);
+        }
+
+        function fecharModal() {
+            document.getElementById('modal-reserva').style.display = 'none';
+        }
+
+        async function carregarCalendario(quartoId) {
+            const hoje = new Date();
+            const resposta = await fetch(`/api/disponibilidade?quartoId=${quartoId}&mes=${hoje.getMonth() + 1}&ano=${hoje.getFullYear()}`);
+            const dados = await resposta.json();
+
+            const datasBloqueadas = dados.diasOcupados.map(r => ({
+                from: r.data_checkin,
+                to: r.data_checkout
+            }));
+
+            flatpickr("#calendario-estadia", {
+                mode: "range",
+                locale: "pt",
+                minDate: "today",
+                dateFormat: "Y-m-d",
+                disable: datasBloqueadas,
+                showMonths: 1,
+                onChange: function(selectedDates) {
+                    if (selectedDates.length === 2) {
+                        checkinData = selectedDates[0].toISOString().split('T')[0];
+                        checkoutData = selectedDates[1].toISOString().split('T')[0];
+                    }
+                }
+            });
+        }
+
+        document.getElementById('quartoId').addEventListener('change', (e) => {
+            carregarCalendario(e.target.value);
+        });
+
+        document.getElementById('form-reserva').addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            if (!checkinData || !checkoutData) {
+                alert("Selecione as datas de entrada e saída no calendário.");
+                return;
+            }
+
+            const dadosReserva = {
+                quartoId: document.getElementById('quartoId').value,
+                hospedes: document.getElementById('hospedes').value,
+                cliente: {
+                    nome: document.getElementById('nome').value,
+                    cpf: document.getElementById('cpf').value,
+                    telefone: document.getElementById('telefone').value
+                },
+                checkin: checkinData,
+                checkout: checkoutData
+            };
+
+            const resposta = await fetch('/api/reservar', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(dadosReserva)
+            });
+
+            const resultado = await resposta.json();
+
+            if (resposta.ok) {
+                document.getElementById('area-pix').style.display = 'block';
+                document.getElementById('valor-exibido').innerText = resultado.valorTotal.toFixed(2);
+                document.getElementById('qr-code-img').src = `data:image/png;base64,${resultado.qrCodeBase64}`;
+                document.getElementById('pix-copia').value = resultado.pixCopiaECola;
+            } else {
+                alert(resultado.erro);
+            }
+        });
+    </script>
+</body>
+</html>

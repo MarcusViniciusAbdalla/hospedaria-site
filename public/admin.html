@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Painel de Controle | Hospedaria Central</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+    <script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/l10n/pt.js"></script>
+
+    <style>
+        body { background-color: var(--bg-cream); padding: 15px; font-family: 'Montserrat', sans-serif; }
+        .admin-card { background: white; padding: 20px; border-radius: 12px; margin-bottom: 20px; box-shadow: 0 4px 12px rgba(92,64,51,0.08); }
+        .admin-card h3 { color: var(--brown-dark); margin-bottom: 15px; border-bottom: 2px solid var(--bg-cream); padding-bottom: 8px; }
+        .form-group { margin-bottom: 12px; }
+        .form-group label { display: block; font-size: 12px; font-weight: bold; color: var(--brown-dark); margin-bottom: 5px; }
+        .form-group input, .form-group select { width: 100%; padding: 12px; border: 1px solid #ccc; border-radius: 6px; font-size: 14px; }
+        .reservation-item { display: flex; justify-content: space-between; align-items: center; padding: 12px; border-bottom: 1px solid #eee; }
+        .reservation-item:last-child { border-bottom: none; }
+        .badge-pago { background: #d4edda; color: #155724; padding: 4px 8px; border-radius: 4px; font-size: 11px; font-weight: bold; }
+        .badge-bloqueio { background: #fff3cd; color: #856404; padding: 4px 8px; border-radius: 4px; font-size: 11px; font-weight: bold; }
+        .btn-delete { background: #d9534f; color: white; border: none; padding: 6px 10px; border-radius: 4px; cursor: pointer; }
+    </style>
+</head>
+<body>
+
+    <h2 style="color: var(--brown-dark); text-align: center; margin-bottom: 20px;">Painel de Controle</h2>
+
+    <!-- FORMULÁRIO DE BLOQUEIO PRESENCIAL -->
+    <div class="admin-card">
+        <h3><i class="fa-solid fa-lock" style="color: var(--terracotta);"></i> Travar Data (Balcão / Presencial)</h3>
+        <form id="form-bloqueio">
+            <div class="form-group">
+                <label>Selecione o Quarto:</label>
+                <select id="bloqueio-quarto" required>
+                    <option value="1">Quarto 01 - Padrão</option>
+                    <option value="2">Quarto 02 - Padrão</option>
+                    <option value="3">Quarto 03 - Suíte Master</option>
+                    <option value="4">Quarto 04 - Padrão</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>Período de Bloqueio:</label>
+                <input type="text" id="bloqueio-datas" placeholder="Selecione Entrada e Saída" readonly required>
+            </div>
+            <button type="submit" class="btn-reserve" style="width: 100%; margin-top: 10px;">Confirmar Bloqueio</button>
+        </form>
+    </div>
+
+    <!-- LISTA DE OCUPAÇÕES -->
+    <div class="admin-card">
+        <h3><i class="fa-solid fa-calendar-check" style="color: var(--terracotta);"></i> Ocupações e Reservas</h3>
+        <div id="lista-reservas">
+            <p style="text-align: center; color: #777;">Carregando agenda...</p>
+        </div>
+    </div>
+
+    <script>
+        let checkinBloqueio = '', checkoutBloqueio = '';
+
+        flatpickr("#bloqueio-datas", {
+            mode: "range",
+            locale: "pt",
+            minDate: "today",
+            dateFormat: "Y-m-d",
+            onChange: function(selectedDates) {
+                if (selectedDates.length === 2) {
+                    checkinBloqueio = selectedDates[0].toISOString().split('T')[0];
+                    checkoutBloqueio = selectedDates[1].toISOString().split('T')[0];
+                }
+            }
+        });
+
+        async function carregarAgenda() {
+            const container = document.getElementById('lista-reservas');
+            try {
+                const resp = await fetch('/api/admin/reservas');
+                const data = await resp.json();
+                container.innerHTML = '';
+
+                if (data.reservas.length === 0) {
+                    container.innerHTML = '<p style="text-align: center; color: #777;">Nenhuma reserva encontrada.</p>';
+                    return;
+                }
+
+                data.reservas.forEach(r => {
+                    const isBloqueio = r.status_pagamento === 'bloqueado_balcao';
+                    const badge = isBloqueio 
+                        ? '<span class="badge-bloqueio">Bloqueio Balcão</span>' 
+                        : '<span class="badge-pago">Pago via Pix</span>';
+
+                    const clienteText = isBloqueio ? 'Presencial' : `${r.cliente_nome} (${r.telefone})`;
+
+                    container.innerHTML += `
+                        <div class="reservation-item">
+                            <div>
+                                <strong>${r.numero_quarto}</strong> - ${badge}<br>
+                                <small style="color: #555;">${r.data_checkin.split('T')[0]} até ${r.data_checkout.split('T')[0]}</small><br>
+                                <small style="color: #777;">${clienteText}</small>
+                            </div>
+                            <button class="btn-delete" onclick="cancelarReserva(${r.id})"><i class="fa-solid fa-trash"></i></button>
+                        </div>
+                    `;
+                });
+            } catch (err) {
+                container.innerHTML = '<p style="color: red; text-align: center;">Erro ao carregar dados.</p>';
+            }
+        }
+
+        document.getElementById('form-bloqueio').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            if (!checkinBloqueio || !checkoutBloqueio) {
+                alert("Selecione o período de entrada e saída.");
+                return;
+            }
+
+            const payload = {
+                quartoId: document.getElementById('bloqueio-quarto').value,
+                checkin: checkinBloqueio,
+                checkout: checkoutBloqueio
+            };
+
+            const resp = await fetch('/api/admin/bloquear', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+
+            const resData = await resp.json();
+            if (resp.ok) {
+                alert(resData.mensagem);
+                document.getElementById('bloqueio-datas').value = '';
+                checkinBloqueio = ''; checkoutBloqueio = '';
+                carregarAgenda();
+            } else {
+                alert(resData.erro);
+            }
+        });
+
+        async function cancelarReserva(id) {
+            if (confirm("Tem certeza que deseja liberar esta data?")) {
+                await fetch(`/api/admin/reservas/${id}`, { method: 'DELETE' });
+                carregarAgenda();
+            }
+        }
+
+        carregarAgenda();
+    </script>
+</body>
+</html>
