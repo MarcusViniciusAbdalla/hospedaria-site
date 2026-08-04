@@ -5,11 +5,11 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Hospedaria Central Morrinhos | Hospedagem & Café</title>
 
-    <!-- CSS Separado -->
+    <!-- CSS Separado por Módulo -->
     <link rel="stylesheet" href="css/global.css">
     <link rel="stylesheet" href="css/home.css">
     
-    <!-- Fontes do Google e Ícones -->
+    <!-- Fontes do Google e Ícones FontAwesome -->
     <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;600;700&family=Playfair+Display:wght@500;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     
@@ -23,7 +23,7 @@
     <!-- MENU DE NAVEGAÇÃO -->
     <header>
         <nav class="navbar">
-            <a href="#" class="logo">
+            <a href="index.html" class="logo">
                 <i class="fa-solid fa-hotel"></i> Hospedaria Central
             </a>
 
@@ -31,7 +31,7 @@
                 <li><a href="#inicio">BEM-VINDO</a></li>
                 <li><a href="#sobre">A HOSPEDARIA</a></li>
                 <li><a href="#quartos">ACOMODAÇÕES</a></li>
-                <li><a href="#fotos">FOTOS</a></li>
+                <li><a href="#cafeteria">CAFÉ & PROSA</a></li>
                 <li><a href="#contato">CONTATO</a></li>
             </ul>
 
@@ -47,7 +47,7 @@
     <!-- BANNER PRINCIPAL (HERO) -->
     <div class="hero" id="inicio">
         <h1>Conforto e Acolhimento no Centro de Morrinhos</h1>
-        <p>Sua hospedagem ideal com ambiente familiar e localização privilegiada, em frente ao Hospital Sylvio de Mello.</p>
+        <p>Sua hospedagem ideal com ambiente familiar e localização privileged, em frente ao Hospital Sylvio de Mello.</p>
     </div>
 
     <!-- BARRA RÁPIDA DE PESQUISA (HOME) -->
@@ -114,7 +114,7 @@
                     <p>Ambiente silencioso, ideal para repouso pós-atendimentos ou viagens.</p>
                     <div class="room-features">
                         <span><i class="fa-solid fa-wifi"></i> Wi-Fi</span>
-                        <span><i class="fa-solid fa-tv"></i> TV Smart</span>
+                        <span><i class="fa-solid fa-snowflake"></i> Climatizado</span>
                     </div>
                     <div class="room-price">
                         <div class="room-price-text">
@@ -152,11 +152,11 @@
     <section id="cafeteria">
         <div class="cafe-section">
             <div>
-                <h2 style="font-family: 'Playfair Display', serif; font-size: 32px; color: var(--primary); margin-bottom: 15px;">Café & Prosa na Hospedaria</h2>
+                <h2 style="font-family: 'Playfair Display', serif; font-size: 32px; color: var(--brown-dark); margin-bottom: 15px;">Café & Prosa na Hospedaria</h2>
                 <p style="color: #555; margin-bottom: 20px;">
                     Sinta o cheirinho de bolo assando e pão de queijo quentinho saindo do forno! Nossa cafeteria anexada serve cafés coados na hora, sucos naturais, salgados e mini pizzas. O ambiente perfeito para começar o dia ou fazer um lanche reforçado.
                 </p>
-                <a href="#contato" class="btn-reserve" style="text-decoration: none; display: inline-block;">Ver Cardápio do Dia</a>
+                <a href="#contato" class="btn-reserve" style="text-decoration: none; display: inline-block;">Fazer um Pedido</a>
             </div>
             <img src="images/cafeteria.jpg" alt="Cafeteria Hospedaria Central" class="cafe-img">
         </div>
@@ -174,7 +174,7 @@
                 <h3>Fale Conosco</h3>
                 <div class="contact-item">
                     <i class="fa-solid fa-location-dot"></i>
-                    <span>Rua Senador Hermenegildo de Moraes, nº 410, Centro, Morrinhos - GO, CEP 74.650-122</span>
+                    <span>Rua Senador Hermenegildo de Moraes, nº 410, Centro, Morrinhos - GO</span>
                 </div>
                 <div class="contact-item">
                     <i class="fa-solid fa-hospital"></i>
@@ -201,7 +201,7 @@
     <div class="modal" id="modal-reserva">
         <div class="modal-content">
             <span class="close-modal" onclick="fecharModal()">&times;</span>
-            <h3 style="font-family: 'Playfair Display', serif; color: var(--primary); margin-bottom: 15px;">Confirmar Sua Reserva</h3>
+            <h3 style="font-family: 'Playfair Display', serif; color: var(--brown-dark); margin-bottom: 15px;">Confirmar Sua Reserva</h3>
             
             <form id="form-reserva">
                 <div style="margin-bottom: 12px;">
@@ -243,14 +243,14 @@
                     <input type="tel" id="telefone" required placeholder="(64) 9 9236-2298" style="width:100%; padding: 8px; border-radius: 4px; border:1px solid #ccc;">
                 </div>
 
-                <button type="submit" class="btn-reserve" style="width: 100%; border: none; cursor: pointer;">Gerar Pagamento Pix</button>
+                <button type="submit" id="btn-modal-submit" class="btn-reserve" style="width: 100%; border: none; cursor: pointer;">Gerar Pagamento Pix</button>
             </form>
 
-            <div id="area-pix" style="display: none; text-align: center; margin-top: 20px; background: #f0f4f8; padding: 15px; border-radius: 8px;">
-                <h4>Pagamento via Pix</h4>
-                <p>Total: <strong>R$ <span id="valor-exibido"></span></strong></p>
-                <img id="qr-code-img" src="" alt="QR Code Pix" style="max-width: 180px; margin: 10px 0;"><br>
-                <textarea id="pix-copia" rows="3" style="width: 100%; font-size: 11px;" readonly></textarea>
+            <div id="area-pix" style="display: none; text-align: center; margin-top: 20px; background: #fdf8f5; padding: 15px; border-radius: 8px; border: 1px solid #eee;">
+                <h4 style="color: var(--brown-dark);">Pagamento via Pix</h4>
+                <p>Total: <strong>R$ <span id="valor-exibido">0,00</span></strong></p>
+                <img id="qr-code-img" src="" alt="QR Code Pix" style="max-width: 180px; margin: 10px 0; border: 1px solid #ddd; padding: 5px; background: white;"><br>
+                <textarea id="pix-copia" rows="3" style="width: 100%; font-size: 11px; font-family: monospace;" readonly></textarea>
             </div>
         </div>
     </div>
@@ -288,6 +288,7 @@
 
         function abrirModal(quartoSelect = null) {
             if(quartoSelect) document.getElementById('quartoId').value = quartoSelect;
+            document.getElementById('area-pix').style.display = 'none';
             document.getElementById('modal-reserva').style.display = 'flex';
             carregarCalendario(document.getElementById('quartoId').value);
         }
@@ -297,29 +298,32 @@
         }
 
         async function carregarCalendario(quartoId) {
-            const hoje = new Date();
-            const resposta = await fetch(`/api/disponibilidade?quartoId=${quartoId}&mes=${hoje.getMonth() + 1}&ano=${hoje.getFullYear()}`);
-            const dados = await resposta.json();
+            try {
+                const hoje = new Date();
+                const resposta = await fetch(`/api/disponibilidade?quartoId=${quartoId}&mes=${hoje.getMonth() + 1}&ano=${hoje.getFullYear()}`);
+                const dados = await resposta.json();
 
-            const datasBloqueadas = dados.diasOcupados.map(r => ({
-                from: r.data_checkin,
-                to: r.data_checkout
-            }));
+                const datasBloqueadas = (dados.diasOcupados || []).map(r => ({
+                    from: r.data_checkin,
+                    to: r.data_checkout
+                }));
 
-            flatpickr("#calendario-estadia", {
-                mode: "range",
-                locale: "pt",
-                minDate: "today",
-                dateFormat: "Y-m-d",
-                disable: datasBloqueadas,
-                showMonths: 1,
-                onChange: function(selectedDates) {
-                    if (selectedDates.length === 2) {
-                        checkinData = selectedDates[0].toISOString().split('T')[0];
-                        checkoutData = selectedDates[1].toISOString().split('T')[0];
+                flatpickr("#calendario-estadia", {
+                    mode: "range",
+                    locale: "pt",
+                    minDate: "today",
+                    dateFormat: "Y-m-d",
+                    disable: datasBloqueadas,
+                    onChange: function(selectedDates) {
+                        if (selectedDates.length === 2) {
+                            checkinData = selectedDates[0].toISOString().split('T')[0];
+                            checkoutData = selectedDates[1].toISOString().split('T')[0];
+                        }
                     }
-                }
-            });
+                });
+            } catch(e) {
+                console.error("Erro ao carregar calendário:", e);
+            }
         }
 
         document.getElementById('quartoId').addEventListener('change', (e) => {
@@ -334,6 +338,10 @@
                 return;
             }
 
+            const btnSubmit = document.getElementById('btn-modal-submit');
+            btnSubmit.innerText = "Gerando Pix...";
+            btnSubmit.disabled = true;
+
             const dadosReserva = {
                 quartoId: document.getElementById('quartoId').value,
                 hospedes: document.getElementById('hospedes').value,
@@ -346,21 +354,33 @@
                 checkout: checkoutData
             };
 
-            const resposta = await fetch('/api/reservar', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(dadosReserva)
-            });
+            try {
+                const resposta = await fetch('/api/reservar', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(dadosReserva)
+                });
 
-            const resultado = await resposta.json();
+                const resultado = await resposta.json();
 
-            if (resposta.ok) {
-                document.getElementById('area-pix').style.display = 'block';
-                document.getElementById('valor-exibido').innerText = resultado.valorTotal.toFixed(2);
-                document.getElementById('qr-code-img').src = `data:image/png;base64,${resultado.qrCodeBase64}`;
-                document.getElementById('pix-copia').value = resultado.pixCopiaECola;
-            } else {
-                alert(resultado.erro);
+                if (resposta.ok) {
+                    document.getElementById('area-pix').style.display = 'block';
+                    document.getElementById('valor-exibido').innerText = Number(resultado.valorTotal).toFixed(2);
+                    
+                    const qrSrc = resultado.qrCodeBase64.startsWith('data:') 
+                        ? resultado.qrCodeBase64 
+                        : `data:image/png;base64,${resultado.qrCodeBase64}`;
+
+                    document.getElementById('qr-code-img').src = qrSrc;
+                    document.getElementById('pix-copia').value = resultado.pixCopiaECola;
+                } else {
+                    alert(resultado.erro || "Erro ao processar reserva.");
+                }
+            } catch (err) {
+                alert("Erro ao se conectar com o servidor.");
+            } finally {
+                btnSubmit.innerText = "Gerar Pagamento Pix";
+                btnSubmit.disabled = false;
             }
         });
     </script>
