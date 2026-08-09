@@ -1,26 +1,42 @@
-<!DOCTYPE html>
 <html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Painel de Controle | Hospedaria Central</title>
     
-    <!-- Chamada correta dos arquivos CSS na pasta css/ -->
     <link rel="stylesheet" href="css/global.css">
     <link rel="stylesheet" href="css/admin.css">
     
-    <!-- Fontes e Ícones FontAwesome -->
     <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;600;700&family=Playfair+Display:wght@700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     
-    <!-- Flatpickr -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
     <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
     <script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/l10n/pt.js"></script>
+    
+    <style>
+        /* Tela de Login Centralizada */
+        .login-overlay {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 80vh;
+        }
+        .login-card {
+            background: var(--white);
+            padding: 40px;
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+            text-align: center;
+            max-width: 400px;
+            width: 100%;
+            border-top: 5px solid var(--terracotta);
+        }
+    </style>
 </head>
 <body>
 
-    <!-- NAVEGAÇÃO -->
+    <!-- HEADER LIMPO -->
     <header>
         <div class="navbar">
             <a href="index.html" class="logo">
@@ -34,8 +50,22 @@
         </div>
     </header>
 
-    <!-- CONTAINER PRINCIPAL -->
-    <div class="admin-container">
+    <!-- TELA DE LOGIN (EXIBIDA INICIALMENTE) -->
+    <div id="login-screen" class="login-overlay">
+        <div class="login-card">
+            <i class="fa-solid fa-user-shield" style="font-size: 40px; color: var(--terracotta); margin-bottom: 15px;"></i>
+            <h3 style="font-family: 'Playfair Display', serif; color: var(--brown-dark); margin-bottom: 10px;">Acesso Restrito</h3>
+            <p style="font-size: 13px; color: #666; margin-bottom: 20px;">Digite a senha de administrador para gerenciar o balcão:</p>
+            
+            <form id="form-login">
+                <input type="password" id="admin-pass" placeholder="Senha de Acesso" required style="width: 100%; padding: 12px; border: 1px solid #ccc; border-radius: 6px; margin-bottom: 15px; text-align: center;">
+                <button type="submit" class="btn-admin-action">Entrar no Painel</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- CONTEÚDO DO PAINEL (OCULTO ATÉ AUTENTICAR) -->
+    <div id="admin-content" class="admin-container" style="display: none;">
         
         <h2 style="color: var(--brown-dark); text-align: center; margin-bottom: 25px; font-family: 'Playfair Display', serif;">
             Painel Administrativo
@@ -76,13 +106,28 @@
 
     </div>
 
-    <!-- RODAPÉ -->
     <footer>
         <p>&copy; 2026 Hospedaria Central Morrinhos - Painel Restrito</p>
     </footer>
 
-    <!-- JAVASCRIPT DO PAINEL -->
     <script>
+        // DEFINA A SUA SENHA AQUI:
+        const SENHA_CORRETA = "123456"; 
+
+        document.getElementById('form-login').addEventListener('submit', (e) => {
+            e.preventDefault();
+            const senhaDigitada = document.getElementById('admin-pass').value;
+            
+            if (senhaDigitada === SENHA_CORRETA) {
+                document.getElementById('login-screen').style.display = 'none';
+                document.getElementById('admin-content').style.display = 'block';
+                carregarAgenda();
+            } else {
+                alert("Senha incorreta!");
+                document.getElementById('admin-pass').value = '';
+            }
+        });
+
         let checkinBloqueio = '', checkoutBloqueio = '';
 
         flatpickr("#bloqueio-datas", {
@@ -106,7 +151,7 @@
                 container.innerHTML = '';
 
                 if (!data.reservas || data.reservas.length === 0) {
-                    container.innerHTML = '<p style="text-align: center; color: #777; padding: 20px;">Nenhuma reserva ou bloqueio encontrado.</p>';
+                    container.innerHTML = '<p style="text-align: center; color: #777; padding: 20px;">Nenhuma reserva encontrada.</p>';
                     return;
                 }
 
@@ -125,14 +170,14 @@
                                 <span><i class="fa-regular fa-calendar"></i> ${r.data_checkin.split('T')[0]} até ${r.data_checkout.split('T')[0]}</span>
                                 <span><i class="fa-regular fa-user"></i> ${clienteText}</span>
                             </div>
-                            <button class="btn-delete" onclick="cancelarReserva(${r.id})" title="Liberar Data">
+                            <button class="btn-delete" onclick="cancelarReserva(${r.id})">
                                 <i class="fa-solid fa-trash"></i> Liberar
                             </button>
                         </div>
                     `;
                 });
             } catch (err) {
-                container.innerHTML = '<p style="color: red; text-align: center; padding: 20px;">Erro ao carregar dados do servidor.</p>';
+                container.innerHTML = '<p style="color: red; text-align: center;">Erro ao carregar dados.</p>';
             }
         }
 
@@ -149,24 +194,20 @@
                 checkout: checkoutBloqueio
             };
 
-            try {
-                const resp = await fetch('/api/admin/bloquear', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(payload)
-                });
+            const resp = await fetch('/api/admin/bloquear', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
 
-                const resData = await resp.json();
-                if (resp.ok) {
-                    alert(resData.mensagem);
-                    document.getElementById('bloqueio-datas').value = '';
-                    checkinBloqueio = ''; checkoutBloqueio = '';
-                    carregarAgenda();
-                } else {
-                    alert(resData.erro);
-                }
-            } catch (err) {
-                alert("Erro ao enviar dados do bloqueio.");
+            const resData = await resp.json();
+            if (resp.ok) {
+                alert(resData.mensagem);
+                document.getElementById('bloqueio-datas').value = '';
+                checkinBloqueio = ''; checkoutBloqueio = '';
+                carregarAgenda();
+            } else {
+                alert(resData.erro);
             }
         });
 
@@ -176,8 +217,6 @@
                 carregarAgenda();
             }
         }
-
-        carregarAgenda();
     </script>
 </body>
 </html>
