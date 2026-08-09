@@ -1,6 +1,11 @@
-/* HERO / BANNER */
+/* ==========================================================================
+   ESTILOS DA HOMEPAGE (index.html)
+   ========================================================================== */
+
+/* HERO / BANNER PRINCIPAL (Corrigido o nome do arquivo da imagem) */
 .hero { 
-    background: linear-gradient(rgba(92, 64, 51, 0.75), rgba(92, 64, 51, 0.75)), url('../images/capa-home.jpg') center/cover; 
+    background: linear-gradient(rgba(92, 64, 51, 0.75), rgba(92, 64, 51, 0.75)), 
+                url('../images/banner-principal.jpg') center/cover no-repeat; 
     height: 75vh; 
     display: flex; 
     flex-direction: column; 
@@ -43,7 +48,10 @@
     margin-right: auto; 
 }
 
-.search-item { flex: 1; min-width: 200px; }
+.search-item { 
+    flex: 1; 
+    min-width: 200px; 
+}
 
 .search-item label { 
     font-size: 12px; 
@@ -76,7 +84,9 @@
     text-transform: uppercase;
 }
 
-.btn-search:hover { background: var(--terracotta-hover); }
+.btn-search:hover { 
+    background: var(--terracotta-hover); 
+}
 
 /* SEÇÕES SOBRE / ACOMODAÇÕES / CAFETERIA / CONTATO */
 section { 
@@ -97,7 +107,10 @@ section {
     margin-bottom: 10px; 
 }
 
-.section-title p { color: #666; font-size: 15px; }
+.section-title p { 
+    color: #666; 
+    font-size: 15px; 
+}
 
 .rooms-grid { 
     display: grid; 
@@ -171,7 +184,9 @@ section {
     color: var(--brown-dark);
 }
 
-.room-features i { color: var(--terracotta); }
+.room-features i { 
+    color: var(--terracotta); 
+}
 
 .room-price { 
     display: flex; 
@@ -181,9 +196,23 @@ section {
     margin-top: auto;
 }
 
-.room-price-text { display: flex; flex-direction: column; }
-.room-price-text small { font-size: 11px; color: #888; text-transform: uppercase; font-weight: 600; }
-.room-price-text strong { font-size: 20px; color: var(--brown-dark); font-weight: 700; }
+.room-price-text { 
+    display: flex; 
+    flex-direction: column; 
+}
+
+.room-price-text small { 
+    font-size: 11px; 
+    color: #888; 
+    text-transform: uppercase; 
+    font-weight: 600; 
+}
+
+.room-price-text strong { 
+    font-size: 20px; 
+    color: var(--brown-dark); 
+    font-weight: 700; 
+}
 
 .cafe-section { 
     display: grid; 
@@ -196,13 +225,44 @@ section {
     box-shadow: 0 4px 15px rgba(0,0,0,0.05);
 }
 
-.cafe-img { width: 100%; height: 350px; object-fit: cover; border-radius: 8px; }
+.cafe-img { 
+    width: 100%; 
+    height: 350px; 
+    object-fit: cover; 
+    border-radius: 8px; 
+}
 
-.contact-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 40px; }
-.contact-info { background: var(--brown-dark); color: var(--white); padding: 40px; border-radius: 12px; }
-.contact-info h3 { font-family: 'Playfair Display', serif; font-size: 26px; margin-bottom: 20px; color: var(--terracotta); }
-.contact-item { display: flex; align-items: center; gap: 15px; margin-bottom: 20px; font-size: 15px; }
-.contact-item i { color: var(--terracotta); }
+.contact-grid { 
+    display: grid; 
+    grid-template-columns: 1fr 1fr; 
+    gap: 40px; 
+}
+
+.contact-info { 
+    background: var(--brown-dark); 
+    color: var(--white); 
+    padding: 40px; 
+    border-radius: 12px; 
+}
+
+.contact-info h3 { 
+    font-family: 'Playfair Display', serif; 
+    font-size: 26px; 
+    margin-bottom: 20px; 
+    color: var(--terracotta); 
+}
+
+.contact-item { 
+    display: flex; 
+    align-items: center; 
+    gap: 15px; 
+    margin-bottom: 20px; 
+    font-size: 15px; 
+}
+
+.contact-item i { 
+    color: var(--terracotta); 
+}
 
 @media (max-width: 768px) {
     .hero h1 { font-size: 32px; }
