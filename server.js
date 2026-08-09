@@ -13,8 +13,6 @@ const pool = new Pool({
     ssl: { rejectUnauthorized: false }
 });
 
-
-
 // 2. Mercado Pago Config & Instância Payment
 const mpClient = new MercadoPagoConfig({ 
     accessToken: process.env.MP_ACCESS_TOKEN 
@@ -198,7 +196,7 @@ app.post('/api/reservar', async (req, res) => {
         // 4. Criar registro de reserva pendente no Banco
         const reservaRes = await client.query(
             `INSERT INTO reservas (quarto_id, cliente_id, quantidade_hospedes, data_checkin, data_checkout, valor_total, status_pagamento, mp_payment_id) 
-             VALUES ($1, $2, $3, $4, $5, $6, 'pendente', $7) RETURNING id`,
+             VALUES ($1, $2, $3, $4::date, $5::date, $6, 'pendente', $7) RETURNING id`,
             [quartoId, clienteId, hospedes || 1, checkin, checkout, valorTotal, String(paymentResponse.id)]
         );
 
@@ -274,7 +272,7 @@ app.post('/api/admin/bloquear', async (req, res) => {
     }
 
     try {
-        // 1. Verifica se já existe reserva/bloqueio no período
+        // 1. Verifica conflito de datas
         const conflito = await pool.query(
             `SELECT id FROM reservas 
              WHERE quarto_id = $1 
@@ -287,7 +285,7 @@ app.post('/api/admin/bloquear', async (req, res) => {
             return res.status(400).json({ erro: 'Já existe reserva ou bloqueio para esta data!' });
         }
 
-        // 2. Garante um cliente padrão "Balcão" registrado na tabela 'clientes'
+        // 2. Garante/Obtém o cliente padrão "Balcão"
         let clienteBalcao = await pool.query("SELECT id FROM clientes WHERE cpf = '00000000000'");
         let clienteId;
 
@@ -302,16 +300,20 @@ app.post('/api/admin/bloquear', async (req, res) => {
             clienteId = novoBalcao.rows[0].id;
         }
 
-        // 3. Insere o bloqueio preenchendo todas as colunas obrigatórias
+        // 3. Insere a reserva/bloqueio com datas tratadas como ::date
         await pool.query(
-            `INSERT INTO reservas (quarto_id, cliente_id, quantidade_hospedes, data_checkin, data_checkout, valor_total, status_pagamento) 
-             VALUES ($1, $2, 1, $3, $4, 0.00, 'bloqueado_balcao')`,
+            `INSERT INTO reservas (quarto_id, cliente_id, quantidade_hospedes, data_checkin, data_checkout, valor_total, status_pagamento, mp_payment_id) 
+             VALUES ($1, $2, 1, $3::date, $4::date, 0.00, 'bloqueado_balcao', 'balcao_presencial')`,
             [quartoId, clienteId, checkin, checkout]
         );
 
         res.json({ mensagem: 'Data bloqueada com sucesso!' });
+
     } catch (err) {
-        console.error("Erro ao bloquear data:", err);
+        console.error("====== ERRO DETALHADO DO BANCO ======");
+        console.error(err);
+        console.error("=====================================");
+        
         res.status(500).json({ erro: 'Erro interno ao salvar bloqueio no banco de dados.' });
     }
 });

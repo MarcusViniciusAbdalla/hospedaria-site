@@ -10,7 +10,6 @@
     <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;600;700&family=Playfair+Display:wght@700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     
-    <!-- Flatpickr -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
     <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
     <script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/l10n/pt.js"></script>
@@ -33,7 +32,6 @@
             border-top: 5px solid var(--terracotta);
         }
         
-        /* GRID DE CALENDÁRIOS DOS QUARTOS */
         .calendars-grid {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
@@ -63,6 +61,17 @@
             border: 1px solid #eee;
             margin: 0 auto;
         }
+        
+        /* ESTILO APENAS PARA DIAS REALMENTE BLOQUEADOS / RESERVADOS */
+        .flatpickr-day.dia-ocupado {
+            background-color: #f8d7da !important;
+            color: #d9534f !important;
+            text-decoration: line-through !important;
+            border-color: #f5c6cb !important;
+            cursor: not-allowed !important;
+            font-weight: bold !important;
+        }
+
         .calendar-legend {
             display: flex;
             justify-content: center;
@@ -71,40 +80,13 @@
             font-size: 12px;
             color: #666;
         }
-        .legend-item {
-            display: flex;
-            align-items: center;
-            gap: 5px;
-        }
-        .legend-box-red {
-            width: 12px;
-            height: 12px;
-            background: #f8d7da;
-            border: 1px solid #d9534f;
-            border-radius: 3px;
-        }
-        .legend-box-green {
-            width: 12px;
-            height: 12px;
-            background: #ffffff;
-            border: 1px solid #ccc;
-            border-radius: 3px;
-        }
-        /* ESTILO DOS DIAS OCUPADOS/BLOQUEADOS NOS CALENDÁRIOS */
-        .flatpickr-day.flatpickr-disabled, 
-        .flatpickr-day.flatpickr-disabled:hover {
-            background-color: #f8d7da !important;
-            color: #d9534f !important;
-            text-decoration: line-through !important;
-            border-color: #f5c6cb !important;
-            cursor: not-allowed !important;
-            font-weight: bold;
-}
+        .legend-item { display: flex; align-items: center; gap: 5px; }
+        .legend-box-red { width: 12px; height: 12px; background: #f8d7da; border: 1px solid #d9534f; border-radius: 3px; }
+        .legend-box-green { width: 12px; height: 12px; background: #ffffff; border: 1px solid #ccc; border-radius: 3px; }
     </style>
 </head>
 <body>
 
-    <!-- HEADER -->
     <header>
         <div class="navbar">
             <a href="index.html" class="logo">
@@ -145,25 +127,21 @@
             <p style="font-size: 13px; color: #666; margin-bottom: 15px;">As datas em <strong style="color: #d9534f;">vermelho/riscadas</strong> estão ocupadas/reservadas.</p>
             
             <div class="calendars-grid">
-                <!-- Quarto 01 -->
                 <div class="room-calendar-card">
                     <h4><i class="fa-solid fa-bed" style="color: var(--terracotta);"></i> Quarto 01 (Solteiro)</h4>
                     <div id="cal-quarto-1"></div>
                 </div>
 
-                <!-- Quarto 02 -->
                 <div class="room-calendar-card">
                     <h4><i class="fa-solid fa-bed" style="color: var(--terracotta);"></i> Quarto 02 (Solteiro)</h4>
                     <div id="cal-quarto-2"></div>
                 </div>
 
-                <!-- Quarto 03 -->
                 <div class="room-calendar-card">
                     <h4><i class="fa-solid fa-star" style="color: var(--terracotta);"></i> Quarto 03 (Suíte Master)</h4>
                     <div id="cal-quarto-3"></div>
                 </div>
 
-                <!-- Quarto 04 -->
                 <div class="room-calendar-card">
                     <h4><i class="fa-solid fa-bed" style="color: var(--terracotta);"></i> Quarto 04 (Solteiro)</h4>
                     <div id="cal-quarto-4"></div>
@@ -220,10 +198,10 @@
 
         document.getElementById('form-login').addEventListener('submit', (e) => {
             e.preventDefault();
-            const senhaDigitada = document.getElementById('admin-pass').value;
+            const senhaDigitada = document.getElementById('admin-pass').value.trim();
             
             if (senhaDigitada === SENHA_CORRETA) {
-                document.getElementById('login-screen').style.display = 'none';
+                document.getElementById('login-screen').setAttribute('style', 'display: none !important');
                 document.getElementById('admin-content').style.display = 'block';
                 carregarTudo();
             } else {
@@ -253,51 +231,53 @@
         }
 
         async function carregarCalendarioQuarto(quartoId) {
-        try {
-        const resp = await fetch(`/api/disponibilidade?quartoId=${quartoId}`);
-        const dados = await resp.json();
+            const elem = document.getElementById(`cal-quarto-${quartoId}`);
+            if (!elem) return;
+            
+            try {
+                const resp = await fetch(`/api/disponibilidade?quartoId=${quartoId}`);
+                let datasOcupadas = [];
 
-        // Mapeia as faixas de check-in e check-out
-        const datasOcupadas = (dados.diasOcupados || []).map(r => ({
-            from: r.data_checkin.split('T')[0],
-            to: r.data_checkout.split('T')[0]
-        }));
+                if (resp.ok) {
+                    const dados = await resp.json();
+                    datasOcupadas = (dados.diasOcupados || []).map(r => ({
+                        from: r.data_checkin.split('T')[0],
+                        to: r.data_checkout.split('T')[0]
+                    }));
+                }
 
-        const elem = document.getElementById(`cal-quarto-${quartoId}`);
-        elem.innerHTML = ''; 
+                elem.innerHTML = ''; 
+                flatpickr(elem, {
+                    inline: true,
+                    locale: "pt",
+                    minDate: "today",
+                    defaultDate: "today",
+                    disable: datasOcupadas,
+                    dateFormat: "Y-m-d",
+                    onDayCreate: function(dObj, dStr, fp, dayElem) {
+                        // Verifica se o dia renderizado é uma data desabilitada por reserva/bloqueio
+                        const dataFormatada = dayElem.dateObj.toISOString().split('T')[0];
+                        
+                        const eReserva = datasOcupadas.some(faixa => {
+                            return dataFormatada >= faixa.from && dataFormatada <= faixa.to;
+                        });
 
-        flatpickr(elem, {
-            inline: true,
-            locale: "pt",
-            minDate: "today",       // Impede a seleção de datas passadas
-            defaultDate: "today",   // FORÇA O CALENDÁRIO A ABRIR NA DATA DE HOJE
-            disable: datasOcupadas,
-            dateFormat: "Y-m-d"
-        });
-        } catch(e) {
-        console.error(`Erro ao carregar calendário do quarto ${quartoId}:`, e);
-        }
-        }
-
-        // Mapeia os intervalos de checkin/checkout vindo do banco
-        const datasOcupadas = (dados.diasOcupados || []).map(r => ({
-            from: r.data_checkin.split('T')[0],
-            to: r.data_checkout.split('T')[0]
-        }));
-
-        const elem = document.getElementById(`cal-quarto-${quartoId}`);
-        elem.innerHTML = ''; 
-
-        flatpickr(elem, {
-            inline: true,
-            locale: "pt",
-            minDate: "today",
-            disable: datasOcupadas,
-            dateFormat: "Y-m-d"
-        });
-        } catch(e) {
-        console.error(`Erro ao carregar calendário do quarto ${quartoId}:`, e);
-        }
+                        if (eReserva) {
+                            dayElem.classList.add("dia-ocupado");
+                        }
+                    }
+                });
+            } catch(e) {
+                console.error(`Erro ao carregar calendário ${quartoId}:`, e);
+                elem.innerHTML = '';
+                flatpickr(elem, {
+                    inline: true,
+                    locale: "pt",
+                    minDate: "today",
+                    defaultDate: "today",
+                    dateFormat: "Y-m-d"
+                });
+            }
         }
 
         async function carregarAgenda() {
