@@ -47,23 +47,32 @@ header {
     font-family: 'Playfair Display', serif;
     font-size: 22px;
     font-weight: 700;
-    color: var(--white);
-    text-decoration: none;
+    color: var(--white) !important;
+    text-decoration: none !important;
     display: flex;
     align-items: center;
     gap: 10px;
 }
 
+/* FIX DA LISTA DO MENU (Remove os marcadores de bolinhas) */
 .nav-links {
     display: flex;
     gap: 25px;
-    list-style: none;
+    list-style: none !important;
     align-items: center;
+    margin: 0;
+    padding: 0;
+}
+
+.nav-links li {
+    list-style: none !important;
+    margin: 0;
+    padding: 0;
 }
 
 .nav-links a {
-    text-decoration: none;
-    color: var(--white);
+    text-decoration: none !important;
+    color: var(--white) !important;
     font-weight: 700;
     font-size: 13px;
     letter-spacing: 1px;
@@ -71,7 +80,7 @@ header {
 }
 
 .nav-links a:hover {
-    color: var(--terracotta);
+    color: var(--terracotta) !important;
 }
 
 .nav-right {
@@ -81,8 +90,82 @@ header {
 }
 
 .phone-link {
-    color: var(--white);
-    text-decoration: none;
+    color: var(--white) !important;
+    text-decoration: none !important;
+    font-weight: 700;
+    font-size: 14px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}/* ==========================================================================
+   2. HEADER E NAVEGAÇÃO
+   ========================================================================== */
+header {
+    background: var(--brown-dark);
+    position: sticky;
+    top: 0;
+    z-index: 1000;
+    box-shadow: 0 2px 15px rgba(0,0,0,0.15);
+}
+
+.navbar {
+    max-width: 1300px;
+    margin: 0 auto;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 15px 25px;
+}
+
+.logo {
+    font-family: 'Playfair Display', serif;
+    font-size: 22px;
+    font-weight: 700;
+    color: var(--white) !important;
+    text-decoration: none !important;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+/* FIX DA LISTA DO MENU (Remove os marcadores de bolinhas) */
+.nav-links {
+    display: flex;
+    gap: 25px;
+    list-style: none !important;
+    align-items: center;
+    margin: 0;
+    padding: 0;
+}
+
+.nav-links li {
+    list-style: none !important;
+    margin: 0;
+    padding: 0;
+}
+
+.nav-links a {
+    text-decoration: none !important;
+    color: var(--white) !important;
+    font-weight: 700;
+    font-size: 13px;
+    letter-spacing: 1px;
+    transition: 0.3s;
+}
+
+.nav-links a:hover {
+    color: var(--terracotta) !important;
+}
+
+.nav-right {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+}
+
+.phone-link {
+    color: var(--white) !important;
+    text-decoration: none !important;
     font-weight: 700;
     font-size: 14px;
     display: flex;
