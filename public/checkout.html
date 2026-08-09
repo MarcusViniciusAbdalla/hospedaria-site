@@ -1,0 +1,313 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Finalizar Reserva | Hospedaria Central</title>
+    
+    <link rel="stylesheet" href="css/global.css">
+    <link rel="stylesheet" href="css/busca.css">
+    
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;600;700&family=Playfair+Display:wght@700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <style>
+        body {
+            background-color: #f7f4f0;
+            font-family: 'Montserrat', sans-serif;
+        }
+
+        .checkout-container {
+            max-width: 1100px;
+            margin: 40px auto;
+            padding: 0 20px;
+            display: grid;
+            grid-template-columns: 1.2fr 0.8fr;
+            gap: 30px;
+        }
+
+        .checkout-card {
+            background: #ffffff;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.06);
+            border: 1px solid #eaeaea;
+        }
+
+        .checkout-card h3 {
+            font-family: 'Playfair Display', serif;
+            color: var(--brown-dark, #3e2723);
+            font-size: 22px;
+            margin-bottom: 20px;
+            border-bottom: 2px solid #f0f0f0;
+            padding-bottom: 10px;
+        }
+
+        .room-gallery {
+            display: grid;
+            grid-template-columns: 2fr 1fr;
+            gap: 10px;
+            margin-bottom: 20px;
+            border-radius: 10px;
+            overflow: hidden;
+        }
+
+        .room-gallery img {
+            width: 100%;
+            height: 180px;
+            object-fit: cover;
+            border-radius: 6px;
+        }
+
+        .room-gallery img.main-img {
+            height: 370px;
+            grid-row: span 2;
+        }
+
+        .summary-item {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 12px;
+            font-size: 14px;
+            color: #555;
+        }
+
+        .summary-total {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 20px;
+            padding-top: 15px;
+            border-top: 2px dashed #ddd;
+            font-size: 20px;
+            font-weight: 700;
+            color: var(--brown-dark, #3e2723);
+        }
+
+        .btn-pay-now {
+            width: 100%;
+            background: var(--terracotta, #d97757);
+            color: white;
+            padding: 16px;
+            border: none;
+            border-radius: 8px;
+            font-weight: 700;
+            font-size: 15px;
+            cursor: pointer;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            transition: background 0.2s;
+            margin-top: 15px;
+        }
+
+        .btn-pay-now:hover {
+            background: var(--brown-dark, #3e2723);
+        }
+
+        @media (max-width: 900px) {
+            .checkout-container {
+                grid-template-columns: 1fr;
+            }
+            .room-gallery {
+                grid-template-columns: 1fr;
+            }
+            .room-gallery img.main-img {
+                height: 220px;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <header>
+        <div class="navbar">
+            <a href="index.html" class="logo">
+                <i class="fa-solid fa-hotel"></i> Hospedaria Central
+            </a>
+            <div class="nav-right">
+                <a href="javascript:history.back()" style="color: white; text-decoration: none; font-weight: 600; font-size: 13px;">
+                    <i class="fa-solid fa-arrow-left"></i> Voltar à Busca
+                </a>
+            </div>
+        </div>
+    </header>
+
+    <main class="checkout-container">
+        
+        <div>
+            <div class="checkout-card" style="margin-bottom: 25px;">
+                <h3 id="room-title"><i class="fa-solid fa-bed"></i> Detalhes da Acomodação</h3>
+                
+                <div class="room-gallery">
+                    <img src="images/quarto-main.jpg" class="main-img" alt="Quarto" onerror="this.src='https://images.unsplash.com/photo-1590490360182-c33d57733427?auto=format&fit=crop&w=800&q=80'">
+                    <img src="images/quarto-banheiro.jpg" alt="Banheiro" onerror="this.src='https://images.unsplash.com/photo-1584622650111-993a426fbf0a?auto=format&fit=crop&w=400&q=80'">
+                    <img src="images/quarto-detalhes.jpg" alt="Acomodação" onerror="this.src='https://images.unsplash.com/photo-1566665797739-1674de7a421a?auto=format&fit=crop&w=400&q=80'">
+                </div>
+
+                <p id="room-desc" style="color: #666; font-size: 14px; line-height: 1.6;">
+                    Quarto aconchegante, higienizado, equipado com ar-condicionado, Wi-Fi de alta velocidade e localizado estrategicamente em frente ao Hospital Sylvio de Mello.
+                </p>
+            </div>
+
+            <div class="checkout-card" id="card-dados">
+                <h3><i class="fa-solid fa-user-check"></i> Dados do Hóspede Principal</h3>
+                
+                <form id="form-checkout-page">
+                    <div style="margin-bottom: 15px;">
+                        <label style="font-size: 13px; font-weight: 600; color: #444;">Nome Completo:</label>
+                        <input type="text" id="cust-nome" required style="width: 100%; padding: 12px; border: 1px solid #ccc; border-radius: 6px; margin-top: 5px;">
+                    </div>
+
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 15px;">
+                        <div>
+                            <label style="font-size: 13px; font-weight: 600; color: #444;">CPF:</label>
+                            <input type="text" id="cust-cpf" placeholder="000.000.000-00" required style="width: 100%; padding: 12px; border: 1px solid #ccc; border-radius: 6px; margin-top: 5px;">
+                        </div>
+                        <div>
+                            <label style="font-size: 13px; font-weight: 600; color: #444;">WhatsApp / Telefone:</label>
+                            <input type="tel" id="cust-tel" placeholder="(64) 90000-0000" required style="width: 100%; padding: 12px; border: 1px solid #ccc; border-radius: 6px; margin-top: 5px;">
+                        </div>
+                    </div>
+
+                    <div style="margin-bottom: 20px;">
+                        <label style="font-size: 13px; font-weight: 600; color: #444;">E-mail (opcional):</label>
+                        <input type="email" id="cust-email" placeholder="seuemail@email.com" style="width: 100%; padding: 12px; border: 1px solid #ccc; border-radius: 6px; margin-top: 5px;">
+                    </div>
+
+                    <button type="submit" class="btn-pay-now">
+                        <i class="fa-solid fa-qrcode"></i> Confirmar e Gerar Pix
+                    </button>
+                </form>
+            </div>
+
+            <div class="checkout-card" id="card-pix" style="display: none; text-align: center;">
+                <h3><i class="fa-solid fa-pix" style="color: #32bcad;"></i> Pagamento via Pix</h3>
+                <p style="font-size: 14px; color: #666; margin-bottom: 20px;">Escaneie o QR Code abaixo no app do seu banco ou copie a chave Pix:</p>
+
+                <div style="margin-bottom: 20px;">
+                    <img id="pix-qr-img" src="" alt="QR Code Pix" style="max-width: 220px; border: 2px solid #eee; border-radius: 12px; padding: 10px;">
+                </div>
+
+                <div style="max-width: 400px; margin: 0 auto 20px;">
+                    <input type="text" id="pix-copia-cola" readonly style="width: 100%; padding: 12px; border: 1px solid #ccc; border-radius: 6px; font-size: 13px; text-align: center; margin-bottom: 10px;">
+                    <button onclick="copiarPix()" class="btn-pay-now" style="background: var(--brown-dark, #3e2723); padding: 12px;">
+                        <i class="fa-regular fa-copy"></i> Copiar Chave Pix
+                    </button>
+                </div>
+
+                <p style="font-size: 13px; color: #28a745; font-weight: 600;">
+                    <i class="fa-solid fa-spinner fa-spin"></i> Aguardando confirmação do pagamento...
+                </p>
+            </div>
+        </div>
+
+        <div>
+            <div class="checkout-card" style="position: sticky; top: 20px;">
+                <h3>Resumo da Reserva</h3>
+
+                <div class="summary-item">
+                    <span>Acomodação:</span>
+                    <strong id="sum-room-name">Quarto --</strong>
+                </div>
+                <div class="summary-item">
+                    <span>Entrada (Check-in):</span>
+                    <strong id="sum-checkin">--/--/----</strong>
+                </div>
+                <div class="summary-item">
+                    <span>Saída (Check-out):</span>
+                    <strong id="sum-checkout">--/--/----</strong>
+                </div>
+                <div class="summary-item">
+                    <span>Hóspedes:</span>
+                    <strong id="sum-adults">1 pessoa(s)</strong>
+                </div>
+
+                <div class="summary-total">
+                    <span>Total:</span>
+                    <span id="sum-total-price" style="color: var(--terracotta, #d97757);">R$ 0,00</span>
+                </div>
+            </div>
+        </div>
+
+    </main>
+
+    <footer>
+        <p>&copy; 2026 Hospedaria Central Morrinhos - Todos os direitos reservados</p>
+    </footer>
+
+    <script>
+        const params = new URLSearchParams(window.location.search);
+        const quartoId = params.get('quartoId');
+        const start = params.get('start');
+        const end = params.get('end');
+        const adults = params.get('adults') || 1;
+
+        document.getElementById('sum-checkin').innerText = start || '--/--/----';
+        document.getElementById('sum-checkout').innerText = end || '--/--/----';
+        document.getElementById('sum-adults').innerText = `${adults} pessoa(s)`;
+        document.getElementById('sum-room-name').innerText = `Quarto 0${quartoId || '1'} ${quartoId == 3 ? '(Suíte Master)' : ''}`;
+
+        async function carregarDetalhes() {
+            if (!quartoId || !start || !end) return;
+            try {
+                const resp = await fetch(`/api/quartos-disponiveis?start=${start}&end=${end}&adults=${adults}`);
+                const data = await resp.json();
+                const quarto = (data.disponiveis || []).find(q => q.id == quartoId);
+
+                if (quarto) {
+                    document.getElementById('sum-total-price').innerText = `R$ ${Number(quarto.valorTotal).toFixed(2)}`;
+                    document.getElementById('room-title').innerHTML = `<i class="fa-solid fa-bed"></i> Quarto 0${quarto.id} ${quarto.id == 3 ? '(Suíte Master)' : ''}`;
+                }
+            } catch(e) {
+                console.error("Erro ao carregar detalhes:", e);
+            }
+        }
+
+        document.getElementById('form-checkout-page').addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            const payload = {
+                quartoId: quartoId,
+                hospedes: adults,
+                checkin: start,
+                checkout: end,
+                cliente: {
+                    nome: document.getElementById('cust-nome').value,
+                    cpf: document.getElementById('cust-cpf').value,
+                    telefone: document.getElementById('cust-tel').value,
+                    email: document.getElementById('cust-email').value
+                }
+            };
+
+            try {
+                const resp = await fetch('/api/reservar', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+
+                const resData = await resp.json();
+                if (resp.ok && resData.sucesso) {
+                    document.getElementById('card-dados').style.display = 'none';
+                    document.getElementById('card-pix').style.display = 'block';
+
+                    document.getElementById('pix-qr-img').src = `data:image/jpeg;base64,${resData.qrCodeBase64}`;
+                    document.getElementById('pix-copia-cola').value = resData.pixCopiaECola;
+                } else {
+                    alert(resData.erro || "Erro ao gerar cobrança.");
+                }
+            } catch (err) {
+                alert("Erro ao se comunicar com o servidor.");
+            }
+        });
+
+        function copiarPix() {
+            const copyText = document.getElementById("pix-copia-cola");
+            copyText.select();
+            document.execCommand("copy");
+            alert("Código Pix copiado com sucesso!");
+        }
+
+        carregarDetalhes();
+    </script>
+</body>
+</html>

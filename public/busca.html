@@ -12,7 +12,11 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     
     <style>
-        /* Ajustes Elegantes para a Lista de Acomodações */
+        body {
+            background-color: #f7f4f0;
+            font-family: 'Montserrat', sans-serif;
+        }
+
         .results-container {
             max-width: 1000px;
             margin: 40px auto;
@@ -20,17 +24,17 @@
         }
 
         .search-summary-card {
-            background: var(--white);
+            background: #ffffff;
             padding: 25px;
             border-radius: 12px;
             box-shadow: 0 4px 15px rgba(0,0,0,0.05);
-            border-left: 5px solid var(--terracotta);
+            border-left: 5px solid var(--terracotta, #d97757);
             margin-bottom: 30px;
         }
 
         .search-summary-card h2 {
             font-family: 'Playfair Display', serif;
-            color: var(--brown-dark);
+            color: var(--brown-dark, #3e2723);
             margin-bottom: 5px;
         }
 
@@ -53,7 +57,7 @@
         }
 
         .room-card {
-            background: var(--white);
+            background: #ffffff;
             border-radius: 12px;
             padding: 25px;
             box-shadow: 0 4px 15px rgba(0,0,0,0.06);
@@ -61,6 +65,7 @@
             justify-content: space-between;
             align-items: center;
             transition: transform 0.2s ease, box-shadow 0.2s ease;
+            border: 1px solid #eaeaea;
         }
 
         .room-card:hover {
@@ -71,13 +76,13 @@
         .room-card-info h4 {
             font-family: 'Playfair Display', serif;
             font-size: 22px;
-            color: var(--brown-dark);
+            color: var(--brown-dark, #3e2723);
             margin-bottom: 8px;
         }
 
         .room-amenities {
             display: flex;
-            gap: 15px;
+            gap: 12px;
             margin-top: 12px;
             color: #666;
             font-size: 13px;
@@ -99,8 +104,8 @@
 
         .btn-select-room {
             display: inline-block;
-            background: var(--terracotta);
-            color: var(--white);
+            background: var(--terracotta, #d97757);
+            color: #ffffff;
             padding: 12px 24px;
             border: none;
             border-radius: 8px;
@@ -111,10 +116,11 @@
             margin-top: 10px;
             text-transform: uppercase;
             letter-spacing: 0.5px;
+            text-decoration: none;
         }
 
         .btn-select-room:hover {
-            background: var(--brown-dark);
+            background: var(--brown-dark, #3e2723);
         }
 
         @media (max-width: 768px) {
@@ -129,6 +135,7 @@
             }
             .btn-select-room {
                 width: 100%;
+                text-align: center;
             }
         }
     </style>
@@ -154,74 +161,16 @@
             <p style="color: #666;">Acomodações disponíveis em frente ao Hospital Sylvio de Mello</p>
             
             <div id="search-params-info" class="params-info">
-                <!-- Informações de busca preenchidas via JS -->
+                <!-- Informações via JS -->
             </div>
         </div>
 
-        <h3 style="font-family: 'Playfair Display', serif; color: var(--brown-dark); margin: 30px 0 20px;">Acomodações Encontradas</h3>
+        <h3 style="font-family: 'Playfair Display', serif; color: var(--brown-dark, #3e2723); margin: 30px 0 20px;">Acomodações Encontradas</h3>
         
         <div id="rooms-list" class="rooms-grid">
             <p style="text-align: center; color: #666; padding: 40px;">Buscando quartos disponíveis...</p>
         </div>
     </main>
-
-    <!-- MODAL DE CHECKOUT -->
-    <div id="modal-reserva" class="modal-overlay" style="display: none;">
-        <div class="modal-card">
-            <button class="modal-close" onclick="fecharModal()">&times;</button>
-            
-            <div id="step-dados">
-                <h3 style="font-family: 'Playfair Display', serif; color: var(--brown-dark); margin-bottom: 15px;">Finalizar Reserva</h3>
-                <form id="form-checkout">
-                    <input type="hidden" id="modal-quarto-id">
-                    
-                    <div class="form-group" style="margin-bottom: 12px;">
-                        <label style="font-size: 13px; font-weight: 600;">Nome Completo:</label>
-                        <input type="text" id="cust-nome" required style="width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 6px;">
-                    </div>
-                    
-                    <div class="form-group" style="margin-bottom: 12px;">
-                        <label style="font-size: 13px; font-weight: 600;">CPF:</label>
-                        <input type="text" id="cust-cpf" placeholder="000.000.000-00" required style="width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 6px;">
-                    </div>
-
-                    <div class="form-group" style="margin-bottom: 12px;">
-                        <label style="font-size: 13px; font-weight: 600;">WhatsApp / Telefone:</label>
-                        <input type="tel" id="cust-tel" placeholder="(64) 90000-0000" required style="width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 6px;">
-                    </div>
-
-                    <div class="form-group" style="margin-bottom: 20px;">
-                        <label style="font-size: 13px; font-weight: 600;">E-mail (opcional):</label>
-                        <input type="email" id="cust-email" placeholder="seuemail@email.com" style="width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 6px;">
-                    </div>
-
-                    <button type="submit" class="btn-select-room" style="width: 100%; padding: 14px;">
-                        Gerar Pagamento Pix
-                    </button>
-                </form>
-            </div>
-
-            <div id="step-pix" style="display: none; text-align: center;">
-                <h3 style="font-family: 'Playfair Display', serif; color: var(--brown-dark); margin-bottom: 10px;">Pagamento via Pix</h3>
-                <p style="font-size: 13px; color: #666; margin-bottom: 15px;">Escaneie o QR Code ou copie o código Pix para confirmar sua reserva:</p>
-
-                <div id="qr-code-container" style="margin-bottom: 15px;">
-                    <img id="pix-qr-img" src="" alt="QR Code Pix" style="max-width: 200px; border: 1px solid #eee; border-radius: 8px;">
-                </div>
-
-                <div style="margin-bottom: 15px;">
-                    <input type="text" id="pix-copia-cola" readonly style="width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 6px; font-size: 12px; text-align: center; margin-bottom: 8px;">
-                    <button onclick="copiarPix()" class="btn-select-room" style="padding: 10px 20px; font-size: 12px; background: var(--brown-dark);">
-                        <i class="fa-regular fa-copy"></i> Copiar Código Pix
-                    </button>
-                </div>
-
-                <p style="font-size: 12px; color: #28a745; font-weight: bold; margin-top: 15px;">
-                    <i class="fa-solid fa-spinner fa-spin"></i> Aguardando confirmação do pagamento...
-                </p>
-            </div>
-        </div>
-    </div>
 
     <footer>
         <p>&copy; 2026 Hospedaria Central Morrinhos - Todos os direitos reservados</p>
@@ -234,10 +183,10 @@
         const adults = params.get('adults') || 1;
 
         document.getElementById('search-params-info').innerHTML = `
-            <span><i class="fa-regular fa-calendar-check"></i> <strong>Entrada:</strong> ${start}</span>
-            <span><i class="fa-regular fa-calendar-xmark"></i> <strong>Saída:</strong> ${end}</span>
+            <span><i class="fa-regular fa-calendar-check"></i> <strong>Entrada:</strong> ${start || '--'}</span>
+            <span><i class="fa-regular fa-calendar-xmark"></i> <strong>Saída:</strong> ${end || '--'}</span>
             <span><i class="fa-solid fa-user-group"></i> <strong>Hóspedes:</strong> ${adults} pessoa(s)</span>
-            <a href="index.html" style="color: var(--terracotta); font-weight: 600; margin-left: auto;">Alterar Pesquisa</a>
+            <a href="index.html" style="color: var(--terracotta, #d97757); font-weight: 600; margin-left: auto;">Alterar Pesquisa</a>
         `;
 
         async function carregarQuartos() {
@@ -253,21 +202,23 @@
 
                 container.innerHTML = '';
                 data.disponiveis.forEach(q => {
+                    const checkoutUrl = `checkout.html?quartoId=${q.id}&start=${start}&end=${end}&adults=${adults}`;
+
                     container.innerHTML += `
                         <div class="room-card">
                             <div class="room-card-info">
                                 <h4>Quarto 0${q.id} ${q.id === 3 ? '(Suíte Master)' : ''}</h4>
                                 <p style="font-size: 13px; color: #666; margin-bottom: 5px;">${q.descricao || 'Quarto higienizado e confortável para sua estadia.'}</p>
                                 <div class="room-amenities">
-                                    <span><i class="fa-solid fa-wifi" style="color: var(--terracotta);"></i> Wi-Fi Grátis</span>
-                                    <span><i class="fa-solid fa-snowflake" style="color: var(--terracotta);"></i> Climatizado</span>
-                                    <span><i class="fa-solid fa-tv" style="color: var(--terracotta);"></i> TV Digital</span>
+                                    <span><i class="fa-solid fa-wifi" style="color: var(--terracotta, #d97757);"></i> Wi-Fi Grátis</span>
+                                    <span><i class="fa-solid fa-snowflake" style="color: var(--terracotta, #d97757);"></i> Climatizado</span>
+                                    <span><i class="fa-solid fa-tv" style="color: var(--terracotta, #d97757);"></i> TV Digital</span>
                                 </div>
                             </div>
                             <div class="room-card-price">
                                 <span style="font-size: 12px; color: #888;">Total de ${q.diasReservados} diária(s)</span>
-                                <div style="font-size: 26px; font-weight: 700; color: var(--brown-dark); margin: 4px 0;">R$ ${Number(q.valorTotal).toFixed(2)}</div>
-                                <button class="btn-select-room" onclick="abrirReserva(${q.id})">Escolher e Reservar</button>
+                                <div style="font-size: 26px; font-weight: 700; color: var(--brown-dark, #3e2723); margin: 4px 0;">R$ ${Number(q.valorTotal).toFixed(2)}</div>
+                                <a href="${checkoutUrl}" class="btn-select-room">Escolher e Reservar</a>
                             </div>
                         </div>
                     `;
@@ -275,60 +226,6 @@
             } catch (e) {
                 container.innerHTML = '<p style="text-align: center; color: red;">Erro ao carregar disponibilidade.</p>';
             }
-        }
-
-        function abrirReserva(quartoId) {
-            document.getElementById('modal-quarto-id').value = quartoId;
-            document.getElementById('modal-reserva').style.display = 'flex';
-        }
-
-        function fecharModal() {
-            document.getElementById('modal-reserva').style.display = 'none';
-        }
-
-        document.getElementById('form-checkout').addEventListener('submit', async (e) => {
-            e.preventDefault();
-            
-            const payload = {
-                quartoId: document.getElementById('modal-quarto-id').value,
-                hospedes: adults,
-                checkin: start,
-                checkout: end,
-                cliente: {
-                    nome: document.getElementById('cust-nome').value,
-                    cpf: document.getElementById('cust-cpf').value,
-                    telefone: document.getElementById('cust-tel').value,
-                    email: document.getElementById('cust-email').value
-                }
-            };
-
-            try {
-                const resp = await fetch('/api/reservar', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(payload)
-                });
-
-                const resData = await resp.json();
-                if (resp.ok && resData.sucesso) {
-                    document.getElementById('step-dados').style.display = 'none';
-                    document.getElementById('step-pix').style.display = 'block';
-
-                    document.getElementById('pix-qr-img').src = `data:image/jpeg;base64,${resData.qrCodeBase64}`;
-                    document.getElementById('pix-copia-cola').value = resData.pixCopiaECola;
-                } else {
-                    alert(resData.erro || "Erro ao processar reserva.");
-                }
-            } catch (err) {
-                alert("Erro de conexão ao gerar o Pix.");
-            }
-        });
-
-        function copiarPix() {
-            const copyText = document.getElementById("pix-copia-cola");
-            copyText.select();
-            document.execCommand("copy");
-            alert("Código Pix copiado!");
         }
 
         carregarQuartos();
