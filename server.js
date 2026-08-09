@@ -43,18 +43,21 @@ function calcularDiaria(quartoId, hospedes) {
    ROTAS PÚBLICAS (SITE DE CLIENTES)
    ========================================================================== */
 
-// ROTA 1: Buscar dias ocupados para o calendário do Modal da Home
+// ROTA 1: Buscar dias ocupados para os calendários do Modal e do Admin
 app.get('/api/disponibilidade', async (req, res) => {
-    const { quartoId, mes, ano } = req.query;
+    const { quartoId } = req.query;
+
+    if (!quartoId) {
+        return res.status(400).json({ erro: 'Parâmetro quartoId é obrigatório.' });
+    }
 
     try {
         const reservas = await pool.query(
             `SELECT data_checkin, data_checkout FROM reservas 
              WHERE quarto_id = $1 
              AND status_pagamento IN ('pago', 'bloqueado_balcao')
-             AND EXTRACT(MONTH FROM data_checkin) = $2 
-             AND EXTRACT(YEAR FROM data_checkin) = $3`,
-            [quartoId, mes, ano]
+             ORDER BY data_checkin ASC`,
+            [quartoId]
         );
 
         res.json({ diasOcupados: reservas.rows });
@@ -114,7 +117,7 @@ app.get('/api/quartos-disponiveis', async (req, res) => {
     }
 });
 
-// ROTA 3: Criar Reserva do Site e Cobrança Pix via Mercado Pago (COM TRANSAÇÃO)
+// ROTA 3: Criar Reserva do Site e Cobrança Pix via Mercado Pago
 app.post('/api/reservar', async (req, res) => {
     const client = await pool.connect();
     try {
@@ -146,7 +149,8 @@ app.post('/api/reservar', async (req, res) => {
         await client.query('BEGIN');
 
         // 1. Inserir ou obter o cliente
-        let clienteRes = await client.query('SELECT id FROM clientes WHERE cpf = $1', [cliente.cpf]);
+        const cpfLimpo = cliente.cpf ? cliente.cpf.replace(/\D/g, '') : '';
+        let clienteRes = await client.query('SELECT id FROM clientes WHERE cpf = $1', [cpfLimpo]);
         let clienteId;
 
         if (clienteRes.rows.length > 0) {
@@ -154,7 +158,7 @@ app.post('/api/reservar', async (req, res) => {
         } else {
             const novoCliente = await client.query(
                 'INSERT INTO clientes (nome, cpf, telefone, email) VALUES ($1, $2, $3, $4) RETURNING id',
-                [cliente.nome, cliente.cpf, cliente.telefone, cliente.email || 'contato@hospedariacentral.com.br']
+                [cliente.nome, cpfLimpo, cliente.telefone, cliente.email || 'contato@hospedariacentral.com.br']
             );
             clienteId = novoCliente.rows[0].id;
         }
@@ -183,7 +187,7 @@ app.post('/api/reservar', async (req, res) => {
                     first_name: cliente.nome,
                     identification: {
                         type: 'CPF',
-                        number: cliente.cpf.replace(/\D/g, '')
+                        number: cpfLimpo
                     }
                 }
             }
@@ -234,14 +238,16 @@ app.post('/api/webhook/mercadopago', async (req, res) => {
 });
 
 /* ==========================================================================
-   ROTAS ADMINISTRATIVAS (PAINEL DO CELULAR)
+   ROTAS ADMINISTRATIVAS (PAINEL DO CELULAR / BALCÃO)
    ========================================================================== */
 
 // ROTA ADMIN 1: Listar todas as ocupações ativas
 app.get('/api/admin/reservas', async (req, res) => {
     try {
         const query = `
-            SELECT r.id, r.quarto_id, q.numero_quarto, c.nome AS cliente_nome, c.telefone,
+            SELECT r.id, r.quarto_id, q.numero_quarto, 
+                   COALESCE(c.nome, 'Atendimento Presencial / Balcão') AS cliente_nome, 
+                   COALESCE(c.telefone, 'Balcão') AS telefone,
                    r.data_checkin, r.data_checkout, r.status_pagamento, r.valor_total
             FROM reservas r
             JOIN quartos q ON q.id = r.quarto_id
@@ -261,6 +267,10 @@ app.get('/api/admin/reservas', async (req, res) => {
 app.post('/api/admin/bloquear', async (req, res) => {
     const { quartoId, checkin, checkout } = req.body;
 
+    if (!quartoId || !checkin || !checkout) {
+        return res.status(400).json({ erro: "Selecione o quarto e as datas para bloqueio." });
+    }
+
     try {
         const conflito = await pool.query(
             `SELECT id FROM reservas 
@@ -275,15 +285,15 @@ app.post('/api/admin/bloquear', async (req, res) => {
         }
 
         await pool.query(
-            `INSERT INTO reservas (quarto_id, quantidade_hospedes, data_checkin, data_checkout, valor_total, status_pagamento) 
-             VALUES ($1, 1, $2, $3, 0.00, 'bloqueado_balcao')`,
+            `INSERT INTO reservas (quarto_id, cliente_id, quantidade_hospedes, data_checkin, data_checkout, valor_total, status_pagamento) 
+             VALUES ($1, NULL, 1, $2, $3, 0.00, 'bloqueado_balcao')`,
             [quartoId, checkin, checkout]
         );
 
         res.json({ mensagem: 'Data bloqueada com sucesso!' });
     } catch (err) {
         console.error("Erro ao bloquear data:", err);
-        res.status(500).json({ erro: 'Erro interno ao salvar bloqueio.' });
+        res.status(500).json({ erro: 'Erro interno ao salvar bloqueio no banco de dados.' });
     }
 });
 
@@ -299,6 +309,6 @@ app.delete('/api/admin/reservas/:id', async (req, res) => {
     }
 });
 
-// Inicialização do Servidor (No final do arquivo)
+// Inicialização do Servidor
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log(`Servidor rodando na porta ${PORT}`));

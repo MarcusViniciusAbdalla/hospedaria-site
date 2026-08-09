@@ -10,12 +10,12 @@
     <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;600;700&family=Playfair+Display:wght@700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     
+    <!-- Flatpickr -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
     <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
     <script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/l10n/pt.js"></script>
     
     <style>
-        /* Tela de Login Centralizada */
         .login-overlay {
             display: flex;
             justify-content: center;
@@ -32,11 +32,69 @@
             width: 100%;
             border-top: 5px solid var(--terracotta);
         }
+        
+        /* GRID DE CALENDÁRIOS DOS QUARTOS */
+        .calendars-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+        .room-calendar-card {
+            background: var(--white);
+            padding: 20px;
+            border-radius: 12px;
+            box-shadow: 0 4px 15px rgba(92, 64, 51, 0.08);
+            border-top: 4px solid var(--brown-dark);
+            text-align: center;
+        }
+        .room-calendar-card h4 {
+            color: var(--brown-dark);
+            font-family: 'Playfair Display', serif;
+            font-size: 18px;
+            margin-bottom: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+        .flatpickr-calendar.inline {
+            box-shadow: none;
+            border: 1px solid #eee;
+            margin: 0 auto;
+        }
+        .calendar-legend {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            margin-top: 10px;
+            font-size: 12px;
+            color: #666;
+        }
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+        .legend-box-red {
+            width: 12px;
+            height: 12px;
+            background: #f8d7da;
+            border: 1px solid #d9534f;
+            border-radius: 3px;
+        }
+        .legend-box-green {
+            width: 12px;
+            height: 12px;
+            background: #ffffff;
+            border: 1px solid #ccc;
+            border-radius: 3px;
+        }
     </style>
 </head>
 <body>
 
-    <!-- HEADER LIMPO -->
+    <!-- HEADER -->
     <header>
         <div class="navbar">
             <a href="index.html" class="logo">
@@ -50,12 +108,12 @@
         </div>
     </header>
 
-    <!-- TELA DE LOGIN (EXIBIDA INICIALMENTE) -->
+    <!-- TELA DE LOGIN -->
     <div id="login-screen" class="login-overlay">
         <div class="login-card">
             <i class="fa-solid fa-user-shield" style="font-size: 40px; color: var(--terracotta); margin-bottom: 15px;"></i>
             <h3 style="font-family: 'Playfair Display', serif; color: var(--brown-dark); margin-bottom: 10px;">Acesso Restrito</h3>
-            <p style="font-size: 13px; color: #666; margin-bottom: 20px;">Digite a senha de administrador para gerenciar o balcão:</p>
+            <p style="font-size: 13px; color: #666; margin-bottom: 20px;">Digite a senha para gerenciar o balcão e conferir a agenda:</p>
             
             <form id="form-login">
                 <input type="password" id="admin-pass" placeholder="Senha de Acesso" required style="width: 100%; padding: 12px; border: 1px solid #ccc; border-radius: 6px; margin-bottom: 15px; text-align: center;">
@@ -64,12 +122,49 @@
         </div>
     </div>
 
-    <!-- CONTEÚDO DO PAINEL (OCULTO ATÉ AUTENTICAR) -->
+    <!-- CONTEÚDO DO PAINEL -->
     <div id="admin-content" class="admin-container" style="display: none;">
         
         <h2 style="color: var(--brown-dark); text-align: center; margin-bottom: 25px; font-family: 'Playfair Display', serif;">
-            Painel Administrativo
+            Painel Administrativo & Ocupação
         </h2>
+
+        <!-- VISUALIZAÇÃO DE CALENDÁRIOS POR QUARTO -->
+        <div class="admin-card">
+            <h3><i class="fa-solid fa-calendar-days"></i> Consulta Rápida de Disponibilidade</h3>
+            <p style="font-size: 13px; color: #666; margin-bottom: 15px;">As datas em <strong style="color: #d9534f;">vermelho/riscadas</strong> estão ocupadas/reservadas.</p>
+            
+            <div class="calendars-grid">
+                <!-- Quarto 01 -->
+                <div class="room-calendar-card">
+                    <h4><i class="fa-solid fa-bed" style="color: var(--terracotta);"></i> Quarto 01 (Solteiro)</h4>
+                    <div id="cal-quarto-1"></div>
+                </div>
+
+                <!-- Quarto 02 -->
+                <div class="room-calendar-card">
+                    <h4><i class="fa-solid fa-bed" style="color: var(--terracotta);"></i> Quarto 02 (Solteiro)</h4>
+                    <div id="cal-quarto-2"></div>
+                </div>
+
+                <!-- Quarto 03 -->
+                <div class="room-calendar-card">
+                    <h4><i class="fa-solid fa-star" style="color: var(--terracotta);"></i> Quarto 03 (Suíte Master)</h4>
+                    <div id="cal-quarto-3"></div>
+                </div>
+
+                <!-- Quarto 04 -->
+                <div class="room-calendar-card">
+                    <h4><i class="fa-solid fa-bed" style="color: var(--terracotta);"></i> Quarto 04 (Solteiro)</h4>
+                    <div id="cal-quarto-4"></div>
+                </div>
+            </div>
+
+            <div class="calendar-legend">
+                <div class="legend-item"><div class="legend-box-green"></div> Data Livre</div>
+                <div class="legend-item"><div class="legend-box-red"></div> Ocupado / Riscado</div>
+            </div>
+        </div>
 
         <!-- FORMULÁRIO DE BLOQUEIO PRESENCIAL -->
         <div class="admin-card">
@@ -98,7 +193,7 @@
 
         <!-- LISTA DE OCUPAÇÕES -->
         <div class="admin-card">
-            <h3><i class="fa-solid fa-calendar-check"></i> Ocupações e Reservas</h3>
+            <h3><i class="fa-solid fa-list-check"></i> Detalhes das Ocupações e Reservas</h3>
             <div id="lista-reservas" class="reservation-list">
                 <p style="text-align: center; color: #777;">Carregando agenda...</p>
             </div>
@@ -111,7 +206,6 @@
     </footer>
 
     <script>
-        // DEFINA A SUA SENHA AQUI:
         const SENHA_CORRETA = "123456"; 
 
         document.getElementById('form-login').addEventListener('submit', (e) => {
@@ -121,7 +215,7 @@
             if (senhaDigitada === SENHA_CORRETA) {
                 document.getElementById('login-screen').style.display = 'none';
                 document.getElementById('admin-content').style.display = 'block';
-                carregarAgenda();
+                carregarTudo();
             } else {
                 alert("Senha incorreta!");
                 document.getElementById('admin-pass').value = '';
@@ -143,6 +237,37 @@
             }
         });
 
+        function carregarTudo() {
+            carregarAgenda();
+            [1, 2, 3, 4].forEach(quartoId => carregarCalendarioQuarto(quartoId));
+        }
+
+        async function carregarCalendarioQuarto(quartoId) {
+            try {
+                const hoje = new Date();
+                const resp = await fetch(`/api/disponibilidade?quartoId=${quartoId}&mes=${hoje.getMonth() + 1}&ano=${hoje.getFullYear()}`);
+                const dados = await resp.json();
+
+                const datasOcupadas = (dados.diasOcupados || []).map(r => ({
+                    from: r.data_checkin.split('T')[0],
+                    to: r.data_checkout.split('T')[0]
+                }));
+
+                const elem = document.getElementById(`cal-quarto-${quartoId}`);
+                elem.innerHTML = ''; 
+
+                flatpickr(elem, {
+                    inline: true,
+                    locale: "pt",
+                    minDate: "today",
+                    disable: datasOcupadas,
+                    dateFormat: "Y-m-d"
+                });
+            } catch(e) {
+                console.error(`Erro ao carregar calendário do quarto ${quartoId}:`, e);
+            }
+        }
+
         async function carregarAgenda() {
             const container = document.getElementById('lista-reservas');
             try {
@@ -151,7 +276,7 @@
                 container.innerHTML = '';
 
                 if (!data.reservas || data.reservas.length === 0) {
-                    container.innerHTML = '<p style="text-align: center; color: #777; padding: 20px;">Nenhuma reserva encontrada.</p>';
+                    container.innerHTML = '<p style="text-align: center; color: #777; padding: 20px;">Nenhuma reserva cadastrada no momento.</p>';
                     return;
                 }
 
@@ -161,7 +286,7 @@
                         ? '<span class="badge badge-bloqueio">Bloqueio Balcão</span>' 
                         : '<span class="badge badge-pago">Pago via Pix</span>';
 
-                    const clienteText = isBloqueio ? 'Atendimento Presencial' : `${r.cliente_nome} (${r.telefone || 'Sem Teletefone'})`;
+                    const clienteText = isBloqueio ? 'Atendimento Presencial / Balcão' : `${r.cliente_nome} (${r.telefone || 'Sem WhatsApp'})`;
 
                     container.innerHTML += `
                         <div class="reservation-item">
@@ -171,13 +296,13 @@
                                 <span><i class="fa-regular fa-user"></i> ${clienteText}</span>
                             </div>
                             <button class="btn-delete" onclick="cancelarReserva(${r.id})">
-                                <i class="fa-solid fa-trash"></i> Liberar
+                                <i class="fa-solid fa-trash"></i> Liberar Data
                             </button>
                         </div>
                     `;
                 });
             } catch (err) {
-                container.innerHTML = '<p style="color: red; text-align: center;">Erro ao carregar dados.</p>';
+                container.innerHTML = '<p style="color: red; text-align: center;">Erro ao carregar a lista de ocupações.</p>';
             }
         }
 
@@ -205,7 +330,7 @@
                 alert(resData.mensagem);
                 document.getElementById('bloqueio-datas').value = '';
                 checkinBloqueio = ''; checkoutBloqueio = '';
-                carregarAgenda();
+                carregarTudo();
             } else {
                 alert(resData.erro);
             }
@@ -214,7 +339,7 @@
         async function cancelarReserva(id) {
             if (confirm("Tem certeza que deseja liberar esta data no sistema?")) {
                 await fetch(`/api/admin/reservas/${id}`, { method: 'DELETE' });
-                carregarAgenda();
+                carregarTudo();
             }
         }
     </script>
