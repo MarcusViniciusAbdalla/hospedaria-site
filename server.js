@@ -10,8 +10,10 @@ app.use(express.static('public'));
 // 1. Conexão com o PostgreSQL (Compatível com Neon/Render e Local)
 const pool = new Pool({
     connectionString: process.env.DATABASE_URL || `postgres://${process.env.DB_USER}:${process.env.DB_PASSWORD}@${process.env.DB_HOST}:${process.env.DB_PORT}/${process.env.DB_NAME}`,
-    ssl: process.env.DATABASE_URL ? { rejectUnauthorized: false } : false
+    ssl: { rejectUnauthorized: false }
 });
+
+
 
 // 2. Mercado Pago Config & Instância Payment
 const mpClient = new MercadoPagoConfig({ 
@@ -272,6 +274,7 @@ app.post('/api/admin/bloquear', async (req, res) => {
     }
 
     try {
+        // 1. Verifica se já existe reserva/bloqueio no período
         const conflito = await pool.query(
             `SELECT id FROM reservas 
              WHERE quarto_id = $1 
@@ -284,10 +287,26 @@ app.post('/api/admin/bloquear', async (req, res) => {
             return res.status(400).json({ erro: 'Já existe reserva ou bloqueio para esta data!' });
         }
 
+        // 2. Garante um cliente padrão "Balcão" registrado na tabela 'clientes'
+        let clienteBalcao = await pool.query("SELECT id FROM clientes WHERE cpf = '00000000000'");
+        let clienteId;
+
+        if (clienteBalcao.rows.length > 0) {
+            clienteId = clienteBalcao.rows[0].id;
+        } else {
+            const novoBalcao = await pool.query(
+                `INSERT INTO clientes (nome, cpf, telefone, email) 
+                 VALUES ('Atendimento Presencial / Balcão', '00000000000', '(64) 00000-0000', 'balcao@hospedariacentral.com.br') 
+                 RETURNING id`
+            );
+            clienteId = novoBalcao.rows[0].id;
+        }
+
+        // 3. Insere o bloqueio preenchendo todas as colunas obrigatórias
         await pool.query(
             `INSERT INTO reservas (quarto_id, cliente_id, quantidade_hospedes, data_checkin, data_checkout, valor_total, status_pagamento) 
-             VALUES ($1, NULL, 1, $2, $3, 0.00, 'bloqueado_balcao')`,
-            [quartoId, checkin, checkout]
+             VALUES ($1, $2, 1, $3, $4, 0.00, 'bloqueado_balcao')`,
+            [quartoId, clienteId, checkin, checkout]
         );
 
         res.json({ mensagem: 'Data bloqueada com sucesso!' });

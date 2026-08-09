@@ -90,6 +90,16 @@
             border: 1px solid #ccc;
             border-radius: 3px;
         }
+        /* ESTILO DOS DIAS OCUPADOS/BLOQUEADOS NOS CALENDÁRIOS */
+        .flatpickr-day.flatpickr-disabled, 
+        .flatpickr-day.flatpickr-disabled:hover {
+            background-color: #f8d7da !important;
+            color: #d9534f !important;
+            text-decoration: line-through !important;
+            border-color: #f5c6cb !important;
+            cursor: not-allowed !important;
+            font-weight: bold;
+}
     </style>
 </head>
 <body>
@@ -243,29 +253,51 @@
         }
 
         async function carregarCalendarioQuarto(quartoId) {
-            try {
-                const hoje = new Date();
-                const resp = await fetch(`/api/disponibilidade?quartoId=${quartoId}&mes=${hoje.getMonth() + 1}&ano=${hoje.getFullYear()}`);
-                const dados = await resp.json();
+        try {
+        const resp = await fetch(`/api/disponibilidade?quartoId=${quartoId}`);
+        const dados = await resp.json();
 
-                const datasOcupadas = (dados.diasOcupados || []).map(r => ({
-                    from: r.data_checkin.split('T')[0],
-                    to: r.data_checkout.split('T')[0]
-                }));
+        // Mapeia as faixas de check-in e check-out
+        const datasOcupadas = (dados.diasOcupados || []).map(r => ({
+            from: r.data_checkin.split('T')[0],
+            to: r.data_checkout.split('T')[0]
+        }));
 
-                const elem = document.getElementById(`cal-quarto-${quartoId}`);
-                elem.innerHTML = ''; 
+        const elem = document.getElementById(`cal-quarto-${quartoId}`);
+        elem.innerHTML = ''; 
 
-                flatpickr(elem, {
-                    inline: true,
-                    locale: "pt",
-                    minDate: "today",
-                    disable: datasOcupadas,
-                    dateFormat: "Y-m-d"
-                });
-            } catch(e) {
-                console.error(`Erro ao carregar calendário do quarto ${quartoId}:`, e);
-            }
+        flatpickr(elem, {
+            inline: true,
+            locale: "pt",
+            minDate: "today",       // Impede a seleção de datas passadas
+            defaultDate: "today",   // FORÇA O CALENDÁRIO A ABRIR NA DATA DE HOJE
+            disable: datasOcupadas,
+            dateFormat: "Y-m-d"
+        });
+        } catch(e) {
+        console.error(`Erro ao carregar calendário do quarto ${quartoId}:`, e);
+        }
+        }
+
+        // Mapeia os intervalos de checkin/checkout vindo do banco
+        const datasOcupadas = (dados.diasOcupados || []).map(r => ({
+            from: r.data_checkin.split('T')[0],
+            to: r.data_checkout.split('T')[0]
+        }));
+
+        const elem = document.getElementById(`cal-quarto-${quartoId}`);
+        elem.innerHTML = ''; 
+
+        flatpickr(elem, {
+            inline: true,
+            locale: "pt",
+            minDate: "today",
+            disable: datasOcupadas,
+            dateFormat: "Y-m-d"
+        });
+        } catch(e) {
+        console.error(`Erro ao carregar calendário do quarto ${quartoId}:`, e);
+        }
         }
 
         async function carregarAgenda() {
