@@ -105,7 +105,6 @@
             font-weight: bold;
         }
 
-        /* MODAL POP-UP PARA EFETIVAR */
         .modal-overlay-admin {
             position: fixed;
             top: 0; left: 0; width: 100%; height: 100%;
@@ -195,11 +194,11 @@
             </div>
         </div>
 
-        <!-- FORMULÁRIO DE BLOQUEIO PRESENCIAL -->
+        <!-- FORMULÁRIO DE BLOQUEIO PRESENCIAL COM VALOR SUGERIDO E VALOR COBRADO -->
         <div class="admin-card">
             <h3><i class="fa-solid fa-lock"></i> Travar Data (Balcão / Presencial)</h3>
             <form id="form-bloqueio">
-                <div class="admin-form-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; align-items: end;">
+                <div class="admin-form-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 15px; align-items: end;">
                     <div class="form-group">
                         <label style="font-size: 12px; font-weight: bold; color: #555;">Selecione o Quarto:</label>
                         <select id="bloqueio-quarto" required style="width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 6px;">
@@ -213,6 +212,12 @@
                     <div class="form-group">
                         <label style="font-size: 12px; font-weight: bold; color: #555;">Período de Bloqueio:</label>
                         <input type="text" id="bloqueio-datas" placeholder="Selecione Entrada e Saída" readonly required style="width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 6px;">
+                    </div>
+
+                    <!-- CAMPO INFORMATIVO: VALOR SUGERIDO / TABELA -->
+                    <div class="form-group">
+                        <label style="font-size: 12px; font-weight: bold; color: #888;">Valor Sugerido (Tabela):</label>
+                        <input type="text" id="bloqueio-valor-sugerido" placeholder="R$ 0,00" readonly style="width: 100%; padding: 10px; border: 1px solid #eee; background-color: #f8f9fa; color: #28a745; font-weight: bold; border-radius: 6px;">
                     </div>
 
                     <div class="form-group">
@@ -287,7 +292,30 @@
             }
         });
 
-        let checkinBloqueio = '', checkoutBloqueio = '';
+        let checkinBloqueio = '', checkoutBloqueio = '', dataObj1 = null, dataObj2 = null;
+
+        // Função para calcular valor diária de referência
+        function obterDiariaReferencia(quartoId) {
+            const id = parseInt(quartoId);
+            return id === 3 ? 100.00 : 75.00; // Suíte Master 100, Padrão 75 (base 1 pessoa)
+        }
+
+        function calcularValorSugerido() {
+            if (dataObj1 && dataObj2) {
+                const diffTempo = dataObj2.getTime() - dataObj1.getTime();
+                const dias = Math.ceil(diffTempo / (1000 * 3600 * 24)) || 1;
+                const quartoId = document.getElementById('bloqueio-quarto').value;
+                const valorDiaria = obterDiariaReferencia(quartoId);
+                const valorTotalCalculado = (dias * valorDiaria).toFixed(2);
+
+                document.getElementById('bloqueio-valor-sugerido').value = `R$ ${valorTotalCalculado} (${dias} diária/s)`;
+                document.getElementById('bloqueio-valor').value = valorTotalCalculado;
+            } else {
+                document.getElementById('bloqueio-valor-sugerido').value = 'R$ 0,00';
+            }
+        }
+
+        document.getElementById('bloqueio-quarto').addEventListener('change', calcularValorSugerido);
 
         flatpickr("#bloqueio-datas", {
             mode: "range",
@@ -296,8 +324,14 @@
             dateFormat: "Y-m-d",
             onChange: function(selectedDates) {
                 if (selectedDates.length === 2) {
+                    dataObj1 = selectedDates[0];
+                    dataObj2 = selectedDates[1];
                     checkinBloqueio = selectedDates[0].toISOString().split('T')[0];
                     checkoutBloqueio = selectedDates[1].toISOString().split('T')[0];
+                    calcularValorSugerido();
+                } else {
+                    dataObj1 = null; dataObj2 = null;
+                    document.getElementById('bloqueio-valor-sugerido').value = 'R$ 0,00';
                 }
             }
         });
@@ -366,7 +400,7 @@
                         badge = '<span style="background:#28a745; color:white; padding:3px 8px; border-radius:4px; font-size:11px;">Pix Site (Pendente Validação)</span>';
                     }
 
-                    const clienteText = `${r.cliente_nome} (${r.telefone || 'Sem Teledone'})`;
+                    const clienteText = `${r.cliente_nome} (${r.telefone || 'Sem Telefone'})`;
                     const valorFormatado = Number(r.valor_total || 0).toFixed(2);
 
                     container.innerHTML += `
@@ -473,7 +507,8 @@
                 alert(resData.mensagem);
                 document.getElementById('bloqueio-datas').value = '';
                 document.getElementById('bloqueio-valor').value = '';
-                checkinBloqueio = ''; checkoutBloqueio = '';
+                document.getElementById('bloqueio-valor-sugerido').value = 'R$ 0,00';
+                checkinBloqueio = ''; checkoutBloqueio = ''; dataObj1 = null; dataObj2 = null;
                 carregarTudo();
             } else {
                 alert(resData.erro);
