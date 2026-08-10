@@ -136,7 +136,7 @@ app.post('/api/reservar', async (req, res) => {
         await client.query('BEGIN');
 
         const cpfLimpo = cliente.cpf ? cliente.cpf.replace(/\D/g, '') : '';
-        let clienteRes = await client.query('SELECT id FROM clientes WHERE cpf = $1', [cpfLimpo]);
+        let clienteRes = await client.query('SELECT id FROM clientes WHERE cpf = $1 AND cpf != \'\'', [cpfLimpo]);
         let clienteId;
 
         if (clienteRes.rows.length > 0) {
@@ -240,6 +240,7 @@ app.get('/api/admin/reservas', async (req, res) => {
     }
 });
 
+// ROTA ADMIN: Bloquear com inserção segura de cliente sem conflito de CPF
 app.post('/api/admin/bloquear', async (req, res) => {
     const { quartoId, checkin, checkout, valorTotal, cliente } = req.body;
 
@@ -260,13 +261,16 @@ app.post('/api/admin/bloquear', async (req, res) => {
             return res.status(400).json({ erro: 'Já existe reserva ou bloqueio para esta data!' });
         }
 
+        // Gera um identificador único temporário para evitar duplicidade de CPF no banco
+        const cpfUnicoBalcao = `BALCAO-${Date.now()}`;
+        
         const novoCliente = await pool.query(
             `INSERT INTO clientes (nome, cpf, telefone, email) 
              VALUES ($1, $2, $3, $4) 
              RETURNING id`,
             [
                 cliente?.nome || 'Atendimento Presencial / Balcão',
-                '00000000000',
+                cpfUnicoBalcao,
                 cliente?.telefone || '(64) 00000-0000',
                 cliente?.email || 'balcao@hospedariacentral.com.br'
             ]
@@ -284,7 +288,7 @@ app.post('/api/admin/bloquear', async (req, res) => {
         res.json({ mensagem: 'Bloqueio e lead salvos com sucesso!' });
 
     } catch (err) {
-        console.error("Erro ao salvar bloqueio:", err);
+        console.error("Erro detalhado ao salvar bloqueio:", err);
         res.status(500).json({ erro: 'Erro interno ao salvar no banco.' });
     }
 });
