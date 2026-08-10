@@ -444,6 +444,7 @@
                     const nomeHospede = r.cliente_nome || 'Hóspede Não Identificado';
                     const telHospede = r.telefone ? r.telefone : 'Sem Telefone';
                     
+                    // Formatação explícita para o formato DD/MM/AAAA
                     const checkinBR = formatarDataBR(r.data_checkin);
                     const checkoutBR = formatarDataBR(r.data_checkout);
 
