@@ -7,13 +7,13 @@ const app = express();
 app.use(express.json());
 app.use(express.static('public'));
 
-// 1. Conexão com o PostgreSQL (Compatível com Neon/Render e Local)
+// 1. Conexão com o PostgreSQL
 const pool = new Pool({
     connectionString: process.env.DATABASE_URL || `postgres://${process.env.DB_USER}:${process.env.DB_PASSWORD}@${process.env.DB_HOST}:${process.env.DB_PORT}/${process.env.DB_NAME}`,
     ssl: { rejectUnauthorized: false }
 });
 
-// 2. Mercado Pago Config & Instância Payment
+// 2. Mercado Pago Config
 const mpClient = new MercadoPagoConfig({ 
     accessToken: process.env.MP_ACCESS_TOKEN 
 });
@@ -24,14 +24,11 @@ function calcularDiaria(quartoId, hospedes) {
     const numHospedes = parseInt(hospedes) || 1;
     const idQuarto = parseInt(quartoId);
 
-    // Suíte Master (Quarto 3)
     if (idQuarto === 3) {
         if (numHospedes === 1) return 100.00;
         if (numHospedes === 2) return 150.00;
         if (numHospedes === 3) return 200.00;
-    } 
-    // Quartos Padrão (1, 2, 4 e futuros)
-    else {
+    } else {
         if (numHospedes === 1) return 75.00;
         if (numHospedes === 2) return 130.00;
         if (numHospedes === 3) return 180.00;
@@ -40,10 +37,9 @@ function calcularDiaria(quartoId, hospedes) {
 }
 
 /* ==========================================================================
-   ROTAS PÚBLICAS (SITE DE CLIENTES)
+   ROTAS PÚBLICAS (SITE)
    ========================================================================== */
 
-// ROTA 1: Buscar dias ocupados para os calendários do Modal e do Admin
 app.get('/api/disponibilidade', async (req, res) => {
     const { quartoId } = req.query;
 
@@ -63,11 +59,10 @@ app.get('/api/disponibilidade', async (req, res) => {
         res.json({ diasOcupados: reservas.rows });
     } catch (err) {
         console.error("Erro na rota de disponibilidade:", err);
-        res.status(500).json({ erro: 'Erro ao buscar disponibilidade do calendário.' });
+        res.status(500).json({ erro: 'Erro ao buscar disponibilidade.' });
     }
 });
 
-// ROTA 2: Busca de Quartos Disponíveis (Para busca.html)
 app.get('/api/quartos-disponiveis', async (req, res) => {
     const { start, end, adults } = req.query;
 
@@ -117,7 +112,6 @@ app.get('/api/quartos-disponiveis', async (req, res) => {
     }
 });
 
-// ROTA 3: Criar Reserva do Site e Cobrança Pix via Mercado Pago
 app.post('/api/reservar', async (req, res) => {
     const client = await pool.connect();
     try {
@@ -127,13 +121,6 @@ app.post('/api/reservar', async (req, res) => {
             return res.status(400).json({ erro: 'Dados incompletos para a reserva.' });
         }
 
-        // Verifica disponibilidade do quarto
-        const checkQuarto = await client.query('SELECT ativo FROM quartos WHERE id = $1', [quartoId]);
-        if (checkQuarto.rows.length === 0 || !checkQuarto.rows[0].ativo) {
-            return res.status(400).json({ erro: 'Quarto indisponível no momento.' });
-        }
-
-        // Bloqueia se já houver reserva paga OU bloqueio de balcão
         const conflito = await client.query(
             `SELECT id FROM reservas 
              WHERE quarto_id = $1 
@@ -148,7 +135,6 @@ app.post('/api/reservar', async (req, res) => {
 
         await client.query('BEGIN');
 
-        // 1. Inserir ou obter o cliente
         const cpfLimpo = cliente.cpf ? cliente.cpf.replace(/\D/g, '') : '';
         let clienteRes = await client.query('SELECT id FROM clientes WHERE cpf = $1', [cpfLimpo]);
         let clienteId;
@@ -163,7 +149,6 @@ app.post('/api/reservar', async (req, res) => {
             clienteId = novoCliente.rows[0].id;
         }
 
-        // 2. Calcular valor total
         const d1 = new Date(`${checkin}T00:00:00`);
         const d2 = new Date(`${checkout}T00:00:00`);
         const dias = Math.ceil((d2 - d1) / (1000 * 60 * 60 * 24));
@@ -176,7 +161,6 @@ app.post('/api/reservar', async (req, res) => {
         const valorDiaria = calcularDiaria(quartoId, hospedes);
         const valorTotal = dias * valorDiaria;
 
-        // 3. Criar pagamento via Mercado Pago Pix
         const paymentResponse = await payment.create({
             body: {
                 transaction_amount: Number(valorTotal),
@@ -185,15 +169,11 @@ app.post('/api/reservar', async (req, res) => {
                 payer: {
                     email: cliente.email || 'contato@hospedariacentral.com.br',
                     first_name: cliente.nome,
-                    identification: {
-                        type: 'CPF',
-                        number: cpfLimpo
-                    }
+                    identification: { type: 'CPF', number: cpfLimpo }
                 }
             }
         });
 
-        // 4. Criar registro de reserva pendente no Banco
         const reservaRes = await client.query(
             `INSERT INTO reservas (quarto_id, cliente_id, quantidade_hospedes, data_checkin, data_checkout, valor_total, status_pagamento, mp_payment_id) 
              VALUES ($1, $2, $3, $4::date, $5::date, $6, 'pendente', $7) RETURNING id`,
@@ -202,7 +182,6 @@ app.post('/api/reservar', async (req, res) => {
 
         await client.query('COMMIT');
 
-        // 5. Retornar dados do QR Code para o frontend
         res.json({
             sucesso: true,
             reservaId: reservaRes.rows[0].id,
@@ -214,13 +193,12 @@ app.post('/api/reservar', async (req, res) => {
     } catch (error) {
         await client.query('ROLLBACK');
         console.error('ERRO DETALHADO NA RESERVA:', error);
-        res.status(500).json({ erro: 'Erro interno ao criar reserva. Verifique o servidor.' });
+        res.status(500).json({ erro: 'Erro interno ao criar reserva.' });
     } finally {
         client.release();
     }
 });
 
-// ROTA 4: Webhook para confirmação automática do Mercado Pago
 app.post('/api/webhook/mercadopago', async (req, res) => {
     const { type, data } = req.body;
     try {
@@ -238,10 +216,9 @@ app.post('/api/webhook/mercadopago', async (req, res) => {
 });
 
 /* ==========================================================================
-   ROTAS ADMINISTRATIVAS (PAINEL DO CELULAR / BALCÃO)
+   ROTAS ADMINISTRATIVAS
    ========================================================================== */
 
-// ROTA ADMIN 1: Listar todas as ocupações ativas
 app.get('/api/admin/reservas', async (req, res) => {
     try {
         const query = `
@@ -263,16 +240,15 @@ app.get('/api/admin/reservas', async (req, res) => {
     }
 });
 
-// ROTA ADMIN 2: Travar/Bloquear datas presencialmente (Balcão)
+// ROTA ADMIN: Travar/Bloquear datas presencialmente SALVANDO O VALOR COBRADO
 app.post('/api/admin/bloquear', async (req, res) => {
-    const { quartoId, checkin, checkout } = req.body;
+    const { quartoId, checkin, checkout, valorTotal } = req.body;
 
     if (!quartoId || !checkin || !checkout) {
         return res.status(400).json({ erro: "Selecione o quarto e as datas para bloqueio." });
     }
 
     try {
-        // 1. Verifica conflito de datas
         const conflito = await pool.query(
             `SELECT id FROM reservas 
              WHERE quarto_id = $1 
@@ -285,7 +261,6 @@ app.post('/api/admin/bloquear', async (req, res) => {
             return res.status(400).json({ erro: 'Já existe reserva ou bloqueio para esta data!' });
         }
 
-        // 2. Garante/Obtém o cliente padrão "Balcão"
         let clienteBalcao = await pool.query("SELECT id FROM clientes WHERE cpf = '00000000000'");
         let clienteId;
 
@@ -300,25 +275,22 @@ app.post('/api/admin/bloquear', async (req, res) => {
             clienteId = novoBalcao.rows[0].id;
         }
 
-        // 3. Insere a reserva/bloqueio com datas tratadas como ::date
+        const valorSalvar = parseFloat(valorTotal) || 0.00;
+
         await pool.query(
             `INSERT INTO reservas (quarto_id, cliente_id, quantidade_hospedes, data_checkin, data_checkout, valor_total, status_pagamento, mp_payment_id) 
-             VALUES ($1, $2, 1, $3::date, $4::date, 0.00, 'bloqueado_balcao', 'balcao_presencial')`,
-            [quartoId, clienteId, checkin, checkout]
+             VALUES ($1, $2, 1, $3::date, $4::date, $5, 'bloqueado_balcao', 'balcao_presencial')`,
+            [quartoId, clienteId, checkin, checkout, valorSalvar]
         );
 
-        res.json({ mensagem: 'Data bloqueada com sucesso!' });
+        res.json({ mensagem: 'Data e valor registrados com sucesso!' });
 
     } catch (err) {
-        console.error("====== ERRO DETALHADO DO BANCO ======");
-        console.error(err);
-        console.error("=====================================");
-        
-        res.status(500).json({ erro: 'Erro interno ao salvar bloqueio no banco de dados.' });
+        console.error("Erro ao salvar bloqueio:", err);
+        res.status(500).json({ erro: 'Erro interno ao salvar no banco.' });
     }
 });
 
-// ROTA ADMIN 3: Cancelar Reserva ou Desbloquear Data
 app.delete('/api/admin/reservas/:id', async (req, res) => {
     const { id } = req.params;
     try {
@@ -330,6 +302,5 @@ app.delete('/api/admin/reservas/:id', async (req, res) => {
     }
 });
 
-// Inicialização do Servidor
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log(`Servidor rodando na porta ${PORT}`));

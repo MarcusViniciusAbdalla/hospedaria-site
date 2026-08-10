@@ -1,3 +1,4 @@
+<!DOCTYPE html>
 <html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
@@ -62,7 +63,6 @@
             margin: 0 auto;
         }
         
-        /* ESTILO APENAS PARA DIAS REALMENTE BLOQUEADOS / RESERVADOS */
         .flatpickr-day.dia-ocupado {
             background-color: #f8d7da !important;
             color: #d9534f !important;
@@ -121,7 +121,7 @@
             Painel Administrativo & Ocupação
         </h2>
 
-        <!-- VISUALIZAÇÃO DE CALENDÁRIOS POR QUARTO -->
+        <!-- CONSULTA RÁPIDA DE CALENDÁRIOS -->
         <div class="admin-card">
             <h3><i class="fa-solid fa-calendar-days"></i> Consulta Rápida de Disponibilidade</h3>
             <p style="font-size: 13px; color: #666; margin-bottom: 15px;">As datas em <strong style="color: #d9534f;">vermelho/riscadas</strong> estão ocupadas/reservadas.</p>
@@ -154,26 +154,33 @@
             </div>
         </div>
 
-        <!-- FORMULÁRIO DE BLOQUEIO PRESENCIAL -->
+        <!-- FORMULÁRIO DE BLOQUEIO PRESENCIAL COM VALOR COBRADO -->
         <div class="admin-card">
             <h3><i class="fa-solid fa-lock"></i> Travar Data (Balcão / Presencial)</h3>
             <form id="form-bloqueio">
-                <div class="admin-form-grid">
+                <div class="admin-form-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; align-items: end;">
                     <div class="form-group">
-                        <label>Selecione o Quarto:</label>
-                        <select id="bloqueio-quarto" required>
+                        <label style="font-size: 12px; font-weight: bold; color: #555;">Selecione o Quarto:</label>
+                        <select id="bloqueio-quarto" required style="width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 6px;">
                             <option value="1">Quarto 01 - Padrão</option>
                             <option value="2">Quarto 02 - Padrão</option>
                             <option value="3">Quarto 03 - Suíte Master</option>
                             <option value="4">Quarto 04 - Padrão</option>
                         </select>
                     </div>
+
                     <div class="form-group">
-                        <label>Período de Bloqueio:</label>
-                        <input type="text" id="bloqueio-datas" placeholder="Selecione Entrada e Saída" readonly required>
+                        <label style="font-size: 12px; font-weight: bold; color: #555;">Período de Bloqueio:</label>
+                        <input type="text" id="bloqueio-datas" placeholder="Selecione Entrada e Saída" readonly required style="width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 6px;">
                     </div>
+
                     <div class="form-group">
-                        <button type="submit" class="btn-admin-action">Confirmar Bloqueio</button>
+                        <label style="font-size: 12px; font-weight: bold; color: #555;">Valor Cobrado (R$):</label>
+                        <input type="number" id="bloqueio-valor" step="0.01" min="0" placeholder="Ex: 150.00" required style="width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 6px;">
+                    </div>
+
+                    <div class="form-group">
+                        <button type="submit" class="btn-admin-action" style="width: 100%; padding: 11px;">Confirmar Bloqueio</button>
                     </div>
                 </div>
             </form>
@@ -255,28 +262,15 @@
                     disable: datasOcupadas,
                     dateFormat: "Y-m-d",
                     onDayCreate: function(dObj, dStr, fp, dayElem) {
-                        // Verifica se o dia renderizado é uma data desabilitada por reserva/bloqueio
                         const dataFormatada = dayElem.dateObj.toISOString().split('T')[0];
-                        
                         const eReserva = datasOcupadas.some(faixa => {
                             return dataFormatada >= faixa.from && dataFormatada <= faixa.to;
                         });
-
-                        if (eReserva) {
-                            dayElem.classList.add("dia-ocupado");
-                        }
+                        if (eReserva) dayElem.classList.add("dia-ocupado");
                     }
                 });
             } catch(e) {
                 console.error(`Erro ao carregar calendário ${quartoId}:`, e);
-                elem.innerHTML = '';
-                flatpickr(elem, {
-                    inline: true,
-                    locale: "pt",
-                    minDate: "today",
-                    defaultDate: "today",
-                    dateFormat: "Y-m-d"
-                });
             }
         }
 
@@ -295,20 +289,22 @@
                 data.reservas.forEach(r => {
                     const isBloqueio = r.status_pagamento === 'bloqueado_balcao';
                     const badge = isBloqueio 
-                        ? '<span class="badge badge-bloqueio">Bloqueio Balcão</span>' 
-                        : '<span class="badge badge-pago">Pago via Pix</span>';
+                        ? '<span class="badge badge-bloqueio" style="background:#e0a800; color:white; padding:3px 8px; border-radius:4px; font-size:11px;">Balcão</span>' 
+                        : '<span class="badge badge-pago" style="background:#28a745; color:white; padding:3px 8px; border-radius:4px; font-size:11px;">Pix Site</span>';
 
                     const clienteText = isBloqueio ? 'Atendimento Presencial / Balcão' : `${r.cliente_nome} (${r.telefone || 'Sem WhatsApp'})`;
+                    const valorFormatado = Number(r.valor_total || 0).toFixed(2);
 
                     container.innerHTML += `
-                        <div class="reservation-item">
+                        <div class="reservation-item" style="display:flex; justify-content:space-between; align-items:center; padding:15px; border-bottom:1px solid #eee;">
                             <div class="reservation-info">
                                 <strong>Quarto ${r.numero_quarto} &nbsp; ${badge}</strong>
-                                <span><i class="fa-regular fa-calendar"></i> ${r.data_checkin.split('T')[0]} até ${r.data_checkout.split('T')[0]}</span>
-                                <span><i class="fa-regular fa-user"></i> ${clienteText}</span>
+                                <div><small style="color:#666;"><i class="fa-regular fa-calendar"></i> ${r.data_checkin.split('T')[0]} até ${r.data_checkout.split('T')[0]}</small></div>
+                                <div><small style="color:#666;"><i class="fa-regular fa-user"></i> ${clienteText}</small></div>
+                                <div><strong style="color:var(--brown-dark);">Valor: R$ ${valorFormatado}</strong></div>
                             </div>
-                            <button class="btn-delete" onclick="cancelarReserva(${r.id})">
-                                <i class="fa-solid fa-trash"></i> Liberar Data
+                            <button class="btn-delete" onclick="cancelarReserva(${r.id})" style="background:#d9534f; color:white; border:none; padding:8px 12px; border-radius:6px; cursor:pointer;">
+                                <i class="fa-solid fa-trash"></i> Liberar
                             </button>
                         </div>
                     `;
@@ -325,10 +321,13 @@
                 return;
             }
 
+            const valorCobrado = document.getElementById('bloqueio-valor').value;
+
             const payload = {
                 quartoId: document.getElementById('bloqueio-quarto').value,
                 checkin: checkinBloqueio,
-                checkout: checkoutBloqueio
+                checkout: checkoutBloqueio,
+                valorTotal: valorCobrado
             };
 
             const resp = await fetch('/api/admin/bloquear', {
@@ -341,6 +340,7 @@
             if (resp.ok) {
                 alert(resData.mensagem);
                 document.getElementById('bloqueio-datas').value = '';
+                document.getElementById('bloqueio-valor').value = '';
                 checkinBloqueio = ''; checkoutBloqueio = '';
                 carregarTudo();
             } else {
