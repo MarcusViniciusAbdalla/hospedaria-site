@@ -118,7 +118,7 @@
             background: white;
             padding: 30px;
             border-radius: 12px;
-            max-width: 420px;
+            max-width: 450px;
             width: 90%;
             box-shadow: 0 5px 25px rgba(0,0,0,0.2);
             position: relative;
@@ -194,7 +194,7 @@
             </div>
         </div>
 
-        <!-- FORMULÁRIO DE BLOQUEIO PRESENCIAL COM VALOR SUGERIDO E VALOR COBRADO -->
+        <!-- FORMULÁRIO DE SELEÇÃO DE DATAS E VALORES DE BLOQUEIO -->
         <div class="admin-card">
             <h3><i class="fa-solid fa-lock"></i> Travar Data (Balcão / Presencial)</h3>
             <form id="form-bloqueio">
@@ -214,7 +214,6 @@
                         <input type="text" id="bloqueio-datas" placeholder="Selecione Entrada e Saída" readonly required style="width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 6px;">
                     </div>
 
-                    <!-- CAMPO INFORMATIVO: VALOR SUGERIDO / TABELA -->
                     <div class="form-group">
                         <label style="font-size: 12px; font-weight: bold; color: #888;">Valor Sugerido (Tabela):</label>
                         <input type="text" id="bloqueio-valor-sugerido" placeholder="R$ 0,00" readonly style="width: 100%; padding: 10px; border: 1px solid #eee; background-color: #f8f9fa; color: #28a745; font-weight: bold; border-radius: 6px;">
@@ -226,7 +225,7 @@
                     </div>
 
                     <div class="form-group">
-                        <button type="submit" class="btn-admin-action" style="width: 100%; padding: 11px;">Confirmar Bloqueio</button>
+                        <button type="submit" class="btn-admin-action" style="width: 100%; padding: 11px;">CONFIRMAR BLOQUEIO</button>
                     </div>
                 </div>
             </form>
@@ -242,13 +241,46 @@
 
     </div>
 
-    <!-- POP-UP / MODAL PARA CONFIRMAR / EFETIVAR RESERVA -->
+    <!-- POP-UP / MODAL DADOS DO HÓSPEDE (CAPTURA DE LEADS NO BLOQUEIO DE BALCÃO) -->
+    <div id="modal-lead-bloqueio" class="modal-overlay-admin" style="display: none;">
+        <div class="modal-card-admin">
+            <h3 style="font-family: 'Playfair Display', serif; color: var(--brown-dark); margin-bottom: 15px;">
+                <i class="fa-solid fa-address-book" style="color: var(--terracotta);"></i> Cadastrar Dados do Hóspede
+            </h3>
+            <p style="font-size: 13px; color: #666; margin-bottom: 15px;">Preencha os dados do hóspede para finalizar o bloqueio presencial:</p>
+            
+            <form id="form-lead-bloqueio">
+                <div style="margin-bottom: 12px;">
+                    <label style="font-size: 12px; font-weight: bold; color: #444;">Nome Completo: *</label>
+                    <input type="text" id="lead-nome" placeholder="Ex: João da Silva" required style="width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 6px; margin-top: 4px;">
+                </div>
+
+                <div style="margin-bottom: 12px;">
+                    <label style="font-size: 12px; font-weight: bold; color: #444;">WhatsApp / Telefone com DDD: *</label>
+                    <input type="tel" id="lead-telefone" placeholder="64999998888 (Apenas números)" maxlength="11" required style="width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 6px; margin-top: 4px;">
+                    <small style="font-size: 11px; color: #777;">Digite 11 dígitos com DDD (ex: 64999998888).</small>
+                </div>
+
+                <div style="margin-bottom: 20px;">
+                    <label style="font-size: 12px; font-weight: bold; color: #444;">E-mail (opcional - deve conter @):</label>
+                    <input type="email" id="lead-email" placeholder="cliente@email.com" style="width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 6px; margin-top: 4px;">
+                </div>
+
+                <div style="display: flex; gap: 10px; justify-content: flex-end;">
+                    <button type="button" onclick="fecharModalLead()" style="padding: 10px 15px; border: 1px solid #ccc; background: #eee; border-radius: 6px; cursor: pointer;">Cancelar</button>
+                    <button type="submit" style="padding: 10px 15px; border: none; background: var(--terracotta); color: white; font-weight: bold; border-radius: 6px; cursor: pointer;">Salvar e Finalizar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- POP-UP / MODAL PARA EFETIVAR RESERVA JÁ CADASTRADA -->
     <div id="modal-efetivar" class="modal-overlay-admin" style="display: none;">
         <div class="modal-card-admin">
             <h3 style="font-family: 'Playfair Display', serif; color: var(--brown-dark); margin-bottom: 15px;">
                 <i class="fa-solid fa-user-check" style="color: #28a745;"></i> Efetivar Reserva
             </h3>
-            <p style="font-size: 13px; color: #666; margin-bottom: 15px;">Informe os dados de contato do hóspede para confirmar esta estada:</p>
+            <p style="font-size: 13px; color: #666; margin-bottom: 15px;">Confirme/Atualize os dados do hóspede para efetivar:</p>
             
             <form id="form-efetivar-dados">
                 <input type="hidden" id="efetivar-reserva-id">
@@ -260,7 +292,7 @@
 
                 <div style="margin-bottom: 20px;">
                     <label style="font-size: 12px; font-weight: bold; color: #444;">WhatsApp / Telefone:</label>
-                    <input type="tel" id="efetivar-telefone" placeholder="(64) 90000-0000" required style="width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 6px; margin-top: 4px;">
+                    <input type="tel" id="efetivar-telefone" placeholder="64999998888" maxlength="11" required style="width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 6px; margin-top: 4px;">
                 </div>
 
                 <div style="display: flex; gap: 10px; justify-content: flex-end;">
@@ -294,10 +326,9 @@
 
         let checkinBloqueio = '', checkoutBloqueio = '', dataObj1 = null, dataObj2 = null;
 
-        // Função para calcular valor diária de referência
         function obterDiariaReferencia(quartoId) {
             const id = parseInt(quartoId);
-            return id === 3 ? 100.00 : 75.00; // Suíte Master 100, Padrão 75 (base 1 pessoa)
+            return id === 3 ? 100.00 : 75.00;
         }
 
         function calcularValorSugerido() {
@@ -402,11 +433,12 @@
 
                     const clienteText = `${r.cliente_nome} (${r.telefone || 'Sem Telefone'})`;
                     const valorFormatado = Number(r.valor_total || 0).toFixed(2);
+                    const numeroQuartoFormatado = String(r.numero_quarto).padStart(2, '0');
 
                     container.innerHTML += `
                         <div class="reservation-item" style="display:flex; justify-content:space-between; align-items:center; padding:15px; border-bottom:1px solid #eee; flex-wrap:wrap; gap:10px;">
                             <div class="reservation-info">
-                                <strong>Quarto 0${r.numero_quarto} &nbsp; ${badge}</strong>
+                                <strong>Quarto ${numeroQuartoFormatado} &nbsp; ${badge}</strong>
                                 <div><small style="color:#666;"><i class="fa-regular fa-calendar"></i> ${r.data_checkin.split('T')[0]} até ${r.data_checkout.split('T')[0]}</small></div>
                                 <div><small style="color:#666;"><i class="fa-regular fa-user"></i> ${clienteText}</small></div>
                                 <div><strong style="color:var(--brown-dark);">Valor: R$ ${valorFormatado}</strong></div>
@@ -427,6 +459,81 @@
                 container.innerHTML = '<p style="color: red; text-align: center;">Erro ao carregar a lista de ocupações.</p>';
             }
         }
+
+        /* PASSO 1 DO BLOQUEIO: ABRE POP-UP DE DADOS DO HÓSPEDE */
+        document.getElementById('form-bloqueio').addEventListener('submit', (e) => {
+            e.preventDefault();
+            if (!checkinBloqueio || !checkoutBloqueio) {
+                alert("Selecione o período de entrada e saída.");
+                return;
+            }
+            const valorCobrado = document.getElementById('bloqueio-valor').value;
+            if (!valorCobrado || parseFloat(valorCobrado) <= 0) {
+                alert("Informe o valor cobrado.");
+                return;
+            }
+
+            document.getElementById('modal-lead-bloqueio').style.display = 'flex';
+        });
+
+        function fecharModalLead() {
+            document.getElementById('modal-lead-bloqueio').style.display = 'none';
+        }
+
+        /* PASSO 2 DO BLOQUEIO: VALIDA LEAD E SALVA NO BANCO */
+        document.getElementById('form-lead-bloqueio').addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            const nome = document.getElementById('lead-nome').value.trim();
+            const telefone = document.getElementById('lead-telefone').value.replace(/\D/g, '');
+            const email = document.getElementById('lead-email').value.trim();
+
+            if (telefone.length < 10 || telefone.length > 11) {
+                alert("O telefone deve conter DDD e o número completo (10 ou 11 dígitos apenas com números).");
+                return;
+            }
+
+            if (email && !email.includes('@')) {
+                alert("Por favor, digite um e-mail válido com @.");
+                return;
+            }
+
+            const payload = {
+                quartoId: document.getElementById('bloqueio-quarto').value,
+                checkin: checkinBloqueio,
+                checkout: checkoutBloqueio,
+                valorTotal: document.getElementById('bloqueio-valor').value,
+                cliente: {
+                    nome: nome,
+                    telefone: telefone,
+                    email: email
+                }
+            };
+
+            try {
+                const resp = await fetch('/api/admin/bloquear', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+
+                const resData = await resp.json();
+                if (resp.ok) {
+                    alert(resData.mensagem);
+                    fecharModalLead();
+                    document.getElementById('form-lead-bloqueio').reset();
+                    document.getElementById('bloqueio-datas').value = '';
+                    document.getElementById('bloqueio-valor').value = '';
+                    document.getElementById('bloqueio-valor-sugerido').value = 'R$ 0,00';
+                    checkinBloqueio = ''; checkoutBloqueio = ''; dataObj1 = null; dataObj2 = null;
+                    carregarTudo();
+                } else {
+                    alert(resData.erro || "Erro ao efetuar bloqueio.");
+                }
+            } catch (err) {
+                alert("Erro ao comunicar com o servidor.");
+            }
+        });
 
         function abrirModalEfetivar(id, nomeAtual, telAtual) {
             document.getElementById('efetivar-reserva-id').value = id;
@@ -479,41 +586,6 @@
                 }
             }
         }
-
-        document.getElementById('form-bloqueio').addEventListener('submit', async (e) => {
-            e.preventDefault();
-            if (!checkinBloqueio || !checkoutBloqueio) {
-                alert("Selecione o período de entrada e saída.");
-                return;
-            }
-
-            const valorCobrado = document.getElementById('bloqueio-valor').value;
-
-            const payload = {
-                quartoId: document.getElementById('bloqueio-quarto').value,
-                checkin: checkinBloqueio,
-                checkout: checkoutBloqueio,
-                valorTotal: valorCobrado
-            };
-
-            const resp = await fetch('/api/admin/bloquear', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(payload)
-            });
-
-            const resData = await resp.json();
-            if (resp.ok) {
-                alert(resData.mensagem);
-                document.getElementById('bloqueio-datas').value = '';
-                document.getElementById('bloqueio-valor').value = '';
-                document.getElementById('bloqueio-valor-sugerido').value = 'R$ 0,00';
-                checkinBloqueio = ''; checkoutBloqueio = ''; dataObj1 = null; dataObj2 = null;
-                carregarTudo();
-            } else {
-                alert(resData.erro);
-            }
-        });
     </script>
 </body>
 </html>
