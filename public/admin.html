@@ -33,6 +33,49 @@
             border-top: 5px solid var(--terracotta);
         }
         
+        /* TOOLBAR DE RELATÓRIOS GERENCIAIS */
+        .admin-toolbar {
+            background: var(--brown-dark);
+            padding: 12px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 3px solid var(--terracotta);
+            flex-wrap: wrap;
+            gap: 12px;
+            margin-bottom: 25px;
+            border-radius: 0 0 8px 8px;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.08);
+        }
+        .toolbar-title {
+            color: white;
+            font-weight: bold;
+            font-size: 14px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .toolbar-actions {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+        .btn-toolbar {
+            border: none;
+            padding: 8px 14px;
+            border-radius: 6px;
+            font-weight: bold;
+            font-size: 12px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            transition: opacity 0.2s;
+        }
+        .btn-toolbar:hover {
+            opacity: 0.9;
+        }
+
         .calendars-grid {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
@@ -157,6 +200,31 @@
     <!-- CONTEÚDO DO PAINEL -->
     <div id="admin-content" class="admin-container" style="display: none;">
         
+        <!-- BARRA DE FERRAMENTAS & RELATÓRIOS GERENCIAIS -->
+        <div class="admin-toolbar">
+            <div class="toolbar-title">
+                <i class="fa-solid fa-chart-line" style="color: var(--terracotta); font-size: 16px;"></i> 
+                Central de Relatórios Gerenciais
+            </div>
+
+            <div class="toolbar-actions">
+                <!-- Botão Exportar Leads -->
+                <button onclick="exportarLeadsCSV()" class="btn-toolbar" style="background: #28a745; color: white;">
+                    <i class="fa-solid fa-file-excel"></i> Exportar Leads (CSV)
+                </button>
+
+                <!-- Botão Faturamento & DRE (Futuro) -->
+                <button onclick="alert('Em breve: Relatório de Faturamento em tempo real.')" class="btn-toolbar" style="background: var(--terracotta); color: white;">
+                    <i class="fa-solid fa-sack-dollar"></i> Faturamento & DRE
+                </button>
+
+                <!-- Botão Taxa de Ocupação (Futuro) -->
+                <button onclick="alert('Em breve: Indicador de Taxa de Ocupação Mensal.')" class="btn-toolbar" style="background: #007bff; color: white;">
+                    <i class="fa-solid fa-chart-pie"></i> Taxa de Ocupação
+                </button>
+            </div>
+        </div>
+
         <h2 style="color: var(--brown-dark); text-align: center; margin-bottom: 25px; font-family: 'Playfair Display', serif;">
             Painel Administrativo & Ocupação
         </h2>
@@ -346,7 +414,6 @@
             }
         }
 
-        // Converte AAAA-MM-DD para DD/MM/AAAA
         function formatarDataBR(dataIso) {
             if (!dataIso) return '--/--/----';
             const partes = dataIso.split('T')[0].split('-');
@@ -444,7 +511,6 @@
                     const nomeHospede = r.cliente_nome || 'Hóspede Não Identificado';
                     const telHospede = r.telefone ? r.telefone : 'Sem Telefone';
                     
-                    // Formatação explícita para o formato DD/MM/AAAA
                     const checkinBR = formatarDataBR(r.data_checkin);
                     const checkoutBR = formatarDataBR(r.data_checkout);
 
@@ -471,6 +537,42 @@
                 });
             } catch (err) {
                 container.innerHTML = '<p style="color: red; text-align: center;">Erro ao carregar a lista de ocupações.</p>';
+            }
+        }
+
+        async function exportarLeadsCSV() {
+            try {
+                const resp = await fetch('/api/admin/exportar-leads');
+                const data = await resp.json();
+
+                if (!data.leads || data.leads.length === 0) {
+                    alert("Nenhum lead encontrado para exportar.");
+                    return;
+                }
+
+                let csvContent = "data:text/csv;charset=utf-8,\uFEFF";
+                csvContent += "Nome;Telefone;Email;Total de Estadias;Total Gasto (R$)\n";
+
+                data.leads.forEach(l => {
+                    const nome = `"${(l.nome || '').replace(/"/g, '""')}"`;
+                    const tel = `"${l.telefone || ''}"`;
+                    const email = `"${l.email || ''}"`;
+                    const estadias = l.total_estadias || 0;
+                    const valor = Number(l.total_gasto || 0).toFixed(2).replace('.', ',');
+                    
+                    csvContent += `${nome};${tel};${email};${estadias};${valor}\n`;
+                });
+
+                const encodedUri = encodeURI(csvContent);
+                const link = document.createElement("a");
+                link.setAttribute("href", encodedUri);
+                link.setAttribute("download", `leads_hospedaria_${new Date().toISOString().split('T')[0]}.csv`);
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+
+            } catch (e) {
+                alert("Erro ao gerar arquivo de leads.");
             }
         }
 

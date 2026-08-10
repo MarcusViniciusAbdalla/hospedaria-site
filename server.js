@@ -240,7 +240,31 @@ app.get('/api/admin/reservas', async (req, res) => {
     }
 });
 
-// ROTA ADMIN: Bloquear balcão garantindo que o CPF tenha menos de 14 caracteres
+// ROTA ADMIN: Exportar Lista de Leads / Clientes
+app.get('/api/admin/exportar-leads', async (req, res) => {
+    try {
+        const query = `
+            SELECT 
+                c.nome, 
+                c.telefone, 
+                c.email, 
+                COUNT(r.id) AS total_estadias,
+                SUM(CASE WHEN r.status_pagamento IN ('pago', 'bloqueado_balcao', 'concluido') THEN r.valor_total ELSE 0 END) AS total_gasto
+            FROM clientes c
+            LEFT JOIN reservas r ON r.cliente_id = c.id
+            WHERE c.cpf NOT LIKE 'BALCAO-%' AND c.nome NOT LIKE '%Atendimento Presencial%'
+            GROUP BY c.id, c.nome, c.telefone, c.email
+            ORDER BY total_estadias DESC;
+        `;
+        const result = await pool.query(query);
+        res.json({ leads: result.rows });
+    } catch (err) {
+        console.error("Erro ao exportar leads:", err);
+        res.status(500).json({ erro: "Erro ao buscar lista de leads." });
+    }
+});
+
+// ROTA ADMIN: Bloquear balcão com suporte a Hóspede Recorrente
 app.post('/api/admin/bloquear', async (req, res) => {
     const { quartoId, checkin, checkout, valorTotal } = req.body;
 
@@ -265,18 +289,26 @@ app.post('/api/admin/bloquear', async (req, res) => {
         const nomeFinal = clienteObj.nome || req.body.nome || 'Atendimento Presencial / Balcão';
         const telefoneFinal = clienteObj.telefone || req.body.telefone || '(64) 00000-0000';
         const emailFinal = clienteObj.email || req.body.email || 'balcao@hospedariacentral.com.br';
-        
-        // Código curto único com exatamente 13 caracteres (respeitando o limite de VARCHAR(14) do banco)
-        const cpfCurtoBalcao = `B-${Date.now().toString().slice(-11)}`;
 
-        const novoCliente = await pool.query(
-            `INSERT INTO clientes (nome, cpf, telefone, email) 
-             VALUES ($1, $2, $3, $4) 
-             RETURNING id`,
-            [nomeFinal, cpfCurtoBalcao, telefoneFinal, emailFinal]
+        let clienteId;
+        const clienteExistente = await pool.query(
+            `SELECT id FROM clientes WHERE telefone = $1 AND telefone != '(64) 00000-0000'`,
+            [telefoneFinal]
         );
-        
-        const clienteId = novoCliente.rows[0].id;
+
+        if (clienteExistente.rows.length > 0) {
+            clienteId = clienteExistente.rows[0].id;
+        } else {
+            const cpfCurtoBalcao = `B-${Date.now().toString().slice(-11)}`;
+            const novoCliente = await pool.query(
+                `INSERT INTO clientes (nome, cpf, telefone, email) 
+                 VALUES ($1, $2, $3, $4) 
+                 RETURNING id`,
+                [nomeFinal, cpfCurtoBalcao, telefoneFinal, emailFinal]
+            );
+            clienteId = novoCliente.rows[0].id;
+        }
+
         const valorSalvar = parseFloat(valorTotal) || 0.00;
 
         await pool.query(
@@ -285,7 +317,7 @@ app.post('/api/admin/bloquear', async (req, res) => {
             [quartoId, clienteId, checkin, checkout, valorSalvar]
         );
 
-        res.json({ mensagem: 'Bloqueio e lead salvos com sucesso!' });
+        res.json({ mensagem: 'Bloqueio e reserva salvos com sucesso!' });
 
     } catch (err) {
         console.error("ERRO DETALHADO DO BANCO (admin/bloquear):", err);
