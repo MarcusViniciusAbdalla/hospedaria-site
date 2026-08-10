@@ -88,7 +88,7 @@
             background: #28a745;
             color: white;
             border: none;
-            padding: 6px 12px;
+            padding: 8px 14px;
             border-radius: 6px;
             cursor: pointer;
             font-size: 12px;
@@ -98,11 +98,31 @@
             background: #d9534f;
             color: white;
             border: none;
-            padding: 6px 12px;
+            padding: 8px 14px;
             border-radius: 6px;
             cursor: pointer;
             font-size: 12px;
             font-weight: bold;
+        }
+
+        /* MODAL POP-UP PARA EFETIVAR */
+        .modal-overlay-admin {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0, 0, 0, 0.6);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+        .modal-card-admin {
+            background: white;
+            padding: 30px;
+            border-radius: 12px;
+            max-width: 420px;
+            width: 90%;
+            box-shadow: 0 5px 25px rgba(0,0,0,0.2);
+            position: relative;
         }
     </style>
 </head>
@@ -207,7 +227,7 @@
             </form>
         </div>
 
-        <!-- LISTA DE OCUPAÇÕES COM BOTÕES DE CONFIRMAÇÃO DE STATUS -->
+        <!-- LISTA DE OCUPAÇÕES -->
         <div class="admin-card">
             <h3><i class="fa-solid fa-list-check"></i> Detalhes e Status das Reservas</h3>
             <div id="lista-reservas" class="reservation-list">
@@ -215,6 +235,35 @@
             </div>
         </div>
 
+    </div>
+
+    <!-- POP-UP / MODAL PARA CONFIRMAR / EFETIVAR RESERVA -->
+    <div id="modal-efetivar" class="modal-overlay-admin" style="display: none;">
+        <div class="modal-card-admin">
+            <h3 style="font-family: 'Playfair Display', serif; color: var(--brown-dark); margin-bottom: 15px;">
+                <i class="fa-solid fa-user-check" style="color: #28a745;"></i> Efetivar Reserva
+            </h3>
+            <p style="font-size: 13px; color: #666; margin-bottom: 15px;">Informe os dados de contato do hóspede para confirmar esta estada:</p>
+            
+            <form id="form-efetivar-dados">
+                <input type="hidden" id="efetivar-reserva-id">
+                
+                <div style="margin-bottom: 12px;">
+                    <label style="font-size: 12px; font-weight: bold; color: #444;">Nome Completo do Hóspede:</label>
+                    <input type="text" id="efetivar-nome" required style="width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 6px; margin-top: 4px;">
+                </div>
+
+                <div style="margin-bottom: 20px;">
+                    <label style="font-size: 12px; font-weight: bold; color: #444;">WhatsApp / Telefone:</label>
+                    <input type="tel" id="efetivar-telefone" placeholder="(64) 90000-0000" required style="width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 6px; margin-top: 4px;">
+                </div>
+
+                <div style="display: flex; gap: 10px; justify-content: flex-end;">
+                    <button type="button" onclick="fecharModalEfetivar()" style="padding: 10px 15px; border: 1px solid #ccc; background: #eee; border-radius: 6px; cursor: pointer;">Cancelar</button>
+                    <button type="submit" style="padding: 10px 15px; border: none; background: #28a745; color: white; font-weight: bold; border-radius: 6px; cursor: pointer;">Salvar e Efetivar</button>
+                </div>
+            </form>
+        </div>
     </div>
 
     <footer>
@@ -317,25 +366,23 @@
                         badge = '<span style="background:#28a745; color:white; padding:3px 8px; border-radius:4px; font-size:11px;">Pix Site (Pendente Validação)</span>';
                     }
 
-                    const clienteText = r.cliente_nome;
+                    const clienteText = `${r.cliente_nome} (${r.telefone || 'Sem Teledone'})`;
                     const valorFormatado = Number(r.valor_total || 0).toFixed(2);
 
                     container.innerHTML += `
                         <div class="reservation-item" style="display:flex; justify-content:space-between; align-items:center; padding:15px; border-bottom:1px solid #eee; flex-wrap:wrap; gap:10px;">
                             <div class="reservation-info">
-                                <strong>Quarto ${r.numero_quarto} &nbsp; ${badge}</strong>
+                                <strong>Quarto 0${r.numero_quarto} &nbsp; ${badge}</strong>
                                 <div><small style="color:#666;"><i class="fa-regular fa-calendar"></i> ${r.data_checkin.split('T')[0]} até ${r.data_checkout.split('T')[0]}</small></div>
-                                <div><small style="color:#666;"><i class="fa-regular fa-user"></i> ${clienteText} (${r.telefone || 'Balcão'})</small></div>
+                                <div><small style="color:#666;"><i class="fa-regular fa-user"></i> ${clienteText}</small></div>
                                 <div><strong style="color:var(--brown-dark);">Valor: R$ ${valorFormatado}</strong></div>
                             </div>
                             
                             <div style="display:flex; gap:8px;">
-                                ${r.status_pagamento !== 'concluido' ? `
-                                    <button class="btn-status-confirm" onclick="alterarStatus(${r.id}, 'concluido')">
-                                        <i class="fa-solid fa-check"></i> Efetivada
-                                    </button>
-                                ` : ''}
-                                <button class="btn-status-cancel" onclick="alterarStatus(${r.id}, 'cancelado')">
+                                <button class="btn-status-confirm" onclick="abrirModalEfetivar(${r.id}, '${r.cliente_nome}', '${r.telefone || ''}')">
+                                    <i class="fa-solid fa-check"></i> Efetivar
+                                </button>
+                                <button class="btn-status-cancel" onclick="cancelarReserva(${r.id})">
                                     <i class="fa-solid fa-xmark"></i> Cancelar
                                 </button>
                             </div>
@@ -347,15 +394,55 @@
             }
         }
 
-        async function alterarStatus(id, novoStatus) {
-            const acaoText = novoStatus === 'concluido' ? 'marcar esta reserva como EFETIVADA/PAGA' : 'CANCELAR esta reserva e liberar a data';
-            if (confirm(`Tem certeza que deseja ${acaoText}?`)) {
-                await fetch(`/api/admin/reservas/${id}/status`, {
+        function abrirModalEfetivar(id, nomeAtual, telAtual) {
+            document.getElementById('efetivar-reserva-id').value = id;
+            document.getElementById('efetivar-nome').value = nomeAtual.includes('Balcão') ? '' : nomeAtual;
+            document.getElementById('efetivar-telefone').value = telAtual.includes('Balcão') ? '' : telAtual;
+            document.getElementById('modal-efetivar').style.display = 'flex';
+        }
+
+        function fecharModalEfetivar() {
+            document.getElementById('modal-efetivar').style.display = 'none';
+        }
+
+        document.getElementById('form-efetivar-dados').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const id = document.getElementById('efetivar-reserva-id').value;
+            const nome = document.getElementById('efetivar-nome').value;
+            const telefone = document.getElementById('efetivar-telefone').value;
+
+            try {
+                const resp = await fetch(`/api/admin/reservas/${id}/efetivar`, {
                     method: 'PUT',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ status: novoStatus })
+                    body: JSON.stringify({ nome, telefone })
                 });
-                carregarTudo();
+
+                if (resp.ok) {
+                    fecharModalEfetivar();
+                    carregarTudo();
+                } else {
+                    alert("Erro ao efetivar a reserva.");
+                }
+            } catch(e) {
+                alert("Erro ao conectar com o servidor.");
+            }
+        });
+
+        async function cancelarReserva(id) {
+            if (confirm("Tem certeza que deseja CANCELAR esta reserva e liberar a data no calendário?")) {
+                try {
+                    const resp = await fetch(`/api/admin/reservas/${id}`, { method: 'DELETE' });
+                    const data = await resp.json();
+                    if (resp.ok) {
+                        alert(data.mensagem);
+                        carregarTudo();
+                    } else {
+                        alert(data.erro || "Erro ao cancelar.");
+                    }
+                } catch(e) {
+                    alert("Erro de conexão ao cancelar.");
+                }
             }
         }
 
