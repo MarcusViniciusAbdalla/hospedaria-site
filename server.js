@@ -19,7 +19,7 @@ const mpClient = new MercadoPagoConfig({
 });
 const payment = new Payment(mpClient);
 
-// 3. Tabela de Preços
+// 3. Tabela de Preços por Hóspedes e Tipo de Quarto
 function calcularDiaria(quartoId, hospedes) {
     const numHospedes = parseInt(hospedes) || 1;
     const idQuarto = parseInt(quartoId);
@@ -240,9 +240,9 @@ app.get('/api/admin/reservas', async (req, res) => {
     }
 });
 
-// ROTA ADMIN: Bloquear com inserção segura de cliente sem conflito de CPF
+// ROTA ADMIN: Bloquear com inserção resiliente de clientes (Tratando dados soltos ou aninhados)
 app.post('/api/admin/bloquear', async (req, res) => {
-    const { quartoId, checkin, checkout, valorTotal, cliente } = req.body;
+    const { quartoId, checkin, checkout, valorTotal } = req.body;
 
     if (!quartoId || !checkin || !checkout) {
         return res.status(400).json({ erro: "Selecione o quarto e as datas para bloqueio." });
@@ -261,19 +261,18 @@ app.post('/api/admin/bloquear', async (req, res) => {
             return res.status(400).json({ erro: 'Já existe reserva ou bloqueio para esta data!' });
         }
 
-        // Gera um identificador único temporário para evitar duplicidade de CPF no banco
+        // Extrai com segurança independente de os dados do cliente virem aninhados (req.body.cliente) ou soltos na raiz (req.body)
+        const clienteObj = req.body.cliente || {};
+        const nomeFinal = clienteObj.nome || req.body.nome || 'Atendimento Presencial / Balcão';
+        const telefoneFinal = clienteObj.telefone || req.body.telefone || '(64) 00000-0000';
+        const emailFinal = clienteObj.email || req.body.email || 'balcao@hospedariacentral.com.br';
         const cpfUnicoBalcao = `BALCAO-${Date.now()}`;
-        
+
         const novoCliente = await pool.query(
             `INSERT INTO clientes (nome, cpf, telefone, email) 
              VALUES ($1, $2, $3, $4) 
              RETURNING id`,
-            [
-                cliente?.nome || 'Atendimento Presencial / Balcão',
-                cpfUnicoBalcao,
-                cliente?.telefone || '(64) 00000-0000',
-                cliente?.email || 'balcao@hospedariacentral.com.br'
-            ]
+            [nomeFinal, cpfUnicoBalcao, telefoneFinal, emailFinal]
         );
         
         const clienteId = novoCliente.rows[0].id;
@@ -288,8 +287,8 @@ app.post('/api/admin/bloquear', async (req, res) => {
         res.json({ mensagem: 'Bloqueio e lead salvos com sucesso!' });
 
     } catch (err) {
-        console.error("Erro detalhado ao salvar bloqueio:", err);
-        res.status(500).json({ erro: 'Erro interno ao salvar no banco.' });
+        console.error("ERRO DETALHADO DO BANCO (admin/bloquear):", err);
+        res.status(500).json({ erro: 'Erro interno ao salvar no banco.', detalhe: err.message });
     }
 });
 
