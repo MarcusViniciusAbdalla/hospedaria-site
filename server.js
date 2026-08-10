@@ -240,7 +240,7 @@ app.get('/api/admin/reservas', async (req, res) => {
     }
 });
 
-// ROTA ADMIN: Bloquear com inserção resiliente de clientes (Tratando dados soltos ou aninhados)
+// ROTA ADMIN: Bloquear balcão garantindo que o CPF tenha menos de 14 caracteres
 app.post('/api/admin/bloquear', async (req, res) => {
     const { quartoId, checkin, checkout, valorTotal } = req.body;
 
@@ -261,18 +261,19 @@ app.post('/api/admin/bloquear', async (req, res) => {
             return res.status(400).json({ erro: 'Já existe reserva ou bloqueio para esta data!' });
         }
 
-        // Extrai com segurança independente de os dados do cliente virem aninhados (req.body.cliente) ou soltos na raiz (req.body)
         const clienteObj = req.body.cliente || {};
         const nomeFinal = clienteObj.nome || req.body.nome || 'Atendimento Presencial / Balcão';
         const telefoneFinal = clienteObj.telefone || req.body.telefone || '(64) 00000-0000';
         const emailFinal = clienteObj.email || req.body.email || 'balcao@hospedariacentral.com.br';
-        const cpfUnicoBalcao = `BALCAO-${Date.now()}`;
+        
+        // Código curto único com exatamente 13 caracteres (respeitando o limite de VARCHAR(14) do banco)
+        const cpfCurtoBalcao = `B-${Date.now().toString().slice(-11)}`;
 
         const novoCliente = await pool.query(
             `INSERT INTO clientes (nome, cpf, telefone, email) 
              VALUES ($1, $2, $3, $4) 
              RETURNING id`,
-            [nomeFinal, cpfUnicoBalcao, telefoneFinal, emailFinal]
+            [nomeFinal, cpfCurtoBalcao, telefoneFinal, emailFinal]
         );
         
         const clienteId = novoCliente.rows[0].id;
