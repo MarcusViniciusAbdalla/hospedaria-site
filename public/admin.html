@@ -83,6 +83,27 @@
         .legend-item { display: flex; align-items: center; gap: 5px; }
         .legend-box-red { width: 12px; height: 12px; background: #f8d7da; border: 1px solid #d9534f; border-radius: 3px; }
         .legend-box-green { width: 12px; height: 12px; background: #ffffff; border: 1px solid #ccc; border-radius: 3px; }
+
+        .btn-status-confirm {
+            background: #28a745;
+            color: white;
+            border: none;
+            padding: 6px 12px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 12px;
+            font-weight: bold;
+        }
+        .btn-status-cancel {
+            background: #d9534f;
+            color: white;
+            border: none;
+            padding: 6px 12px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 12px;
+            font-weight: bold;
+        }
     </style>
 </head>
 <body>
@@ -154,7 +175,7 @@
             </div>
         </div>
 
-        <!-- FORMULÁRIO DE BLOQUEIO PRESENCIAL COM VALOR COBRADO -->
+        <!-- FORMULÁRIO DE BLOQUEIO PRESENCIAL -->
         <div class="admin-card">
             <h3><i class="fa-solid fa-lock"></i> Travar Data (Balcão / Presencial)</h3>
             <form id="form-bloqueio">
@@ -186,9 +207,9 @@
             </form>
         </div>
 
-        <!-- LISTA DE OCUPAÇÕES -->
+        <!-- LISTA DE OCUPAÇÕES COM BOTÕES DE CONFIRMAÇÃO DE STATUS -->
         <div class="admin-card">
-            <h3><i class="fa-solid fa-list-check"></i> Detalhes das Ocupações e Reservas</h3>
+            <h3><i class="fa-solid fa-list-check"></i> Detalhes e Status das Reservas</h3>
             <div id="lista-reservas" class="reservation-list">
                 <p style="text-align: center; color: #777;">Carregando agenda...</p>
             </div>
@@ -282,35 +303,59 @@
                 container.innerHTML = '';
 
                 if (!data.reservas || data.reservas.length === 0) {
-                    container.innerHTML = '<p style="text-align: center; color: #777; padding: 20px;">Nenhuma reserva cadastrada no momento.</p>';
+                    container.innerHTML = '<p style="text-align: center; color: #777; padding: 20px;">Nenhuma reserva ativa cadastrada no momento.</p>';
                     return;
                 }
 
                 data.reservas.forEach(r => {
-                    const isBloqueio = r.status_pagamento === 'bloqueado_balcao';
-                    const badge = isBloqueio 
-                        ? '<span class="badge badge-bloqueio" style="background:#e0a800; color:white; padding:3px 8px; border-radius:4px; font-size:11px;">Balcão</span>' 
-                        : '<span class="badge badge-pago" style="background:#28a745; color:white; padding:3px 8px; border-radius:4px; font-size:11px;">Pix Site</span>';
+                    let badge = '';
+                    if (r.status_pagamento === 'concluido') {
+                        badge = '<span style="background:#007bff; color:white; padding:3px 8px; border-radius:4px; font-size:11px;">Efetivada / Concluída</span>';
+                    } else if (r.status_pagamento === 'bloqueado_balcao') {
+                        badge = '<span style="background:#e0a800; color:white; padding:3px 8px; border-radius:4px; font-size:11px;">Balcão (Pendente Validação)</span>';
+                    } else if (r.status_pagamento === 'pago') {
+                        badge = '<span style="background:#28a745; color:white; padding:3px 8px; border-radius:4px; font-size:11px;">Pix Site (Pendente Validação)</span>';
+                    }
 
-                    const clienteText = isBloqueio ? 'Atendimento Presencial / Balcão' : `${r.cliente_nome} (${r.telefone || 'Sem WhatsApp'})`;
+                    const clienteText = r.cliente_nome;
                     const valorFormatado = Number(r.valor_total || 0).toFixed(2);
 
                     container.innerHTML += `
-                        <div class="reservation-item" style="display:flex; justify-content:space-between; align-items:center; padding:15px; border-bottom:1px solid #eee;">
+                        <div class="reservation-item" style="display:flex; justify-content:space-between; align-items:center; padding:15px; border-bottom:1px solid #eee; flex-wrap:wrap; gap:10px;">
                             <div class="reservation-info">
                                 <strong>Quarto ${r.numero_quarto} &nbsp; ${badge}</strong>
                                 <div><small style="color:#666;"><i class="fa-regular fa-calendar"></i> ${r.data_checkin.split('T')[0]} até ${r.data_checkout.split('T')[0]}</small></div>
-                                <div><small style="color:#666;"><i class="fa-regular fa-user"></i> ${clienteText}</small></div>
+                                <div><small style="color:#666;"><i class="fa-regular fa-user"></i> ${clienteText} (${r.telefone || 'Balcão'})</small></div>
                                 <div><strong style="color:var(--brown-dark);">Valor: R$ ${valorFormatado}</strong></div>
                             </div>
-                            <button class="btn-delete" onclick="cancelarReserva(${r.id})" style="background:#d9534f; color:white; border:none; padding:8px 12px; border-radius:6px; cursor:pointer;">
-                                <i class="fa-solid fa-trash"></i> Liberar
-                            </button>
+                            
+                            <div style="display:flex; gap:8px;">
+                                ${r.status_pagamento !== 'concluido' ? `
+                                    <button class="btn-status-confirm" onclick="alterarStatus(${r.id}, 'concluido')">
+                                        <i class="fa-solid fa-check"></i> Efetivada
+                                    </button>
+                                ` : ''}
+                                <button class="btn-status-cancel" onclick="alterarStatus(${r.id}, 'cancelado')">
+                                    <i class="fa-solid fa-xmark"></i> Cancelar
+                                </button>
+                            </div>
                         </div>
                     `;
                 });
             } catch (err) {
                 container.innerHTML = '<p style="color: red; text-align: center;">Erro ao carregar a lista de ocupações.</p>';
+            }
+        }
+
+        async function alterarStatus(id, novoStatus) {
+            const acaoText = novoStatus === 'concluido' ? 'marcar esta reserva como EFETIVADA/PAGA' : 'CANCELAR esta reserva e liberar a data';
+            if (confirm(`Tem certeza que deseja ${acaoText}?`)) {
+                await fetch(`/api/admin/reservas/${id}/status`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ status: novoStatus })
+                });
+                carregarTudo();
             }
         }
 
@@ -347,13 +392,6 @@
                 alert(resData.erro);
             }
         });
-
-        async function cancelarReserva(id) {
-            if (confirm("Tem certeza que deseja liberar esta data no sistema?")) {
-                await fetch(`/api/admin/reservas/${id}`, { method: 'DELETE' });
-                carregarTudo();
-            }
-        }
     </script>
 </body>
 </html>
