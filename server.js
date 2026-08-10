@@ -19,7 +19,7 @@ const mpClient = new MercadoPagoConfig({
 });
 const payment = new Payment(mpClient);
 
-// 3. Tabela de Preços por Hóspedes e Tipo de Quarto
+// 3. Tabela de Preços
 function calcularDiaria(quartoId, hospedes) {
     const numHospedes = parseInt(hospedes) || 1;
     const idQuarto = parseInt(quartoId);
@@ -37,7 +37,7 @@ function calcularDiaria(quartoId, hospedes) {
 }
 
 /* ==========================================================================
-   ROTAS PÚBLICAS (SITE)
+   ROTAS PÚBLICAS
    ========================================================================== */
 
 app.get('/api/disponibilidade', async (req, res) => {
@@ -51,7 +51,7 @@ app.get('/api/disponibilidade', async (req, res) => {
         const reservas = await pool.query(
             `SELECT data_checkin, data_checkout FROM reservas 
              WHERE quarto_id = $1 
-             AND status_pagamento IN ('pago', 'bloqueado_balcao')
+             AND status_pagamento IN ('pago', 'bloqueado_balcao', 'concluido')
              ORDER BY data_checkin ASC`,
             [quartoId]
         );
@@ -81,7 +81,7 @@ app.get('/api/quartos-disponiveis', async (req, res) => {
             AND q.id NOT IN (
                 SELECT quarto_id 
                 FROM reservas 
-                WHERE status_pagamento IN ('pago', 'bloqueado_balcao')
+                WHERE status_pagamento IN ('pago', 'bloqueado_balcao', 'concluido')
                 AND (data_checkin, data_checkout) OVERLAPS ($2::date, $3::date)
             )
             ORDER BY q.id ASC;
@@ -124,7 +124,7 @@ app.post('/api/reservar', async (req, res) => {
         const conflito = await client.query(
             `SELECT id FROM reservas 
              WHERE quarto_id = $1 
-             AND status_pagamento IN ('pago', 'bloqueado_balcao')
+             AND status_pagamento IN ('pago', 'bloqueado_balcao', 'concluido')
              AND (data_checkin, data_checkout) OVERLAPS ($2::date, $3::date)`,
             [quartoId, checkin, checkout]
         );
@@ -224,12 +224,12 @@ app.get('/api/admin/reservas', async (req, res) => {
         const query = `
             SELECT r.id, r.quarto_id, q.numero_quarto, 
                    COALESCE(c.nome, 'Atendimento Presencial / Balcão') AS cliente_nome, 
-                   COALESCE(c.telefone, 'Balcão') AS telefone,
+                   COALESCE(c.telefone, 'Sem Telefone') AS telefone,
                    r.data_checkin, r.data_checkout, r.status_pagamento, r.valor_total
             FROM reservas r
             JOIN quartos q ON q.id = r.quarto_id
             LEFT JOIN clientes c ON c.id = r.cliente_id
-            WHERE r.status_pagamento IN ('pago', 'bloqueado_balcao')
+            WHERE r.status_pagamento IN ('pago', 'bloqueado_balcao', 'concluido')
             ORDER BY r.data_checkin ASC;
         `;
         const result = await pool.query(query);
@@ -240,9 +240,8 @@ app.get('/api/admin/reservas', async (req, res) => {
     }
 });
 
-// ROTA ADMIN: Travar/Bloquear datas presencialmente SALVANDO O VALOR COBRADO
 app.post('/api/admin/bloquear', async (req, res) => {
-    const { quartoId, checkin, checkout, valorTotal } = req.body;
+    const { quartoId, checkin, checkout, valorTotal, cliente } = req.body;
 
     if (!quartoId || !checkin || !checkout) {
         return res.status(400).json({ erro: "Selecione o quarto e as datas para bloqueio." });
@@ -252,7 +251,7 @@ app.post('/api/admin/bloquear', async (req, res) => {
         const conflito = await pool.query(
             `SELECT id FROM reservas 
              WHERE quarto_id = $1 
-             AND status_pagamento IN ('pago', 'bloqueado_balcao')
+             AND status_pagamento IN ('pago', 'bloqueado_balcao', 'concluido')
              AND (data_checkin, data_checkout) OVERLAPS ($2::date, $3::date)`,
             [quartoId, checkin, checkout]
         );
@@ -261,20 +260,19 @@ app.post('/api/admin/bloquear', async (req, res) => {
             return res.status(400).json({ erro: 'Já existe reserva ou bloqueio para esta data!' });
         }
 
-        let clienteBalcao = await pool.query("SELECT id FROM clientes WHERE cpf = '00000000000'");
-        let clienteId;
-
-        if (clienteBalcao.rows.length > 0) {
-            clienteId = clienteBalcao.rows[0].id;
-        } else {
-            const novoBalcao = await pool.query(
-                `INSERT INTO clientes (nome, cpf, telefone, email) 
-                 VALUES ('Atendimento Presencial / Balcão', '00000000000', '(64) 00000-0000', 'balcao@hospedariacentral.com.br') 
-                 RETURNING id`
-            );
-            clienteId = novoBalcao.rows[0].id;
-        }
-
+        const novoCliente = await pool.query(
+            `INSERT INTO clientes (nome, cpf, telefone, email) 
+             VALUES ($1, $2, $3, $4) 
+             RETURNING id`,
+            [
+                cliente?.nome || 'Atendimento Presencial / Balcão',
+                '00000000000',
+                cliente?.telefone || '(64) 00000-0000',
+                cliente?.email || 'balcao@hospedariacentral.com.br'
+            ]
+        );
+        
+        const clienteId = novoCliente.rows[0].id;
         const valorSalvar = parseFloat(valorTotal) || 0.00;
 
         await pool.query(
@@ -283,7 +281,7 @@ app.post('/api/admin/bloquear', async (req, res) => {
             [quartoId, clienteId, checkin, checkout, valorSalvar]
         );
 
-        res.json({ mensagem: 'Data e valor registrados com sucesso!' });
+        res.json({ mensagem: 'Bloqueio e lead salvos com sucesso!' });
 
     } catch (err) {
         console.error("Erro ao salvar bloqueio:", err);
@@ -291,11 +289,31 @@ app.post('/api/admin/bloquear', async (req, res) => {
     }
 });
 
+app.put('/api/admin/reservas/:id/efetivar', async (req, res) => {
+    const { id } = req.params;
+    const { nome, telefone } = req.body;
+
+    try {
+        const resReserva = await pool.query("SELECT cliente_id FROM reservas WHERE id = $1", [id]);
+        if (resReserva.rows.length === 0) return res.status(404).json({ erro: "Reserva não encontrada." });
+
+        const clienteId = resReserva.rows[0].cliente_id;
+
+        await pool.query("UPDATE clientes SET nome = $1, telefone = $2 WHERE id = $3", [nome, telefone, clienteId]);
+        await pool.query("UPDATE reservas SET status_pagamento = 'concluido' WHERE id = $1", [id]);
+
+        res.json({ mensagem: 'Reserva efetivada com sucesso!' });
+    } catch (err) {
+        console.error("Erro ao efetivar reserva:", err);
+        res.status(500).json({ erro: 'Erro ao efetivar reserva.' });
+    }
+});
+
 app.delete('/api/admin/reservas/:id', async (req, res) => {
     const { id } = req.params;
     try {
         await pool.query("UPDATE reservas SET status_pagamento = 'cancelado' WHERE id = $1", [id]);
-        res.json({ mensagem: 'Reserva/Bloqueio removido com sucesso.' });
+        res.json({ mensagem: 'Reserva cancelada e data liberada com sucesso.' });
     } catch (err) {
         console.error("Erro ao cancelar reserva:", err);
         res.status(500).json({ erro: 'Erro ao remover reserva.' });
