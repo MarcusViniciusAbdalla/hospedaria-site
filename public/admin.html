@@ -33,7 +33,6 @@
             border-top: 5px solid var(--terracotta);
         }
         
-        /* TOOLBAR DE RELATÓRIOS GERENCIAIS */
         .admin-toolbar {
             background: var(--brown-dark);
             padding: 12px 20px;
@@ -208,17 +207,14 @@
             </div>
 
             <div class="toolbar-actions">
-                <!-- Botão Exportar Leads -->
                 <button onclick="exportarLeadsCSV()" class="btn-toolbar" style="background: #28a745; color: white;">
                     <i class="fa-solid fa-file-excel"></i> Exportar Leads (CSV)
                 </button>
 
-                <!-- Botão Faturamento & DRE (Futuro) -->
                 <button onclick="alert('Em breve: Relatório de Faturamento em tempo real.')" class="btn-toolbar" style="background: var(--terracotta); color: white;">
                     <i class="fa-solid fa-sack-dollar"></i> Faturamento & DRE
                 </button>
 
-                <!-- Botão Taxa de Ocupação (Futuro) -->
                 <button onclick="alert('Em breve: Indicador de Taxa de Ocupação Mensal.')" class="btn-toolbar" style="background: #007bff; color: white;">
                     <i class="fa-solid fa-chart-pie"></i> Taxa de Ocupação
                 </button>
@@ -262,11 +258,12 @@
             </div>
         </div>
 
-        <!-- FORMULÁRIO DE SELEÇÃO DE DATAS E VALORES DE BLOQUEIO -->
+        <!-- FORMULÁRIO DE BLOQUEIO PRESENCIAL COM SELETOR DE HÓSPEDES -->
         <div class="admin-card">
             <h3><i class="fa-solid fa-lock"></i> Travar Data (Balcão / Presencial)</h3>
             <form id="form-bloqueio">
-                <div class="admin-form-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 15px; align-items: end;">
+                <div class="admin-form-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 15px; align-items: end;">
+                    
                     <div class="form-group">
                         <label style="font-size: 12px; font-weight: bold; color: #555;">Selecione o Quarto:</label>
                         <select id="bloqueio-quarto" required style="width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 6px;">
@@ -277,9 +274,19 @@
                         </select>
                     </div>
 
+                    <!-- NOVO CAMPO: QUANTIDADE DE HÓSPEDES -->
+                    <div class="form-group">
+                        <label style="font-size: 12px; font-weight: bold; color: #555;">Qtd. Hóspedes:</label>
+                        <select id="bloqueio-hospedes" required style="width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 6px;">
+                            <option value="1">01 Pessoa</option>
+                            <option value="2">02 Pessoas</option>
+                            <option value="3">03 Pessoas</option>
+                        </select>
+                    </div>
+
                     <div class="form-group">
                         <label style="font-size: 12px; font-weight: bold; color: #555;">Período de Bloqueio:</label>
-                        <input type="text" id="bloqueio-datas" placeholder="Selecione Entrada e Saída" readonly required style="width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 6px;">
+                        <input type="text" id="bloqueio-datas" placeholder="Entrada e Saída" readonly required style="width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 6px;">
                     </div>
 
                     <div class="form-group">
@@ -394,9 +401,21 @@
 
         let checkinBloqueio = '', checkoutBloqueio = '', dataObj1 = null, dataObj2 = null;
 
-        function obterDiariaReferencia(quartoId) {
+        // Função de Tabela de Preços idêntica ao site
+        function obterDiariaReferencia(quartoId, hospedes) {
             const id = parseInt(quartoId);
-            return id === 3 ? 100.00 : 75.00;
+            const numHospedes = parseInt(hospedes) || 1;
+
+            if (id === 3) { // Suíte Master
+                if (numHospedes === 1) return 100.00;
+                if (numHospedes === 2) return 150.00;
+                if (numHospedes === 3) return 200.00;
+            } else { // Quartos Padrão (1, 2 e 4)
+                if (numHospedes === 1) return 75.00;
+                if (numHospedes === 2) return 130.00;
+                if (numHospedes === 3) return 180.00;
+            }
+            return 75.00;
         }
 
         function calcularValorSugerido() {
@@ -404,7 +423,9 @@
                 const diffTempo = dataObj2.getTime() - dataObj1.getTime();
                 const dias = Math.ceil(diffTempo / (1000 * 3600 * 24)) || 1;
                 const quartoId = document.getElementById('bloqueio-quarto').value;
-                const valorDiaria = obterDiariaReferencia(quartoId);
+                const hospedes = document.getElementById('bloqueio-hospedes').value;
+
+                const valorDiaria = obterDiariaReferencia(quartoId, hospedes);
                 const valorTotalCalculado = (dias * valorDiaria).toFixed(2);
 
                 document.getElementById('bloqueio-valor-sugerido').value = `R$ ${valorTotalCalculado} (${dias} diária/s)`;
@@ -422,6 +443,7 @@
         }
 
         document.getElementById('bloqueio-quarto').addEventListener('change', calcularValorSugerido);
+        document.getElementById('bloqueio-hospedes').addEventListener('change', calcularValorSugerido);
 
         flatpickr("#bloqueio-datas", {
             mode: "range",
@@ -510,6 +532,7 @@
                     const valorFormatado = Number(r.valor_total || 0).toFixed(2);
                     const nomeHospede = r.cliente_nome || 'Hóspede Não Identificado';
                     const telHospede = r.telefone ? r.telefone : 'Sem Telefone';
+                    const qtdHospedes = r.quantidade_hospedes || 1;
                     
                     const checkinBR = formatarDataBR(r.data_checkin);
                     const checkoutBR = formatarDataBR(r.data_checkout);
@@ -519,7 +542,7 @@
                             <div class="reservation-info">
                                 <div style="font-size:16px; margin-bottom:4px;"><strong>Quarto ${numQuarto}</strong> &nbsp; ${badge}</div>
                                 <div style="color:#555; font-size:13px; margin-bottom:2px;"><i class="fa-regular fa-calendar" style="color:var(--terracotta);"></i> <strong>Período:</strong> ${checkinBR} até ${checkoutBR}</div>
-                                <div style="color:#222; font-size:14px; margin-bottom:2px;"><i class="fa-solid fa-user" style="color:var(--brown-dark);"></i> <strong>Hóspede:</strong> ${nomeHospede}</div>
+                                <div style="color:#222; font-size:14px; margin-bottom:2px;"><i class="fa-solid fa-user" style="color:var(--brown-dark);"></i> <strong>Hóspede:</strong> ${nomeHospede} (${qtdHospedes} pessoa/s)</div>
                                 <div style="color:#25d366; font-size:13px; margin-bottom:4px;"><i class="fa-brands fa-whatsapp"></i> <strong>Contato:</strong> ${telHospede}</div>
                                 <div><strong style="color:var(--brown-dark); font-size:15px;">Valor Total: R$ ${valorFormatado}</strong></div>
                             </div>
@@ -614,6 +637,7 @@
 
             const payload = {
                 quartoId: document.getElementById('bloqueio-quarto').value,
+                hospedes: document.getElementById('bloqueio-hospedes').value,
                 checkin: checkinBloqueio,
                 checkout: checkoutBloqueio,
                 valorTotal: document.getElementById('bloqueio-valor').value,

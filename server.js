@@ -222,7 +222,7 @@ app.post('/api/webhook/mercadopago', async (req, res) => {
 app.get('/api/admin/reservas', async (req, res) => {
     try {
         const query = `
-            SELECT r.id, r.quarto_id, q.numero_quarto, 
+            SELECT r.id, r.quarto_id, q.numero_quarto, r.quantidade_hospedes,
                    COALESCE(c.nome, 'Atendimento Presencial / Balcão') AS cliente_nome, 
                    COALESCE(c.telefone, 'Sem Telefone') AS telefone,
                    r.data_checkin, r.data_checkout, r.status_pagamento, r.valor_total
@@ -240,7 +240,6 @@ app.get('/api/admin/reservas', async (req, res) => {
     }
 });
 
-// ROTA ADMIN: Exportar Lista de Leads / Clientes
 app.get('/api/admin/exportar-leads', async (req, res) => {
     try {
         const query = `
@@ -264,9 +263,9 @@ app.get('/api/admin/exportar-leads', async (req, res) => {
     }
 });
 
-// ROTA ADMIN: Bloquear balcão com suporte a Hóspede Recorrente
+// ROTA ADMIN: Bloquear balcão registrando a quantidade de hóspedes
 app.post('/api/admin/bloquear', async (req, res) => {
-    const { quartoId, checkin, checkout, valorTotal } = req.body;
+    const { quartoId, hospedes, checkin, checkout, valorTotal } = req.body;
 
     if (!quartoId || !checkin || !checkout) {
         return res.status(400).json({ erro: "Selecione o quarto e as datas para bloqueio." });
@@ -310,11 +309,12 @@ app.post('/api/admin/bloquear', async (req, res) => {
         }
 
         const valorSalvar = parseFloat(valorTotal) || 0.00;
+        const numHospedes = parseInt(hospedes) || 1;
 
         await pool.query(
             `INSERT INTO reservas (quarto_id, cliente_id, quantidade_hospedes, data_checkin, data_checkout, valor_total, status_pagamento, mp_payment_id) 
-             VALUES ($1, $2, 1, $3::date, $4::date, $5, 'bloqueado_balcao', 'balcao_presencial')`,
-            [quartoId, clienteId, checkin, checkout, valorSalvar]
+             VALUES ($1, $2, $3, $4::date, $5::date, $6, 'bloqueado_balcao', 'balcao_presencial')`,
+            [quartoId, clienteId, numHospedes, checkin, checkout, valorSalvar]
         );
 
         res.json({ mensagem: 'Bloqueio e reserva salvos com sucesso!' });
