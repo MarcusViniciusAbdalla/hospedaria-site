@@ -135,8 +135,9 @@ app.post('/api/reservar', async (req, res) => {
 
         await client.query('BEGIN');
 
+        // Como removemos o CPF no checkout, enviaremos vazio para o banco se não existir
         const cpfLimpo = cliente.cpf ? cliente.cpf.replace(/\D/g, '') : '';
-        let clienteRes = await client.query('SELECT id FROM clientes WHERE cpf = $1 AND cpf != \'\'', [cpfLimpo]);
+        let clienteRes = await client.query('SELECT id FROM clientes WHERE telefone = $1', [cliente.telefone]);
         let clienteId;
 
         if (clienteRes.rows.length > 0) {
@@ -168,8 +169,8 @@ app.post('/api/reservar', async (req, res) => {
                 payment_method_id: 'pix',
                 payer: {
                     email: cliente.email || 'contato@hospedariacentral.com.br',
-                    first_name: cliente.nome,
-                    identification: { type: 'CPF', number: cpfLimpo }
+                    first_name: cliente.nome
+                    // Removida a obrigatoriedade do CPF para o Mercado Pago aqui
                 }
             }
         });
@@ -355,6 +356,32 @@ app.delete('/api/admin/reservas/:id', async (req, res) => {
         res.status(500).json({ erro: 'Erro ao remover reserva.' });
     }
 });
+
+
+/* ==========================================================================
+   ROTINA DE LIMPEZA AUTOMÁTICA (O "Faxineiro" do Banco de Dados)
+   ========================================================================== */
+// Roda a cada 5 minutos procurando PIX pendentes abandonados há mais de 30 minutos.
+setInterval(async () => {
+    try {
+        // Observação: Assumimos que o seu banco cria a coluna de data usando o padrão 'created_at'.
+        const limpeza = await pool.query(`
+            UPDATE reservas 
+            SET status_pagamento = 'cancelado' 
+            WHERE status_pagamento = 'pendente' 
+            AND created_at < NOW() - INTERVAL '30 minutes'
+        `);
+        
+        if (limpeza.rowCount > 0) {
+            console.log(`[LIMPEZA AUTOMÁTICA] O faxineiro cancelou ${limpeza.rowCount} reserva(s) não paga(s) e liberou a data!`);
+        }
+    } catch (err) {
+        // Apenas ignora silenciosamente se houver erro (por exemplo, se a coluna se chamar diferente) 
+        // para não atrapalhar o funcionamento do resto do site.
+        console.error("[LIMPEZA AUTOMÁTICA] Erro:", err.message);
+    }
+}, 5 * 60 * 1000); // 5 minutos = 300000 milissegundos
+
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log(`Servidor rodando na porta ${PORT}`));
