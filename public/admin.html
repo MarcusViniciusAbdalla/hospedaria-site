@@ -243,10 +243,11 @@
 
             <div class="toolbar-actions">
                 <button onclick="exportarLeadsCSV()" class="btn-toolbar" style="background: #28a745; color: white;">
-                    <i class="fa-solid fa-file-excel"></i> Exportar Leads (CSV)
+                    <i class="fa-solid fa-users"></i> Exportar Leads
                 </button>
-                <button onclick="document.getElementById('painel-dashboard').scrollIntoView({behavior: 'smooth'})" class="btn-toolbar" style="background: var(--terracotta); color: white;">
-                    <i class="fa-solid fa-sack-dollar"></i> Faturamento & DRE
+                <!-- BOTÃO DE DRE/FATURAMENTO ATUALIZADO AQUI -->
+                <button onclick="exportarFaturamentoCSV()" class="btn-toolbar" style="background: var(--terracotta); color: white;">
+                    <i class="fa-solid fa-file-csv"></i> Exportar DRE (CSV)
                 </button>
             </div>
         </div>
@@ -284,7 +285,7 @@
             </div>
         </div>
 
-        <!-- NOVO: GRÁFICO DE BARRAS DE FATURAMENTO (ÚLTIMOS 12 MESES) -->
+        <!-- GRÁFICO DE BARRAS DE FATURAMENTO -->
         <div class="admin-card" style="margin-bottom: 30px;">
             <h3><i class="fa-solid fa-chart-column" style="color: var(--terracotta);"></i> Evolução do Faturamento (Últimos 12 Meses)</h3>
             <div style="position: relative; height: 350px; width: 100%; margin-top: 20px;">
@@ -447,7 +448,6 @@
 
         let checkinBloqueio = '', checkoutBloqueio = '', dataObj1 = null, dataObj2 = null;
         
-        // --- LÓGICA DO FILTRO DE DASHBOARD ---
         let dashStart = '';
         let dashEnd = '';
 
@@ -499,7 +499,6 @@
             }
         }
         
-        // --- LÓGICA DO GRÁFICO (CHART.JS) ---
         let faturamentoChartInstance = null;
 
         async function carregarGraficoFaturamento() {
@@ -510,7 +509,6 @@
                     
                     const ctx = document.getElementById('faturamentoChart').getContext('2d');
                     
-                    // Se já existir um gráfico na tela, apaga ele antes de desenhar o novo
                     if (faturamentoChartInstance) {
                         faturamentoChartInstance.destroy();
                     }
@@ -518,13 +516,13 @@
                     faturamentoChartInstance = new Chart(ctx, {
                         type: 'bar',
                         data: {
-                            labels: data.labels, // Nomes dos meses (Ex: Ago/26)
+                            labels: data.labels, 
                             datasets: [{
                                 label: 'Faturamento (R$)',
-                                data: data.dados, // Valores
-                                backgroundColor: '#d97757', // Cor Terracota
-                                borderRadius: 6, // Bordas arredondadas nas barras
-                                barPercentage: 0.6 // Espessura da barra
+                                data: data.dados, 
+                                backgroundColor: '#d97757', 
+                                borderRadius: 6, 
+                                barPercentage: 0.6 
                             }]
                         },
                         options: {
@@ -541,16 +539,12 @@
                                 }
                             },
                             plugins: {
-                                legend: {
-                                    display: false // Esconde a legenda para ficar mais limpo
-                                },
+                                legend: { display: false },
                                 tooltip: {
                                     callbacks: {
                                         label: function(context) {
                                             let label = context.dataset.label || '';
-                                            if (label) {
-                                                label += ': ';
-                                            }
+                                            if (label) { label += ': '; }
                                             if (context.parsed.y !== null) {
                                                 label += 'R$ ' + context.parsed.y.toFixed(2).replace('.', ',');
                                             }
@@ -566,7 +560,46 @@
                 console.error("Erro ao carregar gráfico:", err);
             }
         }
-        // -------------------------------------
+
+        // --- NOVA FUNÇÃO PARA EXPORTAR DRE ---
+        async function exportarFaturamentoCSV() {
+            try {
+                const resp = await fetch('/api/admin/exportar-faturamento');
+                const data = await resp.json();
+
+                if (!data.faturamento || data.faturamento.length === 0) {
+                    alert("Nenhum faturamento encontrado para exportar.");
+                    return;
+                }
+
+                let csvContent = "data:text/csv;charset=utf-8,\uFEFF";
+                csvContent += "ID Reserva;Data Entrada;Data Saida;Quarto;Hospede;Status do Pagamento;Valor Faturado (R$)\n";
+
+                data.faturamento.forEach(f => {
+                    const id = f.id;
+                    const entrada = f.data_entrada;
+                    const saida = f.data_saida;
+                    const quarto = f.numero_quarto;
+                    const hospede = `"${(f.cliente || '').replace(/"/g, '""')}"`;
+                    const status = f.status_pagamento;
+                    const valor = Number(f.valor_total || 0).toFixed(2).replace('.', ',');
+                    
+                    csvContent += `${id};${entrada};${saida};${quarto};${hospede};${status};${valor}\n`;
+                });
+
+                const encodedUri = encodeURI(csvContent);
+                const link = document.createElement("a");
+                link.setAttribute("href", encodedUri);
+                link.setAttribute("download", `DRE_Faturamento_${new Date().toISOString().split('T')[0]}.csv`);
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+
+            } catch (e) {
+                alert("Erro ao gerar a planilha de faturamento.");
+            }
+        }
+        // ------------------------------------
 
         function obterDiariaReferencia(quartoId, hospedes) {
             const id = parseInt(quartoId);
@@ -631,7 +664,7 @@
 
         function carregarTudo() {
             carregarDashboard();
-            carregarGraficoFaturamento(); // Chama o desenho das barras!
+            carregarGraficoFaturamento(); 
             carregarAgenda();
             [1, 2, 3, 4].forEach(quartoId => carregarCalendarioQuarto(quartoId));
         }
