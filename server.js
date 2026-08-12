@@ -373,21 +373,18 @@ app.put('/api/admin/reservas/:id/checkout', async (req, res) => {
     }
 });
 
-// NOVA ROTA: Dashboard com suporte a filtro de datas personalizadas
 app.get('/api/admin/dashboard', async (req, res) => {
     try {
         const { start, end } = req.query;
         let firstDay, lastDay, textoPeriodo;
 
         if (start && end) {
-            // Se o usuário filtrou por data
             firstDay = start;
             lastDay = end;
             const ds = start.split('-');
             const de = end.split('-');
             textoPeriodo = `${ds[2]}/${ds[1]} até ${de[2]}/${de[1]}`;
         } else {
-            // Se não filtrou, pega o mês atual completo
             const currentDate = new Date();
             firstDay = new Date(currentDate.getFullYear(), currentDate.getMonth(), 1).toISOString().split('T')[0];
             lastDay = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0).toISOString().split('T')[0];
@@ -396,7 +393,6 @@ app.get('/api/admin/dashboard', async (req, res) => {
             textoPeriodo = textoPeriodo.charAt(0).toUpperCase() + textoPeriodo.slice(1);
         }
 
-        // 1. Faturamento Total do período selecionado
         const faturamentoQuery = `
             SELECT SUM(valor_total) as total_faturado
             FROM reservas
@@ -406,7 +402,6 @@ app.get('/api/admin/dashboard', async (req, res) => {
         const faturamentoResult = await pool.query(faturamentoQuery, [firstDay, lastDay]);
         const totalFaturado = faturamentoResult.rows[0].total_faturado || 0;
 
-        // 2. Dias ocupados no período selecionado
         const ocupacaoQuery = `
             SELECT SUM(data_checkout - data_checkin) as dias_ocupados
             FROM reservas
@@ -416,17 +411,16 @@ app.get('/api/admin/dashboard', async (req, res) => {
         const ocupacaoResult = await pool.query(ocupacaoQuery, [firstDay, lastDay]);
         const diasOcupados = ocupacaoResult.rows[0].dias_ocupados || 0;
         
-        // 3. Descobre quantos dias existem no período pesquisado para calcular a %
         const d1 = new Date(`${firstDay}T00:00:00`);
         const d2 = new Date(`${lastDay}T00:00:00`);
         const diasNaPesquisa = Math.max(1, Math.ceil((d2 - d1) / (1000 * 60 * 60 * 24)) + 1);
         
-        const totalDiariasPossiveis = diasNaPesquisa * 4; // 4 quartos disponíveis no total
+        const totalDiariasPossiveis = diasNaPesquisa * 4;
         const taxaOcupacao = ((diasOcupados / totalDiariasPossiveis) * 100).toFixed(1);
 
         res.json({
             faturamento: Number(totalFaturado).toFixed(2),
-            ocupacao: taxaOcupacao > 100 ? 100 : taxaOcupacao, // Trava visual para não passar de 100%
+            ocupacao: taxaOcupacao > 100 ? 100 : taxaOcupacao,
             mesAtual: textoPeriodo
         });
     } catch (err) {
@@ -435,8 +429,45 @@ app.get('/api/admin/dashboard', async (req, res) => {
     }
 });
 
+// NOVA ROTA: Obter Faturamento dos últimos 12 meses para o Gráfico
+app.get('/api/admin/grafico-faturamento', async (req, res) => {
+    try {
+        const query = `
+            SELECT 
+                TO_CHAR(data_checkin, 'YYYY-MM') as mes_ano,
+                SUM(valor_total) as total_faturado
+            FROM reservas
+            WHERE status_pagamento IN ('pago', 'concluido', 'checkin', 'checkout')
+              AND data_checkin >= NOW() - INTERVAL '12 months'
+            GROUP BY TO_CHAR(data_checkin, 'YYYY-MM')
+            ORDER BY mes_ano ASC;
+        `;
+        const result = await pool.query(query);
+
+        const mesesLabels = [];
+        const faturamentos = [];
+        const nomesMeses = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
+
+        result.rows.forEach(row => {
+            const ano = row.mes_ano.split('-')[0];
+            const mesIdx = parseInt(row.mes_ano.split('-')[1], 10) - 1;
+            mesesLabels.push(`${nomesMeses[mesIdx]}/${ano.slice(2)}`);
+            faturamentos.push(Number(row.total_faturado).toFixed(2));
+        });
+
+        res.json({
+            labels: mesesLabels,
+            dados: faturamentos
+        });
+    } catch (err) {
+        console.error("Erro ao gerar dados do gráfico:", err);
+        res.status(500).json({ erro: 'Erro ao buscar dados do gráfico.' });
+    }
+});
+
+
 /* ==========================================================================
-   ROTINA DE LIMPEZA AUTOMÁTICA (O "Faxineiro" do Banco de Dados)
+   ROTINA DE LIMPEZA AUTOMÁTICA
    ========================================================================== */
 setInterval(async () => {
     try {
@@ -448,11 +479,9 @@ setInterval(async () => {
         `);
         
         if (limpeza.rowCount > 0) {
-            console.log(`[LIMPEZA AUTOMÁTICA] O faxineiro cancelou ${limpeza.rowCount} reserva(s) não paga(s) e liberou a data!`);
+            console.log(`[LIMPEZA AUTOMÁTICA] Cancelou ${limpeza.rowCount} reserva(s) não paga(s).`);
         }
-    } catch (err) {
-        console.error("[LIMPEZA AUTOMÁTICA] Erro:", err.message);
-    }
+    } catch (err) {}
 }, 5 * 60 * 1000);
 
 const PORT = process.env.PORT || 3000;
