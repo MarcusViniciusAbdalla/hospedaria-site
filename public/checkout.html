@@ -103,6 +103,18 @@
             background: var(--brown-dark, #3e2723);
         }
 
+        .alert-urgency {
+            background-color: #fff3cd;
+            color: #856404;
+            padding: 12px;
+            border-radius: 8px;
+            font-size: 13px;
+            font-weight: 600;
+            margin-bottom: 20px;
+            border: 1px solid #ffeeba;
+            text-align: center;
+        }
+
         @media (max-width: 900px) {
             .checkout-container {
                 grid-template-columns: 1fr;
@@ -175,6 +187,12 @@
 
             <div class="checkout-card" id="card-pix" style="display: none; text-align: center;">
                 <h3><i class="fa-solid fa-pix" style="color: #32bcad;"></i> Pagamento via Pix</h3>
+                
+                <!-- AVISO DE URGÊNCIA ADICIONADO AQUI -->
+                <div class="alert-urgency">
+                    <i class="fa-solid fa-clock"></i> Atenção: Realize o pagamento em até 30 minutos. Após este prazo, a reserva não paga será cancelada automaticamente.
+                </div>
+
                 <p style="font-size: 14px; color: #666; margin-bottom: 20px;">Escaneie o QR Code abaixo no app do seu banco ou copie a chave Pix:</p>
 
                 <div style="margin-bottom: 20px;">
