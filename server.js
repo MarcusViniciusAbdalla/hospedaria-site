@@ -51,7 +51,7 @@ app.get('/api/disponibilidade', async (req, res) => {
         const reservas = await pool.query(
             `SELECT data_checkin, data_checkout FROM reservas 
              WHERE quarto_id = $1 
-             AND status_pagamento IN ('pago', 'bloqueado_balcao', 'concluido')
+             AND status_pagamento IN ('pago', 'bloqueado_balcao', 'concluido', 'checkin')
              ORDER BY data_checkin ASC`,
             [quartoId]
         );
@@ -81,7 +81,7 @@ app.get('/api/quartos-disponiveis', async (req, res) => {
             AND q.id NOT IN (
                 SELECT quarto_id 
                 FROM reservas 
-                WHERE status_pagamento IN ('pago', 'bloqueado_balcao', 'concluido')
+                WHERE status_pagamento IN ('pago', 'bloqueado_balcao', 'concluido', 'checkin')
                 AND (data_checkin, data_checkout) OVERLAPS ($2::date, $3::date)
             )
             ORDER BY q.id ASC;
@@ -124,7 +124,7 @@ app.post('/api/reservar', async (req, res) => {
         const conflito = await client.query(
             `SELECT id FROM reservas 
              WHERE quarto_id = $1 
-             AND status_pagamento IN ('pago', 'bloqueado_balcao', 'concluido')
+             AND status_pagamento IN ('pago', 'bloqueado_balcao', 'concluido', 'checkin')
              AND (data_checkin, data_checkout) OVERLAPS ($2::date, $3::date)`,
             [quartoId, checkin, checkout]
         );
@@ -135,7 +135,6 @@ app.post('/api/reservar', async (req, res) => {
 
         await client.query('BEGIN');
 
-        // Como removemos o CPF no checkout, enviaremos vazio para o banco se não existir
         const cpfLimpo = cliente.cpf ? cliente.cpf.replace(/\D/g, '') : '';
         let clienteRes = await client.query('SELECT id FROM clientes WHERE telefone = $1', [cliente.telefone]);
         let clienteId;
@@ -170,7 +169,6 @@ app.post('/api/reservar', async (req, res) => {
                 payer: {
                     email: cliente.email || 'contato@hospedariacentral.com.br',
                     first_name: cliente.nome
-                    // Removida a obrigatoriedade do CPF para o Mercado Pago aqui
                 }
             }
         });
@@ -222,6 +220,7 @@ app.post('/api/webhook/mercadopago', async (req, res) => {
 
 app.get('/api/admin/reservas', async (req, res) => {
     try {
+        // Agora não trazemos as reservas com status 'checkout' para limpar a tela
         const query = `
             SELECT r.id, r.quarto_id, q.numero_quarto, r.quantidade_hospedes,
                    COALESCE(c.nome, 'Atendimento Presencial / Balcão') AS cliente_nome, 
@@ -230,7 +229,7 @@ app.get('/api/admin/reservas', async (req, res) => {
             FROM reservas r
             JOIN quartos q ON q.id = r.quarto_id
             LEFT JOIN clientes c ON c.id = r.cliente_id
-            WHERE r.status_pagamento IN ('pago', 'bloqueado_balcao', 'concluido')
+            WHERE r.status_pagamento IN ('pago', 'bloqueado_balcao', 'concluido', 'checkin')
             ORDER BY r.data_checkin ASC;
         `;
         const result = await pool.query(query);
@@ -249,7 +248,7 @@ app.get('/api/admin/exportar-leads', async (req, res) => {
                 c.telefone, 
                 c.email, 
                 COUNT(r.id) AS total_estadias,
-                SUM(CASE WHEN r.status_pagamento IN ('pago', 'bloqueado_balcao', 'concluido') THEN r.valor_total ELSE 0 END) AS total_gasto
+                SUM(CASE WHEN r.status_pagamento IN ('pago', 'bloqueado_balcao', 'concluido', 'checkin', 'checkout') THEN r.valor_total ELSE 0 END) AS total_gasto
             FROM clientes c
             LEFT JOIN reservas r ON r.cliente_id = c.id
             WHERE c.cpf NOT LIKE 'BALCAO-%' AND c.nome NOT LIKE '%Atendimento Presencial%'
@@ -276,7 +275,7 @@ app.post('/api/admin/bloquear', async (req, res) => {
         const conflito = await pool.query(
             `SELECT id FROM reservas 
              WHERE quarto_id = $1 
-             AND status_pagamento IN ('pago', 'bloqueado_balcao', 'concluido')
+             AND status_pagamento IN ('pago', 'bloqueado_balcao', 'concluido', 'checkin')
              AND (data_checkin, data_checkout) OVERLAPS ($2::date, $3::date)`,
             [quartoId, checkin, checkout]
         );
@@ -357,14 +356,36 @@ app.delete('/api/admin/reservas/:id', async (req, res) => {
     }
 });
 
+// NOVA ROTA: Registrar Entrada (Check-in)
+app.put('/api/admin/reservas/:id/checkin', async (req, res) => {
+    const { id } = req.params;
+    try {
+        await pool.query("UPDATE reservas SET status_pagamento = 'checkin' WHERE id = $1", [id]);
+        res.json({ mensagem: 'Check-in realizado! Hóspede na pousada.' });
+    } catch (err) {
+        console.error("Erro ao fazer check-in:", err);
+        res.status(500).json({ erro: 'Erro ao registrar check-in.' });
+    }
+});
+
+// NOVA ROTA: Registrar Saída (Check-out)
+app.put('/api/admin/reservas/:id/checkout', async (req, res) => {
+    const { id } = req.params;
+    try {
+        await pool.query("UPDATE reservas SET status_pagamento = 'checkout' WHERE id = $1", [id]);
+        res.json({ mensagem: 'Check-out realizado! Reserva arquivada e quarto desocupado.' });
+    } catch (err) {
+        console.error("Erro ao fazer check-out:", err);
+        res.status(500).json({ erro: 'Erro ao registrar check-out.' });
+    }
+});
+
 
 /* ==========================================================================
    ROTINA DE LIMPEZA AUTOMÁTICA (O "Faxineiro" do Banco de Dados)
    ========================================================================== */
-// Roda a cada 5 minutos procurando PIX pendentes abandonados há mais de 30 minutos.
 setInterval(async () => {
     try {
-        // Observação: Assumimos que o seu banco cria a coluna de data usando o padrão 'created_at'.
         const limpeza = await pool.query(`
             UPDATE reservas 
             SET status_pagamento = 'cancelado' 
@@ -376,11 +397,9 @@ setInterval(async () => {
             console.log(`[LIMPEZA AUTOMÁTICA] O faxineiro cancelou ${limpeza.rowCount} reserva(s) não paga(s) e liberou a data!`);
         }
     } catch (err) {
-        // Apenas ignora silenciosamente se houver erro (por exemplo, se a coluna se chamar diferente) 
-        // para não atrapalhar o funcionamento do resto do site.
         console.error("[LIMPEZA AUTOMÁTICA] Erro:", err.message);
     }
-}, 5 * 60 * 1000); // 5 minutos = 300000 milissegundos
+}, 5 * 60 * 1000);
 
 
 const PORT = process.env.PORT || 3000;
