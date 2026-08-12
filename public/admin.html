@@ -353,9 +353,9 @@
     <div id="modal-efetivar" class="modal-overlay-admin" style="display: none;">
         <div class="modal-card-admin">
             <h3 style="font-family: 'Playfair Display', serif; color: var(--brown-dark); margin-bottom: 15px;">
-                <i class="fa-solid fa-user-check" style="color: #28a745;"></i> Efetivar Reserva
+                <i class="fa-solid fa-user-check" style="color: #28a745;"></i> Editar / Atualizar Dados
             </h3>
-            <p style="font-size: 13px; color: #666; margin-bottom: 15px;">Confirme/Atualize os dados do hóspede para efetivar:</p>
+            <p style="font-size: 13px; color: #666; margin-bottom: 15px;">Atualize o nome ou o telefone do hóspede:</p>
             
             <form id="form-efetivar-dados">
                 <input type="hidden" id="efetivar-reserva-id">
@@ -372,7 +372,7 @@
 
                 <div style="display: flex; gap: 10px; justify-content: flex-end;">
                     <button type="button" onclick="fecharModalEfetivar()" style="padding: 10px 15px; border: 1px solid #ccc; background: #eee; border-radius: 6px; cursor: pointer;">Cancelar</button>
-                    <button type="submit" style="padding: 10px 15px; border: none; background: #28a745; color: white; font-weight: bold; border-radius: 6px; cursor: pointer;">Salvar e Efetivar</button>
+                    <button type="submit" style="padding: 10px 15px; border: none; background: #28a745; color: white; font-weight: bold; border-radius: 6px; cursor: pointer;">Salvar Alterações</button>
                 </div>
             </form>
         </div>
@@ -401,16 +401,15 @@
 
         let checkinBloqueio = '', checkoutBloqueio = '', dataObj1 = null, dataObj2 = null;
 
-        // Função de Tabela de Preços idêntica ao site
         function obterDiariaReferencia(quartoId, hospedes) {
             const id = parseInt(quartoId);
             const numHospedes = parseInt(hospedes) || 1;
 
-            if (id === 3) { // Suíte Master
+            if (id === 3) { 
                 if (numHospedes === 1) return 100.00;
                 if (numHospedes === 2) return 150.00;
                 if (numHospedes === 3) return 200.00;
-            } else { // Quartos Padrão (1, 2 e 4)
+            } else { 
                 if (numHospedes === 1) return 75.00;
                 if (numHospedes === 2) return 130.00;
                 if (numHospedes === 3) return 180.00;
@@ -520,12 +519,16 @@
 
                 data.reservas.forEach(r => {
                     let badge = '';
+                    let botoesAcao = '';
+
                     if (r.status_pagamento === 'concluido') {
                         badge = '<span style="background:#007bff; color:white; padding:3px 8px; border-radius:4px; font-size:11px;">Efetivada / Concluída</span>';
                     } else if (r.status_pagamento === 'bloqueado_balcao') {
                         badge = '<span style="background:#e0a800; color:white; padding:3px 8px; border-radius:4px; font-size:11px;">Balcão (Pendente Validação)</span>';
                     } else if (r.status_pagamento === 'pago') {
-                        badge = '<span style="background:#28a745; color:white; padding:3px 8px; border-radius:4px; font-size:11px;">Pix Site (Pendente Validação)</span>';
+                        badge = '<span style="background:#28a745; color:white; padding:3px 8px; border-radius:4px; font-size:11px;">Pix Site Pago</span>';
+                    } else if (r.status_pagamento === 'checkin') {
+                        badge = '<span style="background:#17a2b8; color:white; padding:3px 8px; border-radius:4px; font-size:11px;"><i class="fa-solid fa-key"></i> Hóspede no Quarto</span>';
                     }
 
                     const numQuarto = String(r.numero_quarto).replace(/\D/g, '').padStart(2, '0');
@@ -536,6 +539,27 @@
                     
                     const checkinBR = formatarDataBR(r.data_checkin);
                     const checkoutBR = formatarDataBR(r.data_checkout);
+
+                    // Lógica dos Botões de Check-in e Check-out
+                    if (r.status_pagamento !== 'checkin') {
+                        botoesAcao = `
+                            <button class="btn-status-confirm" style="background: #17a2b8;" onclick="fazerCheckin(${r.id})">
+                                <i class="fa-solid fa-door-open"></i> Check-in
+                            </button>
+                            <button class="btn-status-confirm" onclick="abrirModalEfetivar(${r.id}, '${nomeHospede.replace(/'/g, "\\'")}', '${telHospede}')">
+                                <i class="fa-solid fa-pen"></i> Editar
+                            </button>
+                            <button class="btn-status-cancel" onclick="cancelarReserva(${r.id})">
+                                <i class="fa-solid fa-xmark"></i> Cancelar
+                            </button>
+                        `;
+                    } else {
+                        botoesAcao = `
+                            <button class="btn-status-cancel" style="background: #343a40;" onclick="fazerCheckout(${r.id})">
+                                <i class="fa-solid fa-person-walking-arrow-right"></i> Registrar Check-out
+                            </button>
+                        `;
+                    }
 
                     container.innerHTML += `
                         <div class="reservation-item" style="display:flex; justify-content:space-between; align-items:center; padding:15px; border-bottom:1px solid #eee; flex-wrap:wrap; gap:10px; background:#fff; margin-bottom:10px; border-radius:8px; border:1px solid #e0e0e0;">
@@ -548,12 +572,7 @@
                             </div>
                             
                             <div style="display:flex; gap:8px;">
-                                <button class="btn-status-confirm" onclick="abrirModalEfetivar(${r.id}, '${nomeHospede.replace(/'/g, "\\'")}', '${telHospede}')">
-                                    <i class="fa-solid fa-check"></i> Efetivar
-                                </button>
-                                <button class="btn-status-cancel" onclick="cancelarReserva(${r.id})">
-                                    <i class="fa-solid fa-xmark"></i> Cancelar
-                                </button>
+                                ${botoesAcao}
                             </div>
                         </div>
                     `;
@@ -626,7 +645,7 @@
             const email = document.getElementById('lead-email').value.trim();
 
             if (telefone.length < 10 || telefone.length > 11) {
-                alert("O telefone deve conter DDD e o número completo (10 ou 11 dígitos apenas com números).");
+                alert("O telefone deve conter DDD e o número completo.");
                 return;
             }
 
@@ -701,7 +720,7 @@
                     fecharModalEfetivar();
                     carregarTudo();
                 } else {
-                    alert("Erro ao efetivar a reserva.");
+                    alert("Erro ao editar os dados da reserva.");
                 }
             } catch(e) {
                 alert("Erro ao conectar com o servidor.");
@@ -721,6 +740,37 @@
                     }
                 } catch(e) {
                     alert("Erro de conexão ao cancelar.");
+                }
+            }
+        }
+
+        // --- FUNÇÕES DE CHECK-IN E CHECK-OUT ---
+        async function fazerCheckin(id) {
+            if (confirm("Confirmar a entrada do hóspede (Check-in)?")) {
+                try {
+                    const resp = await fetch(`/api/admin/reservas/${id}/checkin`, { method: 'PUT' });
+                    if (resp.ok) {
+                        carregarTudo();
+                    } else {
+                        alert("Erro ao registrar Check-in.");
+                    }
+                } catch(e) {
+                    alert("Erro de conexão.");
+                }
+            }
+        }
+
+        async function fazerCheckout(id) {
+            if (confirm("Confirmar a saída do hóspede (Check-out)? A reserva sairá da lista principal.")) {
+                try {
+                    const resp = await fetch(`/api/admin/reservas/${id}/checkout`, { method: 'PUT' });
+                    if (resp.ok) {
+                        carregarTudo();
+                    } else {
+                        alert("Erro ao registrar Check-out.");
+                    }
+                } catch(e) {
+                    alert("Erro de conexão.");
                 }
             }
         }
