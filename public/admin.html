@@ -332,8 +332,8 @@
 
                 <div style="margin-bottom: 12px;">
                     <label style="font-size: 12px; font-weight: bold; color: #444;">WhatsApp / Telefone com DDD: *</label>
-                    <input type="tel" id="lead-telefone" placeholder="64999998888 (Apenas números)" maxlength="11" required style="width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 6px; margin-top: 4px;">
-                    <small style="font-size: 11px; color: #777;">Digite 11 dígitos com DDD (ex: 64999998888).</small>
+                    <input type="tel" id="lead-telefone" placeholder="(64) 99999-9999" maxlength="15" required style="width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 6px; margin-top: 4px;">
+                    <small style="font-size: 11px; color: #777;">O sistema formata automaticamente com DDD.</small>
                 </div>
 
                 <div style="margin-bottom: 20px;">
@@ -367,7 +367,7 @@
 
                 <div style="margin-bottom: 20px;">
                     <label style="font-size: 12px; font-weight: bold; color: #444;">WhatsApp / Telefone com DDD:</label>
-                    <input type="tel" id="efetivar-telefone" placeholder="64999998888" maxlength="11" required style="width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 6px; margin-top: 4px;">
+                    <input type="tel" id="efetivar-telefone" placeholder="(64) 99999-9999" maxlength="15" required style="width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 6px; margin-top: 4px;">
                 </div>
 
                 <div style="display: flex; gap: 10px; justify-content: flex-end;">
@@ -724,6 +724,27 @@
                 }
             }
         }
+
+        // --- MÁSCARAS DE TELEFONE ADICIONADAS ---
+        function aplicarMascaraTelefone(e) {
+            let valor = e.target.value.replace(/\D/g, '');
+            if (valor.length > 11) valor = valor.slice(0, 11);
+
+            if (valor.length > 10) {
+                valor = valor.replace(/^(\d{2})(\d{5})(\d{4})$/, '($1) $2-$3');
+            } else if (valor.length > 6) {
+                valor = valor.replace(/^(\d{2})(\d{4})(\d{0,4})$/, '($1) $2-$3');
+            } else if (valor.length > 2) {
+                valor = valor.replace(/^(\d{2})(\d{0,5})$/, '($1) $2');
+            } else if (valor.length > 0) {
+                valor = valor.replace(/^(\d*)/, '($1');
+            }
+            e.target.value = valor;
+        }
+
+        document.getElementById('lead-telefone').addEventListener('input', aplicarMascaraTelefone);
+        document.getElementById('efetivar-telefone').addEventListener('input', aplicarMascaraTelefone);
+
     </script>
 </body>
 </html>
