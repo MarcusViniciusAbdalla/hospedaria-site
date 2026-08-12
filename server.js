@@ -33,6 +33,44 @@ function calcularDiaria(quartoId, hospedes) {
     return 75.00;
 }
 
+// ==========================================================================
+// ROTA: PROCESSAR PAGAMENTO COM CARTÃO (CRÉDITO / DÉBITO)
+// ==========================================================================
+app.post('/api/processar-cartao', async (req, res) => {
+    try {
+        const { token, paymentMethodId, issuerId, installments, email, description, amount, reservaId } = req.body;
+
+        const paymentResponse = await payment.create({
+            body: {
+                token,
+                payment_method_id: paymentMethodId,
+                transaction_amount: Number(amount),
+                installments: Number(installments || 1),
+                issuer_id: issuerId ? Number(issuerId) : undefined,
+                description,
+                payer: { email: email || 'contato@hospedariacentral.com.br' }
+            }
+        });
+
+        if (paymentResponse.status === 'approved') {
+            await pool.query("UPDATE reservas SET status_pagamento = 'pago', mp_payment_id = $1 WHERE id = $2", 
+                [String(paymentResponse.id), reservaId]);
+        } else {
+            await pool.query("UPDATE reservas SET mp_payment_id = $1 WHERE id = $2", 
+                [String(paymentResponse.id), reservaId]);
+        }
+
+        res.json({ 
+            sucesso: true, 
+            status: paymentResponse.status,
+            paymentId: paymentResponse.id 
+        });
+    } catch (error) {
+        console.error('ERRO AO PROCESSAR CARTÃO:', error);
+        res.status(400).json({ erro: error.message || 'Erro ao processar pagamento com cartão.' });
+    }
+});
+
 /* ==========================================================================
    ROTAS PÚBLICAS
    ========================================================================== */
@@ -195,6 +233,7 @@ app.post('/api/reservar', async (req, res) => {
     }
 });
 
+// WEBHOOK ATUALIZADO (SUPORTA PIX E CARTÃO COM SEGURANÇA MÁXIMA)
 app.post('/api/webhook/mercadopago', async (req, res) => {
     const { type, data } = req.body;
     try {
@@ -259,7 +298,6 @@ app.get('/api/admin/exportar-leads', async (req, res) => {
     }
 });
 
-// NOVA ROTA: Extração do Relatório de Faturamento
 app.get('/api/admin/exportar-faturamento', async (req, res) => {
     try {
         const query = `
