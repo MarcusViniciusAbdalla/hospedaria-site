@@ -220,7 +220,6 @@ app.post('/api/webhook/mercadopago', async (req, res) => {
 
 app.get('/api/admin/reservas', async (req, res) => {
     try {
-        // Agora não trazemos as reservas com status 'checkout' para limpar a tela
         const query = `
             SELECT r.id, r.quarto_id, q.numero_quarto, r.quantidade_hospedes,
                    COALESCE(c.nome, 'Atendimento Presencial / Balcão') AS cliente_nome, 
@@ -263,7 +262,6 @@ app.get('/api/admin/exportar-leads', async (req, res) => {
     }
 });
 
-// ROTA ADMIN: Bloquear balcão registrando a quantidade de hóspedes
 app.post('/api/admin/bloquear', async (req, res) => {
     const { quartoId, hospedes, checkin, checkout, valorTotal } = req.body;
 
@@ -356,7 +354,6 @@ app.delete('/api/admin/reservas/:id', async (req, res) => {
     }
 });
 
-// NOVA ROTA: Registrar Entrada (Check-in)
 app.put('/api/admin/reservas/:id/checkin', async (req, res) => {
     const { id } = req.params;
     try {
@@ -368,7 +365,6 @@ app.put('/api/admin/reservas/:id/checkin', async (req, res) => {
     }
 });
 
-// NOVA ROTA: Registrar Saída (Check-out)
 app.put('/api/admin/reservas/:id/checkout', async (req, res) => {
     const { id } = req.params;
     try {
@@ -380,6 +376,48 @@ app.put('/api/admin/reservas/:id/checkout', async (req, res) => {
     }
 });
 
+// NOVA ROTA: Obter Faturamento e Ocupação do Mês Atual
+app.get('/api/admin/dashboard', async (req, res) => {
+    try {
+        const currentDate = new Date();
+        const firstDay = new Date(currentDate.getFullYear(), currentDate.getMonth(), 1).toISOString().split('T')[0];
+        const lastDay = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0).toISOString().split('T')[0];
+
+        // 1. Calcula o Faturamento Total (reservas pagas, concluídas, checkin e checkout) que caem no mês atual
+        const faturamentoQuery = `
+            SELECT SUM(valor_total) as total_faturado
+            FROM reservas
+            WHERE status_pagamento IN ('pago', 'concluido', 'checkin', 'checkout')
+            AND data_checkin >= $1 AND data_checkin <= $2
+        `;
+        const faturamentoResult = await pool.query(faturamentoQuery, [firstDay, lastDay]);
+        const totalFaturado = faturamentoResult.rows[0].total_faturado || 0;
+
+        // 2. Calcula a Taxa de Ocupação (simplificada: conta quantos dias as reservas ocupam no mês)
+        // Um mês tem aprox 30 dias * 4 quartos = 120 diárias disponíveis no total.
+        const ocupacaoQuery = `
+            SELECT SUM(data_checkout - data_checkin) as dias_ocupados
+            FROM reservas
+            WHERE status_pagamento IN ('pago', 'concluido', 'checkin', 'checkout')
+            AND data_checkin >= $1 AND data_checkin <= $2
+        `;
+        const ocupacaoResult = await pool.query(ocupacaoQuery, [firstDay, lastDay]);
+        const diasOcupados = ocupacaoResult.rows[0].dias_ocupados || 0;
+        
+        const diasNoMes = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0).getDate();
+        const totalDiariasPossiveis = diasNoMes * 4; // 4 quartos
+        const taxaOcupacao = ((diasOcupados / totalDiariasPossiveis) * 100).toFixed(1);
+
+        res.json({
+            faturamento: Number(totalFaturado).toFixed(2),
+            ocupacao: taxaOcupacao,
+            mesAtual: currentDate.toLocaleString('pt-BR', { month: 'long', year: 'numeric' })
+        });
+    } catch (err) {
+        console.error("Erro ao gerar dashboard:", err);
+        res.status(500).json({ erro: 'Erro ao gerar dados do dashboard.' });
+    }
+});
 
 /* ==========================================================================
    ROTINA DE LIMPEZA AUTOMÁTICA (O "Faxineiro" do Banco de Dados)
@@ -400,7 +438,6 @@ setInterval(async () => {
         console.error("[LIMPEZA AUTOMÁTICA] Erro:", err.message);
     }
 }, 5 * 60 * 1000);
-
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log(`Servidor rodando na porta ${PORT}`));
