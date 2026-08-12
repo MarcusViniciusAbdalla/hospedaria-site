@@ -7,19 +7,16 @@ const app = express();
 app.use(express.json());
 app.use(express.static('public'));
 
-// 1. Conexão com o PostgreSQL
 const pool = new Pool({
     connectionString: process.env.DATABASE_URL || `postgres://${process.env.DB_USER}:${process.env.DB_PASSWORD}@${process.env.DB_HOST}:${process.env.DB_PORT}/${process.env.DB_NAME}`,
     ssl: { rejectUnauthorized: false }
 });
 
-// 2. Mercado Pago Config
 const mpClient = new MercadoPagoConfig({ 
     accessToken: process.env.MP_ACCESS_TOKEN 
 });
 const payment = new Payment(mpClient);
 
-// 3. Tabela de Preços por Hóspedes e Tipo de Quarto
 function calcularDiaria(quartoId, hospedes) {
     const numHospedes = parseInt(hospedes) || 1;
     const idQuarto = parseInt(quartoId);
@@ -376,14 +373,30 @@ app.put('/api/admin/reservas/:id/checkout', async (req, res) => {
     }
 });
 
-// NOVA ROTA: Obter Faturamento e Ocupação do Mês Atual
+// NOVA ROTA: Dashboard com suporte a filtro de datas personalizadas
 app.get('/api/admin/dashboard', async (req, res) => {
     try {
-        const currentDate = new Date();
-        const firstDay = new Date(currentDate.getFullYear(), currentDate.getMonth(), 1).toISOString().split('T')[0];
-        const lastDay = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0).toISOString().split('T')[0];
+        const { start, end } = req.query;
+        let firstDay, lastDay, textoPeriodo;
 
-        // 1. Calcula o Faturamento Total (reservas pagas, concluídas, checkin e checkout) que caem no mês atual
+        if (start && end) {
+            // Se o usuário filtrou por data
+            firstDay = start;
+            lastDay = end;
+            const ds = start.split('-');
+            const de = end.split('-');
+            textoPeriodo = `${ds[2]}/${ds[1]} até ${de[2]}/${de[1]}`;
+        } else {
+            // Se não filtrou, pega o mês atual completo
+            const currentDate = new Date();
+            firstDay = new Date(currentDate.getFullYear(), currentDate.getMonth(), 1).toISOString().split('T')[0];
+            lastDay = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0).toISOString().split('T')[0];
+            
+            textoPeriodo = currentDate.toLocaleString('pt-BR', { month: 'long', year: 'numeric' });
+            textoPeriodo = textoPeriodo.charAt(0).toUpperCase() + textoPeriodo.slice(1);
+        }
+
+        // 1. Faturamento Total do período selecionado
         const faturamentoQuery = `
             SELECT SUM(valor_total) as total_faturado
             FROM reservas
@@ -393,8 +406,7 @@ app.get('/api/admin/dashboard', async (req, res) => {
         const faturamentoResult = await pool.query(faturamentoQuery, [firstDay, lastDay]);
         const totalFaturado = faturamentoResult.rows[0].total_faturado || 0;
 
-        // 2. Calcula a Taxa de Ocupação (simplificada: conta quantos dias as reservas ocupam no mês)
-        // Um mês tem aprox 30 dias * 4 quartos = 120 diárias disponíveis no total.
+        // 2. Dias ocupados no período selecionado
         const ocupacaoQuery = `
             SELECT SUM(data_checkout - data_checkin) as dias_ocupados
             FROM reservas
@@ -404,14 +416,18 @@ app.get('/api/admin/dashboard', async (req, res) => {
         const ocupacaoResult = await pool.query(ocupacaoQuery, [firstDay, lastDay]);
         const diasOcupados = ocupacaoResult.rows[0].dias_ocupados || 0;
         
-        const diasNoMes = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0).getDate();
-        const totalDiariasPossiveis = diasNoMes * 4; // 4 quartos
+        // 3. Descobre quantos dias existem no período pesquisado para calcular a %
+        const d1 = new Date(`${firstDay}T00:00:00`);
+        const d2 = new Date(`${lastDay}T00:00:00`);
+        const diasNaPesquisa = Math.max(1, Math.ceil((d2 - d1) / (1000 * 60 * 60 * 24)) + 1);
+        
+        const totalDiariasPossiveis = diasNaPesquisa * 4; // 4 quartos disponíveis no total
         const taxaOcupacao = ((diasOcupados / totalDiariasPossiveis) * 100).toFixed(1);
 
         res.json({
             faturamento: Number(totalFaturado).toFixed(2),
-            ocupacao: taxaOcupacao,
-            mesAtual: currentDate.toLocaleString('pt-BR', { month: 'long', year: 'numeric' })
+            ocupacao: taxaOcupacao > 100 ? 100 : taxaOcupacao, // Trava visual para não passar de 100%
+            mesAtual: textoPeriodo
         });
     } catch (err) {
         console.error("Erro ao gerar dashboard:", err);
