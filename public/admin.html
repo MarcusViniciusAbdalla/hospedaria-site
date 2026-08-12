@@ -75,7 +75,6 @@
             opacity: 0.9;
         }
 
-        /* --- ESTILOS DO DASHBOARD FINANCEIRO --- */
         .dashboard-grid {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
@@ -106,7 +105,6 @@
             color: var(--brown-dark);
             font-family: 'Playfair Display', serif;
         }
-        /* -------------------------------------- */
 
         .calendars-grid {
             display: grid;
@@ -232,7 +230,7 @@
     <!-- CONTEÚDO DO PAINEL -->
     <div id="admin-content" class="admin-container" style="display: none;">
         
-        <!-- BARRA DE FERRAMENTAS & RELATÓRIOS GERENCIAIS -->
+        <!-- BARRA DE FERRAMENTAS -->
         <div class="admin-toolbar">
             <div class="toolbar-title">
                 <i class="fa-solid fa-chart-line" style="color: var(--terracotta); font-size: 16px;"></i> 
@@ -243,13 +241,8 @@
                 <button onclick="exportarLeadsCSV()" class="btn-toolbar" style="background: #28a745; color: white;">
                     <i class="fa-solid fa-file-excel"></i> Exportar Leads (CSV)
                 </button>
-
                 <button onclick="document.getElementById('painel-dashboard').scrollIntoView({behavior: 'smooth'})" class="btn-toolbar" style="background: var(--terracotta); color: white;">
                     <i class="fa-solid fa-sack-dollar"></i> Faturamento & DRE
-                </button>
-
-                <button onclick="document.getElementById('painel-dashboard').scrollIntoView({behavior: 'smooth'})" class="btn-toolbar" style="background: #007bff; color: white;">
-                    <i class="fa-solid fa-chart-pie"></i> Taxa de Ocupação
                 </button>
             </div>
         </div>
@@ -258,18 +251,31 @@
             Painel Administrativo & Ocupação
         </h2>
 
-        <!-- NOVO: DASHBOARD FINANCEIRO -->
+        <!-- FILTRO E DASHBOARD FINANCEIRO -->
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; flex-wrap: wrap; gap: 10px; background: #fff; padding: 15px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.05);">
+            <div style="font-weight: 600; color: #444;"><i class="fa-solid fa-filter" style="color: var(--terracotta);"></i> Filtro de Desempenho</div>
+            <div style="display: flex; gap: 10px; align-items: center;">
+                <input type="text" id="dash-filtro-data" placeholder="Selecione um período específico..." style="padding: 10px 15px; border: 1px solid #ccc; border-radius: 6px; width: 260px; font-size: 13px;">
+                <button onclick="aplicarFiltroDashboard()" style="background: var(--brown-dark); color: white; border: none; padding: 10px 15px; border-radius: 6px; font-weight: bold; cursor: pointer;">
+                    Pesquisar
+                </button>
+                <button onclick="limparFiltroDashboard()" style="background: #eee; color: #555; border: 1px solid #ccc; padding: 10px 15px; border-radius: 6px; font-weight: bold; cursor: pointer;">
+                    Mês Atual
+                </button>
+            </div>
+        </div>
+
         <div class="dashboard-grid" id="painel-dashboard">
             <div class="dash-card">
-                <h4><i class="fa-regular fa-calendar" style="color: var(--terracotta);"></i> Mês de Referência</h4>
-                <div class="dash-value" id="dash-mes" style="font-size: 20px; margin-top: 5px;">Carregando...</div>
+                <h4><i class="fa-regular fa-calendar" style="color: var(--terracotta);"></i> Período Analisado</h4>
+                <div class="dash-value" id="dash-mes" style="font-size: 18px; margin-top: 5px;">Carregando...</div>
             </div>
             <div class="dash-card" style="border-left-color: #28a745;">
-                <h4><i class="fa-solid fa-sack-dollar" style="color: #28a745;"></i> Faturamento Mensal</h4>
+                <h4><i class="fa-solid fa-sack-dollar" style="color: #28a745;"></i> Faturamento (Pago)</h4>
                 <div class="dash-value" id="dash-faturamento" style="color: #28a745;">R$ 0,00</div>
             </div>
             <div class="dash-card" style="border-left-color: #007bff;">
-                <h4><i class="fa-solid fa-chart-pie" style="color: #007bff;"></i> Taxa de Ocupação</h4>
+                <h4><i class="fa-solid fa-chart-pie" style="color: #007bff;"></i> Ocupação (4 Quartos)</h4>
                 <div class="dash-value" id="dash-ocupacao" style="color: #007bff;">0.0%</div>
             </div>
         </div>
@@ -300,19 +306,17 @@
                     <div id="cal-quarto-4"></div>
                 </div>
             </div>
-
             <div class="calendar-legend">
                 <div class="legend-item"><div class="legend-box-green"></div> Data Livre</div>
                 <div class="legend-item"><div class="legend-box-red"></div> Ocupado / Riscado</div>
             </div>
         </div>
 
-        <!-- FORMULÁRIO DE BLOQUEIO PRESENCIAL COM SELETOR DE HÓSPEDES -->
+        <!-- FORMULÁRIO DE BLOQUEIO PRESENCIAL -->
         <div class="admin-card">
             <h3><i class="fa-solid fa-lock"></i> Travar Data (Balcão / Presencial)</h3>
             <form id="form-bloqueio">
                 <div class="admin-form-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 15px; align-items: end;">
-                    
                     <div class="form-group">
                         <label style="font-size: 12px; font-weight: bold; color: #555;">Selecione o Quarto:</label>
                         <select id="bloqueio-quarto" required style="width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 6px;">
@@ -322,7 +326,6 @@
                             <option value="4">Quarto 04 - Padrão</option>
                         </select>
                     </div>
-
                     <div class="form-group">
                         <label style="font-size: 12px; font-weight: bold; color: #555;">Qtd. Hóspedes:</label>
                         <select id="bloqueio-hospedes" required style="width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 6px;">
@@ -331,22 +334,18 @@
                             <option value="3">03 Pessoas</option>
                         </select>
                     </div>
-
                     <div class="form-group">
                         <label style="font-size: 12px; font-weight: bold; color: #555;">Período de Bloqueio:</label>
                         <input type="text" id="bloqueio-datas" placeholder="Entrada e Saída" readonly required style="width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 6px;">
                     </div>
-
                     <div class="form-group">
-                        <label style="font-size: 12px; font-weight: bold; color: #888;">Valor Sugerido (Tabela):</label>
+                        <label style="font-size: 12px; font-weight: bold; color: #888;">Valor Sugerido:</label>
                         <input type="text" id="bloqueio-valor-sugerido" placeholder="R$ 0,00" readonly style="width: 100%; padding: 10px; border: 1px solid #eee; background-color: #f8f9fa; color: #28a745; font-weight: bold; border-radius: 6px;">
                     </div>
-
                     <div class="form-group">
                         <label style="font-size: 12px; font-weight: bold; color: #555;">Valor Cobrado (R$):</label>
                         <input type="number" id="bloqueio-valor" step="0.01" min="0" placeholder="Ex: 150.00" required style="width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 6px;">
                     </div>
-
                     <div class="form-group">
                         <button type="submit" class="btn-admin-action" style="width: 100%; padding: 11px;">CONFIRMAR BLOQUEIO</button>
                     </div>
@@ -361,66 +360,53 @@
                 <p style="text-align: center; color: #777;">Carregando agenda...</p>
             </div>
         </div>
-
     </div>
 
-    <!-- POP-UP / MODAL DADOS DO HÓSPEDE -->
+    <!-- MODAIS (Inalterados) -->
     <div id="modal-lead-bloqueio" class="modal-overlay-admin" style="display: none;">
         <div class="modal-card-admin">
             <h3 style="font-family: 'Playfair Display', serif; color: var(--brown-dark); margin-bottom: 15px;">
                 <i class="fa-solid fa-address-book" style="color: var(--terracotta);"></i> Cadastrar Dados do Hóspede
             </h3>
-            <p style="font-size: 13px; color: #666; margin-bottom: 15px;">Preencha os dados do hóspede para finalizar o bloqueio presencial:</p>
-            
             <form id="form-lead-bloqueio">
                 <div style="margin-bottom: 12px;">
                     <label style="font-size: 12px; font-weight: bold; color: #444;">Nome Completo: *</label>
-                    <input type="text" id="lead-nome" placeholder="Ex: João da Silva" required style="width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 6px; margin-top: 4px;">
+                    <input type="text" id="lead-nome" required style="width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 6px; margin-top: 4px;">
                 </div>
-
                 <div style="margin-bottom: 12px;">
-                    <label style="font-size: 12px; font-weight: bold; color: #444;">WhatsApp / Telefone com DDD: *</label>
-                    <input type="tel" id="lead-telefone" placeholder="(64) 99999-9999" maxlength="15" required style="width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 6px; margin-top: 4px;">
-                    <small style="font-size: 11px; color: #777;">O sistema formata automaticamente com DDD.</small>
+                    <label style="font-size: 12px; font-weight: bold; color: #444;">WhatsApp / Telefone: *</label>
+                    <input type="tel" id="lead-telefone" maxlength="15" required style="width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 6px; margin-top: 4px;">
                 </div>
-
                 <div style="margin-bottom: 20px;">
                     <label style="font-size: 12px; font-weight: bold; color: #444;">E-mail (opcional):</label>
-                    <input type="email" id="lead-email" placeholder="cliente@email.com" style="width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 6px; margin-top: 4px;">
+                    <input type="email" id="lead-email" style="width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 6px; margin-top: 4px;">
                 </div>
-
                 <div style="display: flex; gap: 10px; justify-content: flex-end;">
                     <button type="button" onclick="fecharModalLead()" style="padding: 10px 15px; border: 1px solid #ccc; background: #eee; border-radius: 6px; cursor: pointer;">Cancelar</button>
-                    <button type="submit" style="padding: 10px 15px; border: none; background: var(--terracotta); color: white; font-weight: bold; border-radius: 6px; cursor: pointer;">Salvar e Finalizar</button>
+                    <button type="submit" style="padding: 10px 15px; border: none; background: var(--terracotta); color: white; font-weight: bold; border-radius: 6px; cursor: pointer;">Finalizar</button>
                 </div>
             </form>
         </div>
     </div>
 
-    <!-- POP-UP / MODAL PARA EFETIVAR RESERVA -->
     <div id="modal-efetivar" class="modal-overlay-admin" style="display: none;">
         <div class="modal-card-admin">
             <h3 style="font-family: 'Playfair Display', serif; color: var(--brown-dark); margin-bottom: 15px;">
                 <i class="fa-solid fa-user-check" style="color: #28a745;"></i> Editar / Atualizar Dados
             </h3>
-            <p style="font-size: 13px; color: #666; margin-bottom: 15px;">Atualize o nome ou o telefone do hóspede:</p>
-            
             <form id="form-efetivar-dados">
                 <input type="hidden" id="efetivar-reserva-id">
-                
                 <div style="margin-bottom: 12px;">
-                    <label style="font-size: 12px; font-weight: bold; color: #444;">Nome Completo do Hóspede:</label>
+                    <label style="font-size: 12px; font-weight: bold; color: #444;">Nome do Hóspede:</label>
                     <input type="text" id="efetivar-nome" required style="width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 6px; margin-top: 4px;">
                 </div>
-
                 <div style="margin-bottom: 20px;">
-                    <label style="font-size: 12px; font-weight: bold; color: #444;">WhatsApp / Telefone com DDD:</label>
-                    <input type="tel" id="efetivar-telefone" placeholder="(64) 99999-9999" maxlength="15" required style="width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 6px; margin-top: 4px;">
+                    <label style="font-size: 12px; font-weight: bold; color: #444;">WhatsApp / Telefone:</label>
+                    <input type="tel" id="efetivar-telefone" maxlength="15" required style="width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 6px; margin-top: 4px;">
                 </div>
-
                 <div style="display: flex; gap: 10px; justify-content: flex-end;">
                     <button type="button" onclick="fecharModalEfetivar()" style="padding: 10px 15px; border: 1px solid #ccc; background: #eee; border-radius: 6px; cursor: pointer;">Cancelar</button>
-                    <button type="submit" style="padding: 10px 15px; border: none; background: #28a745; color: white; font-weight: bold; border-radius: 6px; cursor: pointer;">Salvar Alterações</button>
+                    <button type="submit" style="padding: 10px 15px; border: none; background: #28a745; color: white; font-weight: bold; border-radius: 6px; cursor: pointer;">Salvar</button>
                 </div>
             </form>
         </div>
@@ -448,11 +434,63 @@
         });
 
         let checkinBloqueio = '', checkoutBloqueio = '', dataObj1 = null, dataObj2 = null;
+        
+        // --- LÓGICA DO FILTRO DE DASHBOARD ---
+        let dashStart = '';
+        let dashEnd = '';
+
+        flatpickr("#dash-filtro-data", {
+            mode: "range",
+            locale: "pt",
+            dateFormat: "Y-m-d",
+            onChange: function(selectedDates) {
+                if (selectedDates.length === 2) {
+                    dashStart = selectedDates[0].toISOString().split('T')[0];
+                    dashEnd = selectedDates[1].toISOString().split('T')[0];
+                } else {
+                    dashStart = '';
+                    dashEnd = '';
+                }
+            }
+        });
+
+        function aplicarFiltroDashboard() {
+            if (!dashStart || !dashEnd) {
+                alert("Por favor, selecione as duas datas no calendário para filtrar.");
+                return;
+            }
+            carregarDashboard(dashStart, dashEnd);
+        }
+
+        function limparFiltroDashboard() {
+            document.getElementById('dash-filtro-data').value = '';
+            dashStart = '';
+            dashEnd = '';
+            carregarDashboard();
+        }
+
+        async function carregarDashboard(start = '', end = '') {
+            try {
+                let url = '/api/admin/dashboard';
+                if (start && end) {
+                    url += `?start=${start}&end=${end}`;
+                }
+                const resp = await fetch(url);
+                if (resp.ok) {
+                    const data = await resp.json();
+                    document.getElementById('dash-mes').innerText = data.mesAtual;
+                    document.getElementById('dash-faturamento').innerText = `R$ ${data.faturamento.replace('.', ',')}`;
+                    document.getElementById('dash-ocupacao').innerText = `${data.ocupacao}%`;
+                }
+            } catch (err) {
+                console.error("Erro ao carregar dashboard:", err);
+            }
+        }
+        // -------------------------------------
 
         function obterDiariaReferencia(quartoId, hospedes) {
             const id = parseInt(quartoId);
             const numHospedes = parseInt(hospedes) || 1;
-
             if (id === 3) { 
                 if (numHospedes === 1) return 100.00;
                 if (numHospedes === 2) return 150.00;
@@ -512,38 +550,17 @@
         });
 
         function carregarTudo() {
-            carregarDashboard(); // NOVO: Chama os dados do dashboard
+            carregarDashboard();
             carregarAgenda();
             [1, 2, 3, 4].forEach(quartoId => carregarCalendarioQuarto(quartoId));
         }
 
-        // --- NOVA FUNÇÃO: CARREGAR DASHBOARD FINANCEIRO ---
-        async function carregarDashboard() {
-            try {
-                const resp = await fetch('/api/admin/dashboard');
-                if (resp.ok) {
-                    const data = await resp.json();
-                    // Converte formato de mês para Primeira Letra Maiúscula
-                    const mesFormatado = data.mesAtual.charAt(0).toUpperCase() + data.mesAtual.slice(1);
-                    
-                    document.getElementById('dash-mes').innerText = mesFormatado;
-                    document.getElementById('dash-faturamento').innerText = `R$ ${data.faturamento.replace('.', ',')}`;
-                    document.getElementById('dash-ocupacao').innerText = `${data.ocupacao}%`;
-                }
-            } catch (err) {
-                console.error("Erro ao carregar os dados do dashboard:", err);
-            }
-        }
-        // ---------------------------------------------------
-
         async function carregarCalendarioQuarto(quartoId) {
             const elem = document.getElementById(`cal-quarto-${quartoId}`);
             if (!elem) return;
-            
             try {
                 const resp = await fetch(`/api/disponibilidade?quartoId=${quartoId}`);
                 let datasOcupadas = [];
-
                 if (resp.ok) {
                     const dados = await resp.json();
                     datasOcupadas = (dados.diasOcupados || []).map(r => ({
@@ -551,7 +568,6 @@
                         to: r.data_checkout.split('T')[0]
                     }));
                 }
-
                 elem.innerHTML = ''; 
                 flatpickr(elem, {
                     inline: true,
@@ -568,9 +584,7 @@
                         if (eReserva) dayElem.classList.add("dia-ocupado");
                     }
                 });
-            } catch(e) {
-                console.error(`Erro ao carregar calendário ${quartoId}:`, e);
-            }
+            } catch(e) { console.error(`Erro ao carregar calendário ${quartoId}:`, e); }
         }
 
         async function carregarAgenda() {
@@ -579,12 +593,10 @@
                 const resp = await fetch('/api/admin/reservas');
                 const data = await resp.json();
                 container.innerHTML = '';
-
                 if (!data.reservas || data.reservas.length === 0) {
                     container.innerHTML = '<p style="text-align: center; color: #777; padding: 20px;">Nenhuma reserva ativa cadastrada no momento.</p>';
                     return;
                 }
-
                 data.reservas.forEach(r => {
                     let badge = '';
                     let botoesAcao = '';
@@ -604,11 +616,9 @@
                     const nomeHospede = r.cliente_nome || 'Hóspede Não Identificado';
                     const telHospede = r.telefone ? r.telefone : 'Sem Telefone';
                     const qtdHospedes = r.quantidade_hospedes || 1;
-                    
                     const checkinBR = formatarDataBR(r.data_checkin);
                     const checkoutBR = formatarDataBR(r.data_checkout);
 
-                    // Lógica dos Botões de Check-in e Check-out
                     if (r.status_pagamento !== 'checkin') {
                         botoesAcao = `
                             <button class="btn-status-confirm" style="background: #17a2b8;" onclick="fazerCheckin(${r.id})">
@@ -638,10 +648,7 @@
                                 <div style="color:#25d366; font-size:13px; margin-bottom:4px;"><i class="fa-brands fa-whatsapp"></i> <strong>Contato:</strong> ${telHospede}</div>
                                 <div><strong style="color:var(--brown-dark); font-size:15px;">Valor Total: R$ ${valorFormatado}</strong></div>
                             </div>
-                            
-                            <div style="display:flex; gap:8px;">
-                                ${botoesAcao}
-                            </div>
+                            <div style="display:flex; gap:8px;">${botoesAcao}</div>
                         </div>
                     `;
                 });
@@ -654,25 +661,20 @@
             try {
                 const resp = await fetch('/api/admin/exportar-leads');
                 const data = await resp.json();
-
                 if (!data.leads || data.leads.length === 0) {
                     alert("Nenhum lead encontrado para exportar.");
                     return;
                 }
-
                 let csvContent = "data:text/csv;charset=utf-8,\uFEFF";
                 csvContent += "Nome;Telefone;Email;Total de Estadias;Total Gasto (R$)\n";
-
                 data.leads.forEach(l => {
                     const nome = `"${(l.nome || '').replace(/"/g, '""')}"`;
                     const tel = `"${l.telefone || ''}"`;
                     const email = `"${l.email || ''}"`;
                     const estadias = l.total_estadias || 0;
                     const valor = Number(l.total_gasto || 0).toFixed(2).replace('.', ',');
-                    
                     csvContent += `${nome};${tel};${email};${estadias};${valor}\n`;
                 });
-
                 const encodedUri = encodeURI(csvContent);
                 const link = document.createElement("a");
                 link.setAttribute("href", encodedUri);
@@ -680,10 +682,7 @@
                 document.body.appendChild(link);
                 link.click();
                 document.body.removeChild(link);
-
-            } catch (e) {
-                alert("Erro ao gerar arquivo de leads.");
-            }
+            } catch (e) { alert("Erro ao gerar arquivo de leads."); }
         }
 
         document.getElementById('form-bloqueio').addEventListener('submit', (e) => {
@@ -697,17 +696,13 @@
                 alert("Informe o valor cobrado.");
                 return;
             }
-
             document.getElementById('modal-lead-bloqueio').style.display = 'flex';
         });
 
-        function fecharModalLead() {
-            document.getElementById('modal-lead-bloqueio').style.display = 'none';
-        }
+        function fecharModalLead() { document.getElementById('modal-lead-bloqueio').style.display = 'none'; }
 
         document.getElementById('form-lead-bloqueio').addEventListener('submit', async (e) => {
             e.preventDefault();
-
             const nome = document.getElementById('lead-nome').value.trim();
             const telefone = document.getElementById('lead-telefone').value.replace(/\D/g, '');
             const email = document.getElementById('lead-email').value.trim();
@@ -717,22 +712,13 @@
                 return;
             }
 
-            if (email && !email.includes('@')) {
-                alert("Por favor, digite um e-mail válido com @.");
-                return;
-            }
-
             const payload = {
                 quartoId: document.getElementById('bloqueio-quarto').value,
                 hospedes: document.getElementById('bloqueio-hospedes').value,
                 checkin: checkinBloqueio,
                 checkout: checkoutBloqueio,
                 valorTotal: document.getElementById('bloqueio-valor').value,
-                cliente: {
-                    nome: nome,
-                    telefone: telefone,
-                    email: email
-                }
+                cliente: { nome: nome, telefone: telefone, email: email }
             };
 
             try {
@@ -741,7 +727,6 @@
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(payload)
                 });
-
                 const resData = await resp.json();
                 if (resp.ok) {
                     alert(resData.mensagem);
@@ -751,13 +736,9 @@
                     document.getElementById('bloqueio-valor').value = '';
                     document.getElementById('bloqueio-valor-sugerido').value = 'R$ 0,00';
                     checkinBloqueio = ''; checkoutBloqueio = ''; dataObj1 = null; dataObj2 = null;
-                    carregarTudo(); // Atualiza painel e dashboard
-                } else {
-                    alert(resData.erro || "Erro ao efetuar bloqueio.");
-                }
-            } catch (err) {
-                alert("Erro ao comunicar com o servidor.");
-            }
+                    carregarTudo(); 
+                } else { alert(resData.erro || "Erro ao efetuar bloqueio."); }
+            } catch (err) { alert("Erro ao comunicar com o servidor."); }
         });
 
         function abrirModalEfetivar(id, nomeAtual, telAtual) {
@@ -767,32 +748,24 @@
             document.getElementById('modal-efetivar').style.display = 'flex';
         }
 
-        function fecharModalEfetivar() {
-            document.getElementById('modal-efetivar').style.display = 'none';
-        }
+        function fecharModalEfetivar() { document.getElementById('modal-efetivar').style.display = 'none'; }
 
         document.getElementById('form-efetivar-dados').addEventListener('submit', async (e) => {
             e.preventDefault();
             const id = document.getElementById('efetivar-reserva-id').value;
             const nome = document.getElementById('efetivar-nome').value;
             const telefone = document.getElementById('efetivar-telefone').value.replace(/\D/g, '');
-
             try {
                 const resp = await fetch(`/api/admin/reservas/${id}/efetivar`, {
                     method: 'PUT',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ nome, telefone })
                 });
-
                 if (resp.ok) {
                     fecharModalEfetivar();
                     carregarTudo();
-                } else {
-                    alert("Erro ao editar os dados da reserva.");
-                }
-            } catch(e) {
-                alert("Erro ao conectar com o servidor.");
-            }
+                } else { alert("Erro ao editar os dados da reserva."); }
+            } catch(e) { alert("Erro ao conectar com o servidor."); }
         });
 
         async function cancelarReserva(id) {
@@ -803,28 +776,18 @@
                     if (resp.ok) {
                         alert(data.mensagem);
                         carregarTudo();
-                    } else {
-                        alert(data.erro || "Erro ao cancelar.");
-                    }
-                } catch(e) {
-                    alert("Erro de conexão ao cancelar.");
-                }
+                    } else { alert(data.erro || "Erro ao cancelar."); }
+                } catch(e) { alert("Erro de conexão ao cancelar."); }
             }
         }
 
-        // --- FUNÇÕES DE CHECK-IN E CHECK-OUT ---
         async function fazerCheckin(id) {
             if (confirm("Confirmar a entrada do hóspede (Check-in)?")) {
                 try {
                     const resp = await fetch(`/api/admin/reservas/${id}/checkin`, { method: 'PUT' });
-                    if (resp.ok) {
-                        carregarTudo();
-                    } else {
-                        alert("Erro ao registrar Check-in.");
-                    }
-                } catch(e) {
-                    alert("Erro de conexão.");
-                }
+                    if (resp.ok) carregarTudo();
+                    else alert("Erro ao registrar Check-in.");
+                } catch(e) { alert("Erro de conexão."); }
             }
         }
 
@@ -832,37 +795,24 @@
             if (confirm("Confirmar a saída do hóspede (Check-out)? A reserva sairá da lista principal.")) {
                 try {
                     const resp = await fetch(`/api/admin/reservas/${id}/checkout`, { method: 'PUT' });
-                    if (resp.ok) {
-                        carregarTudo();
-                    } else {
-                        alert("Erro ao registrar Check-out.");
-                    }
-                } catch(e) {
-                    alert("Erro de conexão.");
-                }
+                    if (resp.ok) carregarTudo();
+                    else alert("Erro ao registrar Check-out.");
+                } catch(e) { alert("Erro de conexão."); }
             }
         }
 
-        // --- MÁSCARAS DE TELEFONE ADICIONADAS ---
         function aplicarMascaraTelefone(e) {
             let valor = e.target.value.replace(/\D/g, '');
             if (valor.length > 11) valor = valor.slice(0, 11);
-
-            if (valor.length > 10) {
-                valor = valor.replace(/^(\d{2})(\d{5})(\d{4})$/, '($1) $2-$3');
-            } else if (valor.length > 6) {
-                valor = valor.replace(/^(\d{2})(\d{4})(\d{0,4})$/, '($1) $2-$3');
-            } else if (valor.length > 2) {
-                valor = valor.replace(/^(\d{2})(\d{0,5})$/, '($1) $2');
-            } else if (valor.length > 0) {
-                valor = valor.replace(/^(\d*)/, '($1');
-            }
+            if (valor.length > 10) valor = valor.replace(/^(\d{2})(\d{5})(\d{4})$/, '($1) $2-$3');
+            else if (valor.length > 6) valor = valor.replace(/^(\d{2})(\d{4})(\d{0,4})$/, '($1) $2-$3');
+            else if (valor.length > 2) valor = valor.replace(/^(\d{2})(\d{0,5})$/, '($1) $2');
+            else if (valor.length > 0) valor = valor.replace(/^(\d*)/, '($1');
             e.target.value = valor;
         }
 
         document.getElementById('lead-telefone').addEventListener('input', aplicarMascaraTelefone);
         document.getElementById('efetivar-telefone').addEventListener('input', aplicarMascaraTelefone);
-
     </script>
 </body>
 </html>
