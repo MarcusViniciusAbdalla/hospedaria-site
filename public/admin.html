@@ -11,9 +11,13 @@
     <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;600;700&family=Playfair+Display:wght@700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     
+    <!-- Flatpickr para os calendários -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
     <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
     <script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/l10n/pt.js"></script>
+    
+    <!-- Chart.js para o Gráfico de Faturamento -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     
     <style>
         .login-overlay {
@@ -280,6 +284,14 @@
             </div>
         </div>
 
+        <!-- NOVO: GRÁFICO DE BARRAS DE FATURAMENTO (ÚLTIMOS 12 MESES) -->
+        <div class="admin-card" style="margin-bottom: 30px;">
+            <h3><i class="fa-solid fa-chart-column" style="color: var(--terracotta);"></i> Evolução do Faturamento (Últimos 12 Meses)</h3>
+            <div style="position: relative; height: 350px; width: 100%; margin-top: 20px;">
+                <canvas id="faturamentoChart"></canvas>
+            </div>
+        </div>
+
         <!-- CONSULTA RÁPIDA DE CALENDÁRIOS -->
         <div class="admin-card">
             <h3><i class="fa-solid fa-calendar-days"></i> Consulta Rápida de Disponibilidade</h3>
@@ -362,7 +374,7 @@
         </div>
     </div>
 
-    <!-- MODAIS (Inalterados) -->
+    <!-- MODAIS -->
     <div id="modal-lead-bloqueio" class="modal-overlay-admin" style="display: none;">
         <div class="modal-card-admin">
             <h3 style="font-family: 'Playfair Display', serif; color: var(--brown-dark); margin-bottom: 15px;">
@@ -486,6 +498,74 @@
                 console.error("Erro ao carregar dashboard:", err);
             }
         }
+        
+        // --- LÓGICA DO GRÁFICO (CHART.JS) ---
+        let faturamentoChartInstance = null;
+
+        async function carregarGraficoFaturamento() {
+            try {
+                const resp = await fetch('/api/admin/grafico-faturamento');
+                if (resp.ok) {
+                    const data = await resp.json();
+                    
+                    const ctx = document.getElementById('faturamentoChart').getContext('2d');
+                    
+                    // Se já existir um gráfico na tela, apaga ele antes de desenhar o novo
+                    if (faturamentoChartInstance) {
+                        faturamentoChartInstance.destroy();
+                    }
+
+                    faturamentoChartInstance = new Chart(ctx, {
+                        type: 'bar',
+                        data: {
+                            labels: data.labels, // Nomes dos meses (Ex: Ago/26)
+                            datasets: [{
+                                label: 'Faturamento (R$)',
+                                data: data.dados, // Valores
+                                backgroundColor: '#d97757', // Cor Terracota
+                                borderRadius: 6, // Bordas arredondadas nas barras
+                                barPercentage: 0.6 // Espessura da barra
+                            }]
+                        },
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            scales: {
+                                y: {
+                                    beginAtZero: true,
+                                    ticks: {
+                                        callback: function(value) {
+                                            return 'R$ ' + value;
+                                        }
+                                    }
+                                }
+                            },
+                            plugins: {
+                                legend: {
+                                    display: false // Esconde a legenda para ficar mais limpo
+                                },
+                                tooltip: {
+                                    callbacks: {
+                                        label: function(context) {
+                                            let label = context.dataset.label || '';
+                                            if (label) {
+                                                label += ': ';
+                                            }
+                                            if (context.parsed.y !== null) {
+                                                label += 'R$ ' + context.parsed.y.toFixed(2).replace('.', ',');
+                                            }
+                                            return label;
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    });
+                }
+            } catch (err) {
+                console.error("Erro ao carregar gráfico:", err);
+            }
+        }
         // -------------------------------------
 
         function obterDiariaReferencia(quartoId, hospedes) {
@@ -551,6 +631,7 @@
 
         function carregarTudo() {
             carregarDashboard();
+            carregarGraficoFaturamento(); // Chama o desenho das barras!
             carregarAgenda();
             [1, 2, 3, 4].forEach(quartoId => carregarCalendarioQuarto(quartoId));
         }
