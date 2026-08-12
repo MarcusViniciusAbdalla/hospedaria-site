@@ -259,6 +259,32 @@ app.get('/api/admin/exportar-leads', async (req, res) => {
     }
 });
 
+// NOVA ROTA: Extração do Relatório de Faturamento
+app.get('/api/admin/exportar-faturamento', async (req, res) => {
+    try {
+        const query = `
+            SELECT 
+                r.id,
+                TO_CHAR(r.data_checkin, 'DD/MM/YYYY') as data_entrada,
+                TO_CHAR(r.data_checkout, 'DD/MM/YYYY') as data_saida,
+                q.numero_quarto,
+                COALESCE(c.nome, 'Balcão / Presencial') as cliente,
+                r.valor_total,
+                r.status_pagamento
+            FROM reservas r
+            JOIN quartos q ON q.id = r.quarto_id
+            LEFT JOIN clientes c ON c.id = r.cliente_id
+            WHERE r.status_pagamento IN ('pago', 'bloqueado_balcao', 'concluido', 'checkin', 'checkout')
+            ORDER BY r.data_checkin DESC;
+        `;
+        const result = await pool.query(query);
+        res.json({ faturamento: result.rows });
+    } catch (err) {
+        console.error("Erro ao exportar faturamento:", err);
+        res.status(500).json({ erro: "Erro ao buscar dados de faturamento." });
+    }
+});
+
 app.post('/api/admin/bloquear', async (req, res) => {
     const { quartoId, hospedes, checkin, checkout, valorTotal } = req.body;
 
@@ -429,7 +455,6 @@ app.get('/api/admin/dashboard', async (req, res) => {
     }
 });
 
-// NOVA ROTA: Obter Faturamento dos últimos 12 meses para o Gráfico
 app.get('/api/admin/grafico-faturamento', async (req, res) => {
     try {
         const query = `
@@ -464,7 +489,6 @@ app.get('/api/admin/grafico-faturamento', async (req, res) => {
         res.status(500).json({ erro: 'Erro ao buscar dados do gráfico.' });
     }
 });
-
 
 /* ==========================================================================
    ROTINA DE LIMPEZA AUTOMÁTICA
