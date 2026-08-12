@@ -11,6 +11,9 @@
     <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;600;700&family=Playfair+Display:wght@700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     
+    <!-- SDK oficial do Mercado Pago para cartões seguros -->
+    <script src="https://sdk.mercadopago.com/js/v2"></script>
+    
     <style>
         body {
             background-color: #f7f4f0;
@@ -115,6 +118,53 @@
             text-align: center;
         }
 
+        /* Abas de Pagamento */
+        .payment-tabs {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+        .tab-btn {
+            flex: 1;
+            padding: 12px;
+            border: 1px solid #ccc;
+            background: #f8f9fa;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            font-size: 14px;
+            text-align: center;
+            transition: all 0.2s;
+        }
+        .tab-btn.active {
+            background: var(--brown-dark, #3e2723);
+            color: white;
+            border-color: var(--brown-dark, #3e2723);
+        }
+
+        .form-row {
+            margin-bottom: 15px;
+        }
+        .form-row label {
+            font-size: 13px;
+            font-weight: 600;
+            color: #444;
+            display: block;
+            margin-bottom: 5px;
+        }
+        .form-row input, .form-row select {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #ccc;
+            border-radius: 6px;
+            font-size: 14px;
+        }
+        .form-grid-2 {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+        }
+
         @media (max-width: 900px) {
             .checkout-container {
                 grid-template-columns: 1fr;
@@ -146,6 +196,7 @@
     <main class="checkout-container">
         
         <div>
+            <!-- DETALHES DO QUARTO -->
             <div class="checkout-card" style="margin-bottom: 25px;">
                 <h3 id="room-title"><i class="fa-solid fa-bed"></i> Detalhes da Acomodação</h3>
                 
@@ -160,58 +211,117 @@
                 </p>
             </div>
 
+            <!-- PASSO 1: DADOS DO HÓSPEDE -->
             <div class="checkout-card" id="card-dados">
-                <h3><i class="fa-solid fa-user-check"></i> Dados do Hóspede Principal</h3>
+                <h3><i class="fa-solid fa-user-check"></i> 1. Dados do Hóspede Principal</h3>
                 
                 <form id="form-checkout-page">
-                    <div style="margin-bottom: 15px;">
-                        <label style="font-size: 13px; font-weight: 600; color: #444;">Nome Completo:</label>
-                        <input type="text" id="cust-nome" required style="width: 100%; padding: 12px; border: 1px solid #ccc; border-radius: 6px; margin-top: 5px;">
+                    <div class="form-row">
+                        <label>Nome Completo:</label>
+                        <input type="text" id="cust-nome" required>
                     </div>
 
-                    <div style="margin-bottom: 15px;">
-                        <label style="font-size: 13px; font-weight: 600; color: #444;">WhatsApp / Telefone:</label>
-                        <input type="tel" id="cust-tel" placeholder="(64) 99999-9999" maxlength="15" required style="width: 100%; padding: 12px; border: 1px solid #ccc; border-radius: 6px; margin-top: 5px;">
+                    <div class="form-row">
+                        <label>WhatsApp / Telefone:</label>
+                        <input type="tel" id="cust-tel" placeholder="(64) 99999-9999" maxlength="15" required>
                     </div>
 
-                    <div style="margin-bottom: 20px;">
-                        <label style="font-size: 13px; font-weight: 600; color: #444;">E-mail (opcional):</label>
-                        <input type="email" id="cust-email" placeholder="seuemail@email.com" style="width: 100%; padding: 12px; border: 1px solid #ccc; border-radius: 6px; margin-top: 5px;">
+                    <div class="form-row">
+                        <label>E-mail:</label>
+                        <input type="email" id="cust-email" placeholder="seuemail@email.com" required>
                     </div>
 
                     <button type="submit" class="btn-pay-now">
-                        <i class="fa-solid fa-qrcode"></i> Confirmar e Gerar Pix
+                        Continuar para o Pagamento <i class="fa-solid fa-arrow-right"></i>
                     </button>
                 </form>
             </div>
 
-            <div class="checkout-card" id="card-pix" style="display: none; text-align: center;">
-                <h3><i class="fa-solid fa-pix" style="color: #32bcad;"></i> Pagamento via Pix</h3>
+            <!-- PASSO 2: ESCOLHA O MEIO DE PAGAMENTO (CARTÃO OU PIX) -->
+            <div class="checkout-card" id="card-pagamento" style="display: none;">
+                <h3><i class="fa-solid fa-wallet"></i> 2. Escolha a Forma de Pagamento</h3>
                 
-                <!-- AVISO DE URGÊNCIA ADICIONADO AQUI -->
-                <div class="alert-urgency">
-                    <i class="fa-solid fa-clock"></i> Atenção: Realize o pagamento em até 30 minutos. Após este prazo, a reserva não paga será cancelada automaticamente.
-                </div>
-
-                <p style="font-size: 14px; color: #666; margin-bottom: 20px;">Escaneie o QR Code abaixo no app do seu banco ou copie a chave Pix:</p>
-
-                <div style="margin-bottom: 20px;">
-                    <img id="pix-qr-img" src="" alt="QR Code Pix" style="max-width: 220px; border: 2px solid #eee; border-radius: 12px; padding: 10px;">
-                </div>
-
-                <div style="max-width: 400px; margin: 0 auto 20px;">
-                    <input type="text" id="pix-copia-cola" readonly style="width: 100%; padding: 12px; border: 1px solid #ccc; border-radius: 6px; font-size: 13px; text-align: center; margin-bottom: 10px;">
-                    <button onclick="copiarPix()" class="btn-pay-now" style="background: var(--brown-dark, #3e2723); padding: 12px;">
-                        <i class="fa-regular fa-copy"></i> Copiar Chave Pix
+                <div class="payment-tabs">
+                    <button type="button" class="tab-btn active" onclick="alternarMetodo('cartao')">
+                        <i class="fa-solid fa-credit-card"></i> Cartão de Crédito
+                    </button>
+                    <button type="button" class="tab-btn" onclick="alternarMetodo('pix')">
+                        <i class="fa-solid fa-pix" style="color: #32bcad;"></i> Pix (Instantâneo)
                     </button>
                 </div>
 
-                <p style="font-size: 13px; color: #28a745; font-weight: 600;">
-                    <i class="fa-solid fa-spinner fa-spin"></i> Aguardando confirmação do pagamento...
-                </p>
+                <!-- MÉTODO CARTÃO DE CRÉDITO -->
+                <div id="metodo-cartao">
+                    <form id="form-pagamento-cartao">
+                        <div class="form-row">
+                            <label>Número do Cartão:</label>
+                            <input type="text" id="form-card-number" placeholder="4000 0000 0000 0000" maxlength="19" required>
+                        </div>
+
+                        <div class="form-row">
+                            <label>Nome do Titular (como está no cartão):</label>
+                            <input type="text" id="form-card-holder" placeholder="NOME DO TITULAR" required>
+                        </div>
+
+                        <div class="form-grid-2">
+                            <div class="form-row">
+                                <label>Validade (MM/AA):</label>
+                                <input type="text" id="form-card-expiry" placeholder="MM/AA" maxlength="5" required>
+                            </div>
+                            <div class="form-row">
+                                <label>CVV (Segurança):</label>
+                                <input type="password" id="form-card-cvv" placeholder="123" maxlength="4" required>
+                            </div>
+                        </div>
+
+                        <div class="form-row">
+                            <label>Parcelamento:</label>
+                            <select id="form-installments">
+                                <option value="1">1x sem juros</option>
+                            </select>
+                        </div>
+
+                        <button type="submit" class="btn-pay-now" style="background: #28a745;">
+                            <i class="fa-solid fa-lock"></i> Pagar Agora com Cartão
+                        </button>
+                    </form>
+                </div>
+
+                <!-- MÉTODO PIX -->
+                <div id="metodo-pix" style="display: none; text-align: center;">
+                    <div class="alert-urgency">
+                        <i class="fa-solid fa-clock"></i> Atenção: Realize o pagamento em até 30 minutos. Após este prazo, a reserva não paga será cancelada automaticamente.
+                    </div>
+
+                    <p style="font-size: 14px; color: #666; margin-bottom: 20px;">Escaneie o QR Code abaixo no app do seu banco ou copie a chave Pix:</p>
+
+                    <div style="margin-bottom: 20px;">
+                        <img id="pix-qr-img" src="" alt="QR Code Pix" style="max-width: 220px; border: 2px solid #eee; border-radius: 12px; padding: 10px;">
+                    </div>
+
+                    <div style="max-width: 400px; margin: 0 auto 20px;">
+                        <input type="text" id="pix-copia-cola" readonly style="width: 100%; padding: 12px; border: 1px solid #ccc; border-radius: 6px; font-size: 13px; text-align: center; margin-bottom: 10px;">
+                        <button onclick="copiarPix()" class="btn-pay-now" style="background: var(--brown-dark, #3e2723); padding: 12px;">
+                            <i class="fa-regular fa-copy"></i> Copiar Chave Pix
+                        </button>
+                    </div>
+
+                    <p style="font-size: 13px; color: #28a745; font-weight: 600;">
+                        <i class="fa-solid fa-spinner fa-spin"></i> Aguardando confirmação do pagamento...
+                    </p>
+                </div>
+            </div>
+
+            <!-- TELA DE SUCESSO DO CARTÃO -->
+            <div class="checkout-card" id="card-sucesso-cartao" style="display: none; text-align: center; padding: 40px;">
+                <i class="fa-solid fa-circle-check" style="font-size: 60px; color: #28a745; margin-bottom: 15px;"></i>
+                <h3 style="color: #28a745; border: none;">Pagamento Aprovado com Sucesso!</h3>
+                <p style="color: #555; margin-bottom: 20px;">Sua reserva na Hospedaria Central está 100% garantida. Enviamos os detalhes para o seu WhatsApp/E-mail.</p>
+                <a href="index.html" class="btn-pay-now" style="display: inline-block; text-decoration: none; max-width: 250px; margin: 0 auto;">Voltar ao Início</a>
             </div>
         </div>
 
+        <!-- RESUMO DA RESERVA (LADO DIREITO) -->
         <div>
             <div class="checkout-card" style="position: sticky; top: 20px;">
                 <h3>Resumo da Reserva</h3>
@@ -247,34 +357,31 @@
     </footer>
 
     <script>
+        const mp = new MercadoPago('APP_USR-00000000-0000-0000-0000-000000000000');
+
         const params = new URLSearchParams(window.location.search);
         const quartoId = params.get('quartoId');
         const start = params.get('start');
         const end = params.get('end');
         const adults = params.get('adults') || 1;
 
+        let reservaIdGlobal = null;
+        let valorTotalGlobal = 0;
+
         document.getElementById('sum-checkin').innerText = start || '--/--/----';
         document.getElementById('sum-checkout').innerText = end || '--/--/----';
         document.getElementById('sum-adults').innerText = `${adults} pessoa(s)`;
         document.getElementById('sum-room-name').innerText = `Quarto 0${quartoId || '1'} ${quartoId == 3 ? '(Suíte Master)' : ''}`;
 
-        // --- MÁSCARA DE TELEFONE EM TEMPO REAL ---
         document.getElementById('cust-tel').addEventListener('input', function(e) {
             let valor = e.target.value.replace(/\D/g, '');
             if (valor.length > 11) valor = valor.slice(0, 11);
-
-            if (valor.length > 10) {
-                valor = valor.replace(/^(\d{2})(\d{5})(\d{4})$/, '($1) $2-$3');
-            } else if (valor.length > 6) {
-                valor = valor.replace(/^(\d{2})(\d{4})(\d{0,4})$/, '($1) $2-$3');
-            } else if (valor.length > 2) {
-                valor = valor.replace(/^(\d{2})(\d{0,5})$/, '($1) $2');
-            } else if (valor.length > 0) {
-                valor = valor.replace(/^(\d*)/, '($1');
-            }
+            if (valor.length > 10) valor = valor.replace(/^(\d{2})(\d{5})(\d{4})$/, '($1) $2-$3');
+            else if (valor.length > 6) valor = valor.replace(/^(\d{2})(\d{4})(\d{0,4})$/, '($1) $2-$3');
+            else if (valor.length > 2) valor = valor.replace(/^(\d{2})(\d{0,5})$/, '($1) $2');
+            else if (valor.length > 0) valor = valor.replace(/^(\d*)/, '($1');
             e.target.value = valor;
         });
-        // ------------------------------------------
 
         async function carregarDetalhes() {
             if (!quartoId || !start || !end) return;
@@ -284,7 +391,8 @@
                 const quarto = (data.disponiveis || []).find(q => q.id == quartoId);
 
                 if (quarto) {
-                    document.getElementById('sum-total-price').innerText = `R$ ${Number(quarto.valorTotal).toFixed(2)}`;
+                    valorTotalGlobal = Number(quarto.valorTotal);
+                    document.getElementById('sum-total-price').innerText = `R$ ${valorTotalGlobal.toFixed(2)}`;
                     document.getElementById('room-title').innerHTML = `<i class="fa-solid fa-bed"></i> Quarto 0${quarto.id} ${quarto.id == 3 ? '(Suíte Master)' : ''}`;
                 }
             } catch(e) {
@@ -294,8 +402,6 @@
 
         document.getElementById('form-checkout-page').addEventListener('submit', async (e) => {
             e.preventDefault();
-
-            // Pega apenas os números para enviar pro banco, evitando erros
             const telLimpo = document.getElementById('cust-tel').value.replace(/\D/g, '');
 
             if (telLimpo.length < 10 || telLimpo.length > 11) {
@@ -324,16 +430,89 @@
 
                 const resData = await resp.json();
                 if (resp.ok && resData.sucesso) {
+                    reservaIdGlobal = resData.reservaId;
+                    
                     document.getElementById('card-dados').style.display = 'none';
-                    document.getElementById('card-pix').style.display = 'block';
+                    document.getElementById('card-pagamento').style.display = 'block';
 
                     document.getElementById('pix-qr-img').src = `data:image/jpeg;base64,${resData.qrCodeBase64}`;
                     document.getElementById('pix-copia-cola').value = resData.pixCopiaECola;
                 } else {
-                    alert(resData.erro || "Erro ao gerar cobrança.");
+                    alert(resData.erro || "Erro ao registrar reserva.");
                 }
             } catch (err) {
-                alert("Erro ao se comunicar com o servidor.");
+                alert("Erro ao comunicar com o servidor.");
+            }
+        });
+
+        function alternarMetodo(metodo) {
+            if (metodo === 'cartao') {
+                document.getElementById('metodo-cartao').style.display = 'block';
+                document.getElementById('metodo-pix').style.display = 'none';
+                document.querySelectorAll('.tab-btn')[0].classList.add('active');
+                document.querySelectorAll('.tab-btn')[1].classList.remove('active');
+            } else {
+                document.getElementById('metodo-cartao').style.display = 'none';
+                document.getElementById('metodo-pix').style.display = 'block';
+                document.querySelectorAll('.tab-btn')[0].classList.remove('active');
+                document.querySelectorAll('.tab-btn')[1].classList.add('active');
+            }
+        }
+
+        document.getElementById('form-pagamento-cartao').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const cardNumber = document.getElementById('form-card-number').value.replace(/\s+/g, '');
+            const cardHolder = document.getElementById('form-card-holder').value.trim();
+            const expiry = document.getElementById('form-card-expiry').value.split('/');
+            const cvv = document.getElementById('form-card-cvv').value.trim();
+            const email = document.getElementById('cust-email').value.trim();
+
+            if (expiry.length !== 2) {
+                alert("Validade inválida. Use o formato MM/AA.");
+                return;
+            }
+
+            const cardExpirationMonth = expiry[0].trim();
+            const cardExpirationYear = '20' + expiry[1].trim();
+
+            try {
+                const tokenObj = await mp.fields.createCardToken({
+                    cardNumber,
+                    cardholderName: cardHolder,
+                    cardExpirationMonth,
+                    cardExpirationYear,
+                    securityCode: cvv
+                });
+
+                const payloadCartao = {
+                    token: tokenObj.id,
+                    paymentMethodId: 'credit_card',
+                    installments: 1,
+                    amount: valorTotalGlobal,
+                    email: email,
+                    description: `Reserva Quarto ${quartoId} - Hospedaria Central`,
+                    reservaId: reservaIdGlobal
+                };
+
+                const resp = await fetch('/api/processar-cartao', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payloadCartao)
+                });
+
+                const data = await resp.json();
+
+                if (resp.ok && data.sucesso) {
+                    document.getElementById('card-pagamento').style.display = 'none';
+                    document.getElementById('card-sucesso-cartao').style.display = 'block';
+                } else {
+                    alert("Pagamento não aprovado: " + (data.erro || "Verifique os dados do cartão"));
+                }
+
+            } catch (err) {
+                console.error("Erro no token do cartão:", err);
+                alert("Erro ao validar o cartão. Verifique os dados digitados.");
             }
         });
 
