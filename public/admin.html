@@ -75,6 +75,39 @@
             opacity: 0.9;
         }
 
+        /* --- ESTILOS DO DASHBOARD FINANCEIRO --- */
+        .dashboard-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-bottom: 25px;
+        }
+        .dash-card {
+            background: #ffffff;
+            border-left: 5px solid var(--terracotta);
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+            text-align: center;
+            border-top: 1px solid #eee;
+            border-right: 1px solid #eee;
+            border-bottom: 1px solid #eee;
+        }
+        .dash-card h4 {
+            color: #666;
+            font-size: 13px;
+            text-transform: uppercase;
+            margin-bottom: 10px;
+            letter-spacing: 0.5px;
+        }
+        .dash-card .dash-value {
+            font-size: 26px;
+            font-weight: 700;
+            color: var(--brown-dark);
+            font-family: 'Playfair Display', serif;
+        }
+        /* -------------------------------------- */
+
         .calendars-grid {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
@@ -211,19 +244,35 @@
                     <i class="fa-solid fa-file-excel"></i> Exportar Leads (CSV)
                 </button>
 
-                <button onclick="alert('Em breve: Relatório de Faturamento em tempo real.')" class="btn-toolbar" style="background: var(--terracotta); color: white;">
+                <button onclick="document.getElementById('painel-dashboard').scrollIntoView({behavior: 'smooth'})" class="btn-toolbar" style="background: var(--terracotta); color: white;">
                     <i class="fa-solid fa-sack-dollar"></i> Faturamento & DRE
                 </button>
 
-                <button onclick="alert('Em breve: Indicador de Taxa de Ocupação Mensal.')" class="btn-toolbar" style="background: #007bff; color: white;">
+                <button onclick="document.getElementById('painel-dashboard').scrollIntoView({behavior: 'smooth'})" class="btn-toolbar" style="background: #007bff; color: white;">
                     <i class="fa-solid fa-chart-pie"></i> Taxa de Ocupação
                 </button>
             </div>
         </div>
 
-        <h2 style="color: var(--brown-dark); text-align: center; margin-bottom: 25px; font-family: 'Playfair Display', serif;">
+        <h2 style="color: var(--brown-dark); text-align: center; margin-bottom: 15px; font-family: 'Playfair Display', serif;">
             Painel Administrativo & Ocupação
         </h2>
+
+        <!-- NOVO: DASHBOARD FINANCEIRO -->
+        <div class="dashboard-grid" id="painel-dashboard">
+            <div class="dash-card">
+                <h4><i class="fa-regular fa-calendar" style="color: var(--terracotta);"></i> Mês de Referência</h4>
+                <div class="dash-value" id="dash-mes" style="font-size: 20px; margin-top: 5px;">Carregando...</div>
+            </div>
+            <div class="dash-card" style="border-left-color: #28a745;">
+                <h4><i class="fa-solid fa-sack-dollar" style="color: #28a745;"></i> Faturamento Mensal</h4>
+                <div class="dash-value" id="dash-faturamento" style="color: #28a745;">R$ 0,00</div>
+            </div>
+            <div class="dash-card" style="border-left-color: #007bff;">
+                <h4><i class="fa-solid fa-chart-pie" style="color: #007bff;"></i> Taxa de Ocupação</h4>
+                <div class="dash-value" id="dash-ocupacao" style="color: #007bff;">0.0%</div>
+            </div>
+        </div>
 
         <!-- CONSULTA RÁPIDA DE CALENDÁRIOS -->
         <div class="admin-card">
@@ -274,7 +323,6 @@
                         </select>
                     </div>
 
-                    <!-- NOVO CAMPO: QUANTIDADE DE HÓSPEDES -->
                     <div class="form-group">
                         <label style="font-size: 12px; font-weight: bold; color: #555;">Qtd. Hóspedes:</label>
                         <select id="bloqueio-hospedes" required style="width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 6px;">
@@ -464,9 +512,29 @@
         });
 
         function carregarTudo() {
+            carregarDashboard(); // NOVO: Chama os dados do dashboard
             carregarAgenda();
             [1, 2, 3, 4].forEach(quartoId => carregarCalendarioQuarto(quartoId));
         }
+
+        // --- NOVA FUNÇÃO: CARREGAR DASHBOARD FINANCEIRO ---
+        async function carregarDashboard() {
+            try {
+                const resp = await fetch('/api/admin/dashboard');
+                if (resp.ok) {
+                    const data = await resp.json();
+                    // Converte formato de mês para Primeira Letra Maiúscula
+                    const mesFormatado = data.mesAtual.charAt(0).toUpperCase() + data.mesAtual.slice(1);
+                    
+                    document.getElementById('dash-mes').innerText = mesFormatado;
+                    document.getElementById('dash-faturamento').innerText = `R$ ${data.faturamento.replace('.', ',')}`;
+                    document.getElementById('dash-ocupacao').innerText = `${data.ocupacao}%`;
+                }
+            } catch (err) {
+                console.error("Erro ao carregar os dados do dashboard:", err);
+            }
+        }
+        // ---------------------------------------------------
 
         async function carregarCalendarioQuarto(quartoId) {
             const elem = document.getElementById(`cal-quarto-${quartoId}`);
@@ -683,7 +751,7 @@
                     document.getElementById('bloqueio-valor').value = '';
                     document.getElementById('bloqueio-valor-sugerido').value = 'R$ 0,00';
                     checkinBloqueio = ''; checkoutBloqueio = ''; dataObj1 = null; dataObj2 = null;
-                    carregarTudo();
+                    carregarTudo(); // Atualiza painel e dashboard
                 } else {
                     alert(resData.erro || "Erro ao efetuar bloqueio.");
                 }
