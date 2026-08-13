@@ -217,7 +217,7 @@ app.post('/api/reservar', async (req, res) => {
         await client.query('COMMIT');
         // AVISO NO WHATSAPP (CallMeBot)
         const mensagem = encodeURIComponent(`🔔 *Nova reserva na Hospedaria Central!*\nQuarto: ${quartoId}\nCliente: ${cliente.nome}\nData: ${checkin} a ${checkout}\nValor: R$ ${valorTotal}`);
-        const urlAviso = `https://api.callmebot.com/whatsapp.php?phone=5564984594781&text=${mensagem}&apikey=https://api.callmebot.com/whatsapp.php?phone=556484594781&text=This+is+a+test&apikey=5774787`;
+        const urlAviso = `https://api.callmebot.com/whatsapp.php?phone=5564984594781&text=${mensagem}&apikey=5774787`;
 
        fetch(urlAviso).catch(err => console.error("Erro no alerta WhatsApp:", err));
 
