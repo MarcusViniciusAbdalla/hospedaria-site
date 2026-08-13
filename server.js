@@ -215,7 +215,7 @@ app.post('/api/reservar', async (req, res) => {
         );
 
         await client.query('COMMIT');
-
+        
         res.json({
             sucesso: true,
             reservaId: reservaRes.rows[0].id,
