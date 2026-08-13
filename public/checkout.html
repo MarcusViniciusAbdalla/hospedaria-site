@@ -228,7 +228,8 @@
 
                     <div class="form-row">
                         <label>E-mail:</label>
-                        <input type="email" id="cust-email" placeholder="seuemail@email.com" required>
+                        <input type="email" id="cust-email" placeholder="seuemail@email.com">
+                        <small style="color: #666; font-size: 11px;">* Opcional: cadastre seu e-mail para receber novidades e promoções!</small>
                     </div>
 
                     <button type="submit" class="btn-pay-now">
@@ -410,17 +411,17 @@
             }
 
             const payload = {
-                quartoId: quartoId,
-                hospedes: adults,
-                checkin: start,
-                checkout: end,
-                cliente: {
-                    nome: document.getElementById('cust-nome').value.trim(),
-                    telefone: telLimpo,
-                    email: document.getElementById('cust-email').value.trim()
+                  quartoId: quartoId,
+                  hospedes: adults,
+                  checkin: start,
+                  checkout: end,
+                  cliente: {
+                  nome: document.getElementById('cust-nome').value.trim(),
+                  telefone: telLimpo,
+                  // Substitua a linha do e-mail por esta abaixo:
+                  email: document.getElementById('cust-email').value.trim() || 'cliente@hospedariacentral.com.br'
                 }
-            };
-
+                };
             try {
                 const resp = await fetch('/api/reservar', {
                     method: 'POST',
