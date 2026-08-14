@@ -1,8 +1,11 @@
-require('dotenv').config();
+import dotenv from 'dotenv';
+dotenv.config();
+
 import express, { Request, Response } from 'express';
 import https from 'https';
 import { Pool } from 'pg';
-const { MercadoPagoConfig, Payment } = require('mercadopago');
+import { MercadoPagoConfig, Payment } from 'mercadopago';
+
 
 const app = express();
 app.use(express.json());
