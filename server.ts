@@ -1,11 +1,8 @@
-import dotenv from 'dotenv';
-dotenv.config();
-
-import express, { Request, Response } from 'express';
-import https from 'https';
-import { Pool } from 'pg';
-import { MercadoPagoConfig, Payment } from 'mercadopago';
-
+require('dotenv').config();
+const express = require('express');
+const https = require('https');
+const { Pool } = require('pg');
+const { MercadoPagoConfig, Payment } = require('mercadopago');
 
 const app = express();
 app.use(express.json());
@@ -37,10 +34,8 @@ function calcularDiaria(quartoId: any, hospedes: any): number {
     return 75.00;
 }
 
-// ==========================================================================
-// ROTA: PROCESSAR PAGAMENTO COM CARTÃO (CRÉDITO / DÉBITO)
-// ==========================================================================
-app.post('/api/processar-cartao', async (req: Request, res: Response): Promise<any> => {
+// ROTA: PROCESSAR PAGAMENTO COM CARTÃO
+app.post('/api/processar-cartao', async (req: any, res: any) => {
     try {
         const { token, paymentMethodId, issuerId, installments, email, description, amount, reservaId } = req.body;
 
@@ -75,16 +70,10 @@ app.post('/api/processar-cartao', async (req: Request, res: Response): Promise<a
     }
 });
 
-/* ==========================================================================
-   ROTAS PÚBLICAS
-   ========================================================================== */
-
-app.get('/api/disponibilidade', async (req: Request, res: Response): Promise<any> => {
+// ROTAS PÚBLICAS
+app.get('/api/disponibilidade', async (req: any, res: any) => {
     const { quartoId } = req.query;
-
-    if (!quartoId) {
-        return res.status(400).json({ erro: 'Parâmetro quartoId é obrigatório.' });
-    }
+    if (!quartoId) return res.status(400).json({ erro: 'Parâmetro quartoId é obrigatório.' });
 
     try {
         const reservas = await pool.query(
@@ -94,75 +83,54 @@ app.get('/api/disponibilidade', async (req: Request, res: Response): Promise<any
              ORDER BY data_checkin ASC`,
             [quartoId]
         );
-
         return res.json({ diasOcupados: reservas.rows });
     } catch (err) {
-        console.error("Erro na rota de disponibilidade:", err);
         return res.status(500).json({ erro: 'Erro ao buscar disponibilidade.' });
     }
 });
 
-app.get('/api/quartos-disponiveis', async (req: Request, res: Response): Promise<any> => {
+app.get('/api/quartos-disponiveis', async (req: any, res: any) => {
     const { start, end, adults } = req.query;
-
-    if (!start || !end) {
-        return res.status(400).json({ erro: 'Parâmetros de data inválidos.' });
-    }
+    if (!start || !end) return res.status(400).json({ erro: 'Parâmetros de data inválidos.' });
 
     try {
-        const numHospedes = parseInt(adults as string) || 1;
-
+        const numHospedes = parseInt(adults) || 1;
         const query = `
-            SELECT q.* 
-            FROM quartos q
-            WHERE q.ativo = TRUE 
-            AND q.capacidade_maxima >= $1
+            SELECT q.* FROM quartos q
+            WHERE q.ativo = TRUE AND q.capacidade_maxima >= $1
             AND q.id NOT IN (
-                SELECT quarto_id 
-                FROM reservas 
+                SELECT quarto_id FROM reservas 
                 WHERE status_pagamento IN ('pago', 'bloqueado_balcao', 'concluido', 'checkin')
                 AND (data_checkin, data_checkout) OVERLAPS ($2::date, $3::date)
-            )
-            ORDER BY q.id ASC;
+            ) ORDER BY q.id ASC;
         `;
-
         const result = await pool.query(query, [numHospedes, start, end]);
 
         const dCheckin = new Date(`${start}T00:00:00`);
         const dCheckout = new Date(`${end}T00:00:00`);
-        const diffTempo = dCheckout.getTime() - dCheckin.getTime();
-        const dias = Math.ceil(diffTempo / (1000 * 3600 * 24)) || 1;
+        const dias = Math.ceil((dCheckout.getTime() - dCheckin.getTime()) / (1000 * 3600 * 24)) || 1;
 
         const quartosComPreco = result.rows.map(quarto => {
             const valorDiaria = calcularDiaria(quarto.id, numHospedes);
-            return {
-                ...quarto,
-                diasReservados: dias,
-                valorDiaria: valorDiaria,
-                valorTotal: dias * valorDiaria
-            };
+            return { ...quarto, diasReservados: dias, valorDiaria, valorTotal: dias * valorDiaria };
         });
 
         return res.json({ disponiveis: quartosComPreco });
-
     } catch (err) {
-        console.error("Erro na busca de quartos:", err);
         return res.status(500).json({ erro: 'Erro interno ao buscar quartos.' });
     }
 });
 
-app.post('/api/reservar', async (req: Request, res: Response): Promise<any> => {
+app.post('/api/reservar', async (req: any, res: any) => {
     const client = await pool.connect();
     try {
         const { quartoId, hospedes, cliente, checkin, checkout } = req.body;
-
         if (!quartoId || !cliente || !checkin || !checkout) {
             return res.status(400).json({ erro: 'Dados incompletos para a reserva.' });
         }
 
         const conflito = await client.query(
-            `SELECT id FROM reservas 
-             WHERE quarto_id = $1 
+            `SELECT id FROM reservas WHERE quarto_id = $1 
              AND status_pagamento IN ('pago', 'bloqueado_balcao', 'concluido', 'checkin')
              AND (data_checkin, data_checkout) OVERLAPS ($2::date, $3::date)`,
             [quartoId, checkin, checkout]
@@ -173,7 +141,6 @@ app.post('/api/reservar', async (req: Request, res: Response): Promise<any> => {
         }
 
         await client.query('BEGIN');
-
         const cpfLimpo = cliente.cpf ? cliente.cpf.replace(/\D/g, '') : '';
         const cpfFinal = cpfLimpo.length > 0 ? cpfLimpo : `SEM-CPF-${Date.now()}`;
 
@@ -190,27 +157,20 @@ app.post('/api/reservar', async (req: Request, res: Response): Promise<any> => {
             clienteId = novoCliente.rows[0].id;
         }
 
-        const d1: any = new Date(`${checkin}T00:00:00`);
-        const d2: any = new Date(`${checkout}T00:00:00`);
-        const dias = Math.ceil((d2 - d1) / (1000 * 60 * 60 * 24));
-        
+        const dias = Math.ceil((new Date(`${checkout}T00:00:00`).getTime() - new Date(`${checkin}T00:00:00`).getTime()) / (1000 * 60 * 60 * 24));
         if (dias <= 0) {
             await client.query('ROLLBACK');
             return res.status(400).json({ erro: 'Data de saída deve ser posterior à data de entrada.' });
         }
 
-        const valorDiaria = calcularDiaria(quartoId, hospedes);
-        const valorTotal = dias * valorDiaria;
+        const valorTotal = dias * calcularDiaria(quartoId, hospedes);
 
         const paymentResponse = await payment.create({
             body: {
                 transaction_amount: Number(valorTotal),
                 description: `Reserva Quarto ${quartoId} - Hospedaria Central`,
                 payment_method_id: 'pix',
-                payer: {
-                    email: cliente.email || 'cliente@hospedariacentral.com.br',
-                    first_name: cliente.nome
-                }
+                payer: { email: cliente.email || 'cliente@hospedariacentral.com.br', first_name: cliente.nome }
             }
         });
 
@@ -222,352 +182,58 @@ app.post('/api/reservar', async (req: Request, res: Response): Promise<any> => {
 
         await client.query('COMMIT');
 
-        // AVISO NO WHATSAPP (CALLMEBOT SEGURO)
+        // AVISO WHATSAPP SEGURO
         try {
-            const numeroWpp = '556484594781';
-            const apiKeyWpp = '5774787';
-            const textoMsg = `🔔 *Nova Reserva!*\nQuarto: 0${quartoId}\nCliente: ${cliente.nome}\nData: ${checkin} a ${checkout}\nValor: R$ ${valorTotal.toFixed(2)}`;
-            
-            const urlWpp = `https://api.callmebot.com/whatsapp.php?phone=${numeroWpp}&text=${encodeURIComponent(textoMsg)}&apikey=${apiKeyWpp}`;
-            
-            https.get(urlWpp, (resWpp) => {
-                resWpp.on('data', () => {});
-            }).on('error', (errWpp) => {
-                console.error("Erro secundário no WhatsApp:", errWpp.message);
-            });
-        } catch (wppErr) {
-            console.error("Falha ao tentar enviar WhatsApp:", wppErr);
-        }
+            const urlWpp = `https://api.callmebot.com/whatsapp.php?phone=556484594781&text=${encodeURIComponent(`🔔 *Nova Reserva!*\nQuarto: 0${quartoId}\nCliente: ${cliente.nome}\nData: ${checkin} a ${checkout}\nValor: R$ ${valorTotal.toFixed(2)}`)}&apikey=5774787`;
+            https.get(urlWpp, (r: any) => r.on('data', () => {}));
+        } catch (e) {}
 
         return res.json({
             sucesso: true,
             reservaId: reservaRes.rows[0].id,
             pixCopiaECola: paymentResponse.point_of_interaction.transaction_data.qr_code,
             qrCodeBase64: paymentResponse.point_of_interaction.transaction_data.qr_code_base64,
-            valorTotal: valorTotal
+            valorTotal
         });
-
     } catch (error) {
         await client.query('ROLLBACK');
-        console.error('ERRO DETALHADO NA RESERVA:', error);
         return res.status(500).json({ erro: 'Erro interno ao criar reserva.' });
     } finally {
         client.release();
     }
 });
 
-// WEBHOOK ATUALIZADO (SUPORTA PIX E CARTÃO COM SEGURANÇA MÁXIMA)
-app.post('/api/webhook/mercadopago', async (req: Request, res: Response): Promise<any> => {
+// WEBHOOK
+app.post('/api/webhook/mercadopago', async (req: any, res: any) => {
     const { type, data } = req.body;
     try {
         if (type === 'payment' && data?.id) {
-            const pagamentoInfo = await payment.get({ id: data.id });
-            if (pagamentoInfo.status === 'approved') {
+            const pInfo = await payment.get({ id: data.id });
+            if (pInfo.status === 'approved') {
                 await pool.query("UPDATE reservas SET status_pagamento = 'pago' WHERE mp_payment_id = $1", [String(data.id)]);
             }
         }
         return res.sendStatus(200);
     } catch (err) {
-        console.error("Erro no Webhook:", err);
         return res.sendStatus(500);
     }
 });
 
-/* ==========================================================================
-   ROTAS ADMINISTRATIVAS
-   ========================================================================== */
-
-app.get('/api/admin/reservas', async (req: Request, res: Response): Promise<any> => {
+// ROTAS ADMIN BÁSICAS
+app.get('/api/admin/reservas', async (req: any, res: any) => {
     try {
-        const query = `
+        const result = await pool.query(`
             SELECT r.id, r.quarto_id, q.numero_quarto, r.quantidade_hospedes,
-                   COALESCE(c.nome, 'Atendimento Presencial / Balcão') AS cliente_nome, 
-                   COALESCE(c.telefone, 'Sem Telefone') AS telefone,
+                   COALESCE(c.nome, 'Balcão') AS cliente_nome, COALESCE(c.telefone, 'Sem Telefone') AS telefone,
                    r.data_checkin, r.data_checkout, r.status_pagamento, r.valor_total
-            FROM reservas r
-            JOIN quartos q ON q.id = r.quarto_id
-            LEFT JOIN clientes c ON c.id = r.cliente_id
-            WHERE r.status_pagamento IN ('pago', 'bloqueado_balcao', 'concluido', 'checkin')
-            ORDER BY r.data_checkin ASC;
-        `;
-        const result = await pool.query(query);
+            FROM reservas r JOIN quartos q ON q.id = r.quarto_id LEFT JOIN clientes c ON c.id = r.cliente_id
+            WHERE r.status_pagamento IN ('pago', 'bloqueado_balcao', 'concluido', 'checkin') ORDER BY r.data_checkin ASC;
+        `);
         return res.json({ reservas: result.rows });
     } catch (err) {
-        console.error("Erro ao buscar reservas admin:", err);
         return res.status(500).json({ erro: 'Erro ao carregar reservas.' });
     }
 });
 
-app.get('/api/admin/exportar-leads', async (req: Request, res: Response): Promise<any> => {
-    try {
-        const query = `
-            SELECT 
-                c.nome, 
-                c.telefone, 
-                c.email, 
-                COUNT(r.id) AS total_estadias,
-                SUM(CASE WHEN r.status_pagamento IN ('pago', 'bloqueado_balcao', 'concluido', 'checkin', 'checkout') THEN r.valor_total ELSE 0 END) AS total_gasto
-            FROM clientes c
-            LEFT JOIN reservas r ON r.cliente_id = c.id
-            WHERE c.cpf NOT LIKE 'BALCAO-%' AND c.nome NOT LIKE '%Atendimento Presencial%'
-            GROUP BY c.id, c.nome, c.telefone, c.email
-            ORDER BY total_estadias DESC;
-        `;
-        const result = await pool.query(query);
-        return res.json({ leads: result.rows });
-    } catch (err) {
-        console.error("Erro ao exportar leads:", err);
-        return res.status(500).json({ erro: "Erro ao buscar lista de leads." });
-    }
-});
-
-app.get('/api/admin/exportar-faturamento', async (req: Request, res: Response): Promise<any> => {
-    try {
-        const query = `
-            SELECT 
-                r.id,
-                TO_CHAR(r.data_checkin, 'DD/MM/YYYY') as data_entrada,
-                TO_CHAR(r.data_checkout, 'DD/MM/YYYY') as data_saida,
-                q.numero_quarto,
-                COALESCE(c.nome, 'Balcão / Presencial') as cliente,
-                r.valor_total,
-                r.status_pagamento
-            FROM reservas r
-            JOIN quartos q ON q.id = r.quarto_id
-            LEFT JOIN clientes c ON c.id = r.cliente_id
-            WHERE r.status_pagamento IN ('pago', 'bloqueado_balcao', 'concluido', 'checkin', 'checkout')
-            ORDER BY r.data_checkin DESC;
-        `;
-        const result = await pool.query(query);
-        return res.json({ faturamento: result.rows });
-    } catch (err) {
-        console.error("Erro ao exportar faturamento:", err);
-        return res.status(500).json({ erro: "Erro ao buscar dados de faturamento." });
-    }
-});
-
-app.post('/api/admin/bloquear', async (req: Request, res: Response): Promise<any> => {
-    const { quartoId, hospedes, checkin, checkout, valorTotal } = req.body;
-
-    if (!quartoId || !checkin || !checkout) {
-        return res.status(400).json({ erro: "Selecione o quarto e as datas para bloqueio." });
-    }
-
-    try {
-        const conflito = await pool.query(
-            `SELECT id FROM reservas 
-             WHERE quarto_id = $1 
-             AND status_pagamento IN ('pago', 'bloqueado_balcao', 'concluido', 'checkin')
-             AND (data_checkin, data_checkout) OVERLAPS ($2::date, $3::date)`,
-            [quartoId, checkin, checkout]
-        );
-
-        if (conflito.rows.length > 0) {
-            return res.status(400).json({ erro: 'Já existe reserva ou bloqueio para esta data!' });
-        }
-
-        const clienteObj = req.body.cliente || {};
-        const nomeFinal = clienteObj.nome || req.body.nome || 'Atendimento Presencial / Balcão';
-        const telefoneFinal = clienteObj.telefone || req.body.telefone || '(64) 00000-0000';
-        const emailFinal = clienteObj.email || req.body.email || 'balcao@hospedariacentral.com.br';
-
-        let clienteId;
-        const clienteExistente = await pool.query(
-            `SELECT id FROM clientes WHERE telefone = $1 AND telefone != '(64) 00000-0000'`,
-            [telefoneFinal]
-        );
-
-        if (clienteExistente.rows.length > 0) {
-            clienteId = clienteExistente.rows[0].id;
-        } else {
-            const cpfCurtoBalcao = `B-${Date.now().toString().slice(-11)}`;
-            const novoCliente = await pool.query(
-                `INSERT INTO clientes (nome, cpf, telefone, email) 
-                 VALUES ($1, $2, $3, $4) 
-                 RETURNING id`,
-                [nomeFinal, cpfCurtoBalcao, telefoneFinal, emailFinal]
-            );
-            clienteId = novoCliente.rows[0].id;
-        }
-
-        const valorSalvar = parseFloat(valorTotal) || 0.00;
-        const numHospedes = parseInt(hospedes) || 1;
-
-        await pool.query(
-            `INSERT INTO reservas (quarto_id, cliente_id, quantidade_hospedes, data_checkin, data_checkout, valor_total, status_pagamento, mp_payment_id) 
-             VALUES ($1, $2, $3, $4::date, $5::date, $6, 'bloqueado_balcao', 'balcao_presencial')`,
-            [quartoId, clienteId, numHospedes, checkin, checkout, valorSalvar]
-        );
-
-        return res.json({ mensagem: 'Bloqueio e reserva salvos com sucesso!' });
-
-    } catch (err: any) {
-        console.error("ERRO DETALHADO DO BANCO (admin/bloquear):", err);
-        return res.status(500).json({ erro: 'Erro interno ao salvar no banco.', detalhe: err.message });
-    }
-});
-
-app.put('/api/admin/reservas/:id/efetivar', async (req: Request, res: Response): Promise<any> => {
-    const { id } = req.params;
-    const { nome, telefone } = req.body;
-
-    try {
-        const resReserva = await pool.query("SELECT cliente_id FROM reservas WHERE id = $1", [id]);
-        if (resReserva.rows.length === 0) return res.status(404).json({ erro: "Reserva não encontrada." });
-
-        const clienteId = resReserva.rows[0].cliente_id;
-
-        await pool.query("UPDATE clientes SET nome = $1, telefone = $2 WHERE id = $3", [nome, telefone, clienteId]);
-        await pool.query("UPDATE reservas SET status_pagamento = 'concluido' WHERE id = $1", [id]);
-
-        return res.json({ mensagem: 'Reserva efetivada com sucesso!' });
-    } catch (err) {
-        console.error("Erro ao efetivar reserva:", err);
-        return res.status(500).json({ erro: 'Erro ao efetivar reserva.' });
-    }
-});
-
-app.delete('/api/admin/reservas/:id', async (req: Request, res: Response): Promise<any> => {
-    const { id } = req.params;
-    try {
-        await pool.query("UPDATE reservas SET status_pagamento = 'cancelado' WHERE id = $1", [id]);
-        return res.json({ mensagem: 'Reserva cancelada e data liberada com sucesso.' });
-    } catch (err) {
-        console.error("Erro ao cancelar reserva:", err);
-        return res.status(500).json({ erro: 'Erro ao remover reserva.' });
-    }
-});
-
-app.put('/api/admin/reservas/:id/checkin', async (req: Request, res: Response): Promise<any> => {
-    const { id } = req.params;
-    try {
-        await pool.query("UPDATE reservas SET status_pagamento = 'checkin' WHERE id = $1", [id]);
-        return res.json({ mensagem: 'Check-in realizado! Hóspede na pousada.' });
-    } catch (err) {
-        console.error("Erro ao fazer check-in:", err);
-        return res.status(500).json({ erro: 'Erro ao registrar check-in.' });
-    }
-});
-
-app.put('/api/admin/reservas/:id/checkout', async (req: Request, res: Response): Promise<any> => {
-    const { id } = req.params;
-    try {
-        await pool.query("UPDATE reservas SET status_pagamento = 'checkout' WHERE id = $1", [id]);
-        return res.json({ mensagem: 'Check-out realizado! Reserva arquivada e quarto desocupado.' });
-    } catch (err) {
-        console.error("Erro ao fazer check-out:", err);
-        return res.status(500).json({ erro: 'Erro ao registrar check-out.' });
-    }
-});
-
-app.get('/api/admin/dashboard', async (req: Request, res: Response): Promise<any> => {
-    try {
-        const { start, end } = req.query;
-        let firstDay, lastDay, textoPeriodo;
-
-        if (start && end) {
-            firstDay = start;
-            lastDay = end;
-            const ds = (start as string).split('-');
-            const de = (end as string).split('-');
-            textoPeriodo = `${ds[2]}/${ds[1]} até ${de[2]}/${de[1]}`;
-        } else {
-            const currentDate = new Date();
-            firstDay = new Date(currentDate.getFullYear(), currentDate.getMonth(), 1).toISOString().split('T')[0];
-            lastDay = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0).toISOString().split('T')[0];
-            
-            textoPeriodo = currentDate.toLocaleString('pt-BR', { month: 'long', year: 'numeric' });
-            textoPeriodo = textoPeriodo.charAt(0).toUpperCase() + textoPeriodo.slice(1);
-        }
-
-        const faturamentoQuery = `
-            SELECT SUM(valor_total) as total_faturado
-            FROM reservas
-            WHERE status_pagamento IN ('pago', 'concluido', 'checkin', 'checkout')
-            AND data_checkin >= $1 AND data_checkin <= $2
-        `;
-        const faturamentoResult = await pool.query(faturamentoQuery, [firstDay, lastDay]);
-        const totalFaturado = faturamentoResult.rows[0].total_faturado || 0;
-
-        const ocupacaoQuery = `
-            SELECT SUM(data_checkout - data_checkin) as dias_ocupados
-            FROM reservas
-            WHERE status_pagamento IN ('pago', 'concluido', 'checkin', 'checkout')
-            AND data_checkin >= $1 AND data_checkin <= $2
-        `;
-        const ocupacaoResult = await pool.query(ocupacaoQuery, [firstDay, lastDay]);
-        const diasOcupados = ocupacaoResult.rows[0].dias_ocupados || 0;
-        
-        const d1: any = new Date(`${firstDay}T00:00:00`);
-        const d2: any = new Date(`${lastDay}T00:00:00`);
-        const diasNaPesquisa = Math.max(1, Math.ceil((d2 - d1) / (1000 * 60 * 60 * 24)) + 1);
-        
-        const totalDiariasPossiveis = diasNaPesquisa * 4;
-        const taxaOcupacao: any = ((diasOcupados / totalDiariasPossiveis) * 100).toFixed(1);
-
-        return res.json({
-            faturamento: Number(totalFaturado).toFixed(2),
-            ocupacao: taxaOcupacao > 100 ? 100 : taxaOcupacao,
-            mesAtual: textoPeriodo
-        });
-    } catch (err) {
-        console.error("Erro ao gerar dashboard:", err);
-        return res.status(500).json({ erro: 'Erro ao gerar dados do dashboard.' });
-    }
-});
-
-app.get('/api/admin/grafico-faturamento', async (req: Request, res: Response): Promise<any> => {
-    try {
-        const query = `
-            SELECT 
-                TO_CHAR(data_checkin, 'YYYY-MM') as mes_ano,
-                SUM(valor_total) as total_faturado
-            FROM reservas
-            WHERE status_pagamento IN ('pago', 'concluido', 'checkin', 'checkout')
-              AND data_checkin >= NOW() - INTERVAL '12 months'
-            GROUP BY TO_CHAR(data_checkin, 'YYYY-MM')
-            ORDER BY mes_ano ASC;
-        `;
-        const result = await pool.query(query);
-
-        const mesesLabels: string[] = [];
-        const faturamentos: string[] = [];
-        const nomesMeses = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
-
-        result.rows.forEach(row => {
-            const ano = row.mes_ano.split('-')[0];
-            const mesIdx = parseInt(row.mes_ano.split('-')[1], 10) - 1;
-            mesesLabels.push(`${nomesMeses[mesIdx]}/${ano.slice(2)}`);
-            faturamentos.push(Number(row.total_faturado).toFixed(2));
-        });
-
-        return res.json({
-            labels: mesesLabels,
-            dados: faturamentos
-        });
-    } catch (err) {
-        console.error("Erro ao gerar dados do gráfico:", err);
-        return res.status(500).json({ erro: 'Erro ao buscar dados do gráfico.' });
-    }
-});
-
-/* ==========================================================================
-   ROTINA DE LIMPEZA AUTOMÁTICA
-   ========================================================================== */
-setInterval(async () => {
-    try {
-        const limpeza = await pool.query(`
-            UPDATE reservas 
-            SET status_pagamento = 'cancelado' 
-            WHERE status_pagamento = 'pendente' 
-            AND created_at < NOW() - INTERVAL '30 minutes'
-        `);
-        
-        if (limpeza.rowCount && limpeza.rowCount > 0) {
-            console.log(`[LIMPEZA AUTOMÁTICA] Cancelou ${limpeza.rowCount} reserva(s) não paga(s).`);
-        }
-    } catch (err) {}
-}, 5 * 60 * 1000);
-
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => console.log(`Servidor TypeScript rodando na porta ${PORT}`));
+app.listen(PORT, () => console.log(`Servidor rodando na porta ${PORT}`));
