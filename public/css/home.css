@@ -30,6 +30,16 @@
     color: #f2e9e4;
 }
 
+/* Ajuste para aumentar o logo no cabeçalho */
+.logo img, header img {
+    height: 50px !important; /* Aumenta a altura do logo (ajuste para 55px ou 60px se preferir maior) */
+    width: auto !important;
+}
+
+.logo span, .logo h1, .logo-text {
+    font-size: 24px !important; /* Aumenta o texto do logo caso seja texto puro */
+}
+
 /* BARRA RÁPIDA DE PESQUISA */
 .search-bar { 
     background: var(--white); 
