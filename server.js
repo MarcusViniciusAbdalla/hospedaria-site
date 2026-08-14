@@ -567,17 +567,4 @@ setInterval(async () => {
 }, 5 * 60 * 1000);
 
 const PORT = process.env.PORT || 3000;
-app.get('/api/admin/limpar-testes', async (req, res) => {
-    try {
-        // Remove reservas e clientes associados aos testes com nome 'Marcus' ou 'Klessia'
-        await pool.query("DELETE FROM reservas WHERE cliente_id IN (SELECT id FROM clientes WHERE nome ILIKE 'Marcus' OR nome ILIKE 'Klessia')");
-        await pool.query("DELETE FROM clientes WHERE nome ILIKE 'Marcus' OR nome ILIKE 'Klessia'");
-        
-        res.send("Dados de teste removidos com sucesso!");
-    } catch (err) {
-        res.status(500).send("Erro ao limpar: " + err.message);
-    }
-});
-
-
 app.listen(PORT, () => console.log(`Servidor rodando na porta ${PORT}`));
