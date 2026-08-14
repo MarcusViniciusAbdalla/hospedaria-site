@@ -1,7 +1,7 @@
 require('dotenv').config();
-const express = require('express');
-const https = require('https');
-const { Pool } = require('pg');
+import express, { Request, Response } from 'express';
+import https from 'https';
+import { Pool } from 'pg';
 const { MercadoPagoConfig, Payment } = require('mercadopago');
 
 const app = express();
@@ -18,7 +18,7 @@ const mpClient = new MercadoPagoConfig({
 });
 const payment = new Payment(mpClient);
 
-function calcularDiaria(quartoId, hospedes) {
+function calcularDiaria(quartoId: any, hospedes: any): number {
     const numHospedes = parseInt(hospedes) || 1;
     const idQuarto = parseInt(quartoId);
 
@@ -37,7 +37,7 @@ function calcularDiaria(quartoId, hospedes) {
 // ==========================================================================
 // ROTA: PROCESSAR PAGAMENTO COM CARTÃO (CRÉDITO / DÉBITO)
 // ==========================================================================
-app.post('/api/processar-cartao', async (req, res) => {
+app.post('/api/processar-cartao', async (req: Request, res: Response): Promise<any> => {
     try {
         const { token, paymentMethodId, issuerId, installments, email, description, amount, reservaId } = req.body;
 
@@ -61,14 +61,14 @@ app.post('/api/processar-cartao', async (req, res) => {
                 [String(paymentResponse.id), reservaId]);
         }
 
-        res.json({ 
+        return res.json({ 
             sucesso: true, 
             status: paymentResponse.status,
             paymentId: paymentResponse.id 
         });
-    } catch (error) {
+    } catch (error: any) {
         console.error('ERRO AO PROCESSAR CARTÃO:', error);
-        res.status(400).json({ erro: error.message || 'Erro ao processar pagamento com cartão.' });
+        return res.status(400).json({ erro: error.message || 'Erro ao processar pagamento com cartão.' });
     }
 });
 
@@ -76,7 +76,7 @@ app.post('/api/processar-cartao', async (req, res) => {
    ROTAS PÚBLICAS
    ========================================================================== */
 
-app.get('/api/disponibilidade', async (req, res) => {
+app.get('/api/disponibilidade', async (req: Request, res: Response): Promise<any> => {
     const { quartoId } = req.query;
 
     if (!quartoId) {
@@ -92,14 +92,14 @@ app.get('/api/disponibilidade', async (req, res) => {
             [quartoId]
         );
 
-        res.json({ diasOcupados: reservas.rows });
+        return res.json({ diasOcupados: reservas.rows });
     } catch (err) {
         console.error("Erro na rota de disponibilidade:", err);
-        res.status(500).json({ erro: 'Erro ao buscar disponibilidade.' });
+        return res.status(500).json({ erro: 'Erro ao buscar disponibilidade.' });
     }
 });
 
-app.get('/api/quartos-disponiveis', async (req, res) => {
+app.get('/api/quartos-disponiveis', async (req: Request, res: Response): Promise<any> => {
     const { start, end, adults } = req.query;
 
     if (!start || !end) {
@@ -107,7 +107,7 @@ app.get('/api/quartos-disponiveis', async (req, res) => {
     }
 
     try {
-        const numHospedes = parseInt(adults) || 1;
+        const numHospedes = parseInt(adults as string) || 1;
 
         const query = `
             SELECT q.* 
@@ -140,15 +140,15 @@ app.get('/api/quartos-disponiveis', async (req, res) => {
             };
         });
 
-        res.json({ disponiveis: quartosComPreco });
+        return res.json({ disponiveis: quartosComPreco });
 
     } catch (err) {
         console.error("Erro na busca de quartos:", err);
-        res.status(500).json({ erro: 'Erro interno ao buscar quartos.' });
+        return res.status(500).json({ erro: 'Erro interno ao buscar quartos.' });
     }
 });
 
-app.post('/api/reservar', async (req, res) => {
+app.post('/api/reservar', async (req: Request, res: Response): Promise<any> => {
     const client = await pool.connect();
     try {
         const { quartoId, hospedes, cliente, checkin, checkout } = req.body;
@@ -187,8 +187,8 @@ app.post('/api/reservar', async (req, res) => {
             clienteId = novoCliente.rows[0].id;
         }
 
-        const d1 = new Date(`${checkin}T00:00:00`);
-        const d2 = new Date(`${checkout}T00:00:00`);
+        const d1: any = new Date(`${checkin}T00:00:00`);
+        const d2: any = new Date(`${checkout}T00:00:00`);
         const dias = Math.ceil((d2 - d1) / (1000 * 60 * 60 * 24));
         
         if (dias <= 0) {
@@ -236,7 +236,7 @@ app.post('/api/reservar', async (req, res) => {
             console.error("Falha ao tentar enviar WhatsApp:", wppErr);
         }
 
-        res.json({
+        return res.json({
             sucesso: true,
             reservaId: reservaRes.rows[0].id,
             pixCopiaECola: paymentResponse.point_of_interaction.transaction_data.qr_code,
@@ -247,14 +247,14 @@ app.post('/api/reservar', async (req, res) => {
     } catch (error) {
         await client.query('ROLLBACK');
         console.error('ERRO DETALHADO NA RESERVA:', error);
-        res.status(500).json({ erro: 'Erro interno ao criar reserva.' });
+        return res.status(500).json({ erro: 'Erro interno ao criar reserva.' });
     } finally {
         client.release();
     }
 });
 
 // WEBHOOK ATUALIZADO (SUPORTA PIX E CARTÃO COM SEGURANÇA MÁXIMA)
-app.post('/api/webhook/mercadopago', async (req, res) => {
+app.post('/api/webhook/mercadopago', async (req: Request, res: Response): Promise<any> => {
     const { type, data } = req.body;
     try {
         if (type === 'payment' && data?.id) {
@@ -263,10 +263,10 @@ app.post('/api/webhook/mercadopago', async (req, res) => {
                 await pool.query("UPDATE reservas SET status_pagamento = 'pago' WHERE mp_payment_id = $1", [String(data.id)]);
             }
         }
-        res.sendStatus(200);
+        return res.sendStatus(200);
     } catch (err) {
         console.error("Erro no Webhook:", err);
-        res.sendStatus(500);
+        return res.sendStatus(500);
     }
 });
 
@@ -274,7 +274,7 @@ app.post('/api/webhook/mercadopago', async (req, res) => {
    ROTAS ADMINISTRATIVAS
    ========================================================================== */
 
-app.get('/api/admin/reservas', async (req, res) => {
+app.get('/api/admin/reservas', async (req: Request, res: Response): Promise<any> => {
     try {
         const query = `
             SELECT r.id, r.quarto_id, q.numero_quarto, r.quantidade_hospedes,
@@ -288,14 +288,14 @@ app.get('/api/admin/reservas', async (req, res) => {
             ORDER BY r.data_checkin ASC;
         `;
         const result = await pool.query(query);
-        res.json({ reservas: result.rows });
+        return res.json({ reservas: result.rows });
     } catch (err) {
         console.error("Erro ao buscar reservas admin:", err);
-        res.status(500).json({ erro: 'Erro ao carregar reservas.' });
+        return res.status(500).json({ erro: 'Erro ao carregar reservas.' });
     }
 });
 
-app.get('/api/admin/exportar-leads', async (req, res) => {
+app.get('/api/admin/exportar-leads', async (req: Request, res: Response): Promise<any> => {
     try {
         const query = `
             SELECT 
@@ -311,14 +311,14 @@ app.get('/api/admin/exportar-leads', async (req, res) => {
             ORDER BY total_estadias DESC;
         `;
         const result = await pool.query(query);
-        res.json({ leads: result.rows });
+        return res.json({ leads: result.rows });
     } catch (err) {
         console.error("Erro ao exportar leads:", err);
-        res.status(500).json({ erro: "Erro ao buscar lista de leads." });
+        return res.status(500).json({ erro: "Erro ao buscar lista de leads." });
     }
 });
 
-app.get('/api/admin/exportar-faturamento', async (req, res) => {
+app.get('/api/admin/exportar-faturamento', async (req: Request, res: Response): Promise<any> => {
     try {
         const query = `
             SELECT 
@@ -336,14 +336,14 @@ app.get('/api/admin/exportar-faturamento', async (req, res) => {
             ORDER BY r.data_checkin DESC;
         `;
         const result = await pool.query(query);
-        res.json({ faturamento: result.rows });
+        return res.json({ faturamento: result.rows });
     } catch (err) {
         console.error("Erro ao exportar faturamento:", err);
-        res.status(500).json({ erro: "Erro ao buscar dados de faturamento." });
+        return res.status(500).json({ erro: "Erro ao buscar dados de faturamento." });
     }
 });
 
-app.post('/api/admin/bloquear', async (req, res) => {
+app.post('/api/admin/bloquear', async (req: Request, res: Response): Promise<any> => {
     const { quartoId, hospedes, checkin, checkout, valorTotal } = req.body;
 
     if (!quartoId || !checkin || !checkout) {
@@ -396,15 +396,15 @@ app.post('/api/admin/bloquear', async (req, res) => {
             [quartoId, clienteId, numHospedes, checkin, checkout, valorSalvar]
         );
 
-        res.json({ mensagem: 'Bloqueio e reserva salvos com sucesso!' });
+        return res.json({ mensagem: 'Bloqueio e reserva salvos com sucesso!' });
 
-    } catch (err) {
+    } catch (err: any) {
         console.error("ERRO DETALHADO DO BANCO (admin/bloquear):", err);
-        res.status(500).json({ erro: 'Erro interno ao salvar no banco.', detalhe: err.message });
+        return res.status(500).json({ erro: 'Erro interno ao salvar no banco.', detalhe: err.message });
     }
 });
 
-app.put('/api/admin/reservas/:id/efetivar', async (req, res) => {
+app.put('/api/admin/reservas/:id/efetivar', async (req: Request, res: Response): Promise<any> => {
     const { id } = req.params;
     const { nome, telefone } = req.body;
 
@@ -417,47 +417,47 @@ app.put('/api/admin/reservas/:id/efetivar', async (req, res) => {
         await pool.query("UPDATE clientes SET nome = $1, telefone = $2 WHERE id = $3", [nome, telefone, clienteId]);
         await pool.query("UPDATE reservas SET status_pagamento = 'concluido' WHERE id = $1", [id]);
 
-        res.json({ mensagem: 'Reserva efetivada com sucesso!' });
+        return res.json({ mensagem: 'Reserva efetivada com sucesso!' });
     } catch (err) {
         console.error("Erro ao efetivar reserva:", err);
-        res.status(500).json({ erro: 'Erro ao efetivar reserva.' });
+        return res.status(500).json({ erro: 'Erro ao efetivar reserva.' });
     }
 });
 
-app.delete('/api/admin/reservas/:id', async (req, res) => {
+app.delete('/api/admin/reservas/:id', async (req: Request, res: Response): Promise<any> => {
     const { id } = req.params;
     try {
         await pool.query("UPDATE reservas SET status_pagamento = 'cancelado' WHERE id = $1", [id]);
-        res.json({ mensagem: 'Reserva cancelada e data liberada com sucesso.' });
+        return res.json({ mensagem: 'Reserva cancelada e data liberada com sucesso.' });
     } catch (err) {
         console.error("Erro ao cancelar reserva:", err);
-        res.status(500).json({ erro: 'Erro ao remover reserva.' });
+        return res.status(500).json({ erro: 'Erro ao remover reserva.' });
     }
 });
 
-app.put('/api/admin/reservas/:id/checkin', async (req, res) => {
+app.put('/api/admin/reservas/:id/checkin', async (req: Request, res: Response): Promise<any> => {
     const { id } = req.params;
     try {
         await pool.query("UPDATE reservas SET status_pagamento = 'checkin' WHERE id = $1", [id]);
-        res.json({ mensagem: 'Check-in realizado! Hóspede na pousada.' });
+        return res.json({ mensagem: 'Check-in realizado! Hóspede na pousada.' });
     } catch (err) {
         console.error("Erro ao fazer check-in:", err);
-        res.status(500).json({ erro: 'Erro ao registrar check-in.' });
+        return res.status(500).json({ erro: 'Erro ao registrar check-in.' });
     }
 });
 
-app.put('/api/admin/reservas/:id/checkout', async (req, res) => {
+app.put('/api/admin/reservas/:id/checkout', async (req: Request, res: Response): Promise<any> => {
     const { id } = req.params;
     try {
         await pool.query("UPDATE reservas SET status_pagamento = 'checkout' WHERE id = $1", [id]);
-        res.json({ mensagem: 'Check-out realizado! Reserva arquivada e quarto desocupado.' });
+        return res.json({ mensagem: 'Check-out realizado! Reserva arquivada e quarto desocupado.' });
     } catch (err) {
         console.error("Erro ao fazer check-out:", err);
-        res.status(500).json({ erro: 'Erro ao registrar check-out.' });
+        return res.status(500).json({ erro: 'Erro ao registrar check-out.' });
     }
 });
 
-app.get('/api/admin/dashboard', async (req, res) => {
+app.get('/api/admin/dashboard', async (req: Request, res: Response): Promise<any> => {
     try {
         const { start, end } = req.query;
         let firstDay, lastDay, textoPeriodo;
@@ -465,8 +465,8 @@ app.get('/api/admin/dashboard', async (req, res) => {
         if (start && end) {
             firstDay = start;
             lastDay = end;
-            const ds = start.split('-');
-            const de = end.split('-');
+            const ds = (start as string).split('-');
+            const de = (end as string).split('-');
             textoPeriodo = `${ds[2]}/${ds[1]} até ${de[2]}/${de[1]}`;
         } else {
             const currentDate = new Date();
@@ -495,25 +495,25 @@ app.get('/api/admin/dashboard', async (req, res) => {
         const ocupacaoResult = await pool.query(ocupacaoQuery, [firstDay, lastDay]);
         const diasOcupados = ocupacaoResult.rows[0].dias_ocupados || 0;
         
-        const d1 = new Date(`${firstDay}T00:00:00`);
-        const d2 = new Date(`${lastDay}T00:00:00`);
+        const d1: any = new Date(`${firstDay}T00:00:00`);
+        const d2: any = new Date(`${lastDay}T00:00:00`);
         const diasNaPesquisa = Math.max(1, Math.ceil((d2 - d1) / (1000 * 60 * 60 * 24)) + 1);
         
         const totalDiariasPossiveis = diasNaPesquisa * 4;
-        const taxaOcupacao = ((diasOcupados / totalDiariasPossiveis) * 100).toFixed(1);
+        const taxaOcupacao: any = ((diasOcupados / totalDiariasPossiveis) * 100).toFixed(1);
 
-        res.json({
+        return res.json({
             faturamento: Number(totalFaturado).toFixed(2),
             ocupacao: taxaOcupacao > 100 ? 100 : taxaOcupacao,
             mesAtual: textoPeriodo
         });
     } catch (err) {
         console.error("Erro ao gerar dashboard:", err);
-        res.status(500).json({ erro: 'Erro ao gerar dados do dashboard.' });
+        return res.status(500).json({ erro: 'Erro ao gerar dados do dashboard.' });
     }
 });
 
-app.get('/api/admin/grafico-faturamento', async (req, res) => {
+app.get('/api/admin/grafico-faturamento', async (req: Request, res: Response): Promise<any> => {
     try {
         const query = `
             SELECT 
@@ -527,8 +527,8 @@ app.get('/api/admin/grafico-faturamento', async (req, res) => {
         `;
         const result = await pool.query(query);
 
-        const mesesLabels = [];
-        const faturamentos = [];
+        const mesesLabels: string[] = [];
+        const faturamentos: string[] = [];
         const nomesMeses = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
 
         result.rows.forEach(row => {
@@ -538,13 +538,13 @@ app.get('/api/admin/grafico-faturamento', async (req, res) => {
             faturamentos.push(Number(row.total_faturado).toFixed(2));
         });
 
-        res.json({
+        return res.json({
             labels: mesesLabels,
             dados: faturamentos
         });
     } catch (err) {
         console.error("Erro ao gerar dados do gráfico:", err);
-        res.status(500).json({ erro: 'Erro ao buscar dados do gráfico.' });
+        return res.status(500).json({ erro: 'Erro ao buscar dados do gráfico.' });
     }
 });
 
@@ -560,11 +560,11 @@ setInterval(async () => {
             AND created_at < NOW() - INTERVAL '30 minutes'
         `);
         
-        if (limpeza.rowCount > 0) {
+        if (limpeza.rowCount && limpeza.rowCount > 0) {
             console.log(`[LIMPEZA AUTOMÁTICA] Cancelou ${limpeza.rowCount} reserva(s) não paga(s).`);
         }
     } catch (err) {}
 }, 5 * 60 * 1000);
 
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => console.log(`Servidor rodando na porta ${PORT}`));
+app.listen(PORT, () => console.log(`Servidor TypeScript rodando na porta ${PORT}`));
