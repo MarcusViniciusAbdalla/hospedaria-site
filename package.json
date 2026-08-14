@@ -1,16 +1,10 @@
 {
   "name": "hospedaria-site",
   "version": "1.0.0",
-  "description": "",
-  "main": "server.js",
-"scripts": {
+  "main": "server.ts",
+  "scripts": {
     "start": "npx ts-node server.ts"
-  }
   },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
-  "type": "commonjs",
   "dependencies": {
     "dotenv": "^17.4.2",
     "express": "^5.2.1",
