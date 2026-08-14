@@ -1,5 +1,6 @@
 require('dotenv').config();
 const express = require('express');
+const https = require('https');
 const { Pool } = require('pg');
 const { MercadoPagoConfig, Payment } = require('mercadopago');
 
@@ -171,6 +172,8 @@ app.post('/api/reservar', async (req, res) => {
         await client.query('BEGIN');
 
         const cpfLimpo = cliente.cpf ? cliente.cpf.replace(/\D/g, '') : '';
+        const cpfFinal = cpfLimpo.length > 0 ? cpfLimpo : `SEM-CPF-${Date.now()}`;
+
         let clienteRes = await client.query('SELECT id FROM clientes WHERE telefone = $1', [cliente.telefone]);
         let clienteId;
 
@@ -179,7 +182,7 @@ app.post('/api/reservar', async (req, res) => {
         } else {
             const novoCliente = await client.query(
                 'INSERT INTO clientes (nome, cpf, telefone, email) VALUES ($1, $2, $3, $4) RETURNING id',
-                [cliente.nome, cpfLimpo, cliente.telefone, cliente.email || 'contato@hospedariacentral.com.br']
+                [cliente.nome, cpfFinal, cliente.telefone, cliente.email || 'cliente@hospedariacentral.com.br']
             );
             clienteId = novoCliente.rows[0].id;
         }
@@ -202,7 +205,7 @@ app.post('/api/reservar', async (req, res) => {
                 description: `Reserva Quarto ${quartoId} - Hospedaria Central`,
                 payment_method_id: 'pix',
                 payer: {
-                    email: cliente.email || 'contato@hospedariacentral.com.br',
+                    email: cliente.email || 'cliente@hospedariacentral.com.br',
                     first_name: cliente.nome
                 }
             }
@@ -215,13 +218,24 @@ app.post('/api/reservar', async (req, res) => {
         );
 
         await client.query('COMMIT');
-        // AVISO NO WHATSAPP (CallMeBot)
-        const mensagem = encodeURIComponent(`🔔 *Nova reserva na Hospedaria Central!*\nQuarto: ${quartoId}\nCliente: ${cliente.nome}\nData: ${checkin} a ${checkout}\nValor: R$ ${valorTotal}`);
-        const urlAviso = `https://api.callmebot.com/whatsapp.php?phone=556484594781&text=${mensagem}&apikey=5774787`;
 
-       fetch(urlAviso).catch(err => console.error("Erro no alerta WhatsApp:", err));
+        // AVISO NO WHATSAPP (CALLMEBOT SEGURO)
+        try {
+            const numeroWpp = '556484594781';
+            const apiKeyWpp = '5774787';
+            const textoMsg = `🔔 *Nova Reserva!*\nQuarto: 0${quartoId}\nCliente: ${cliente.nome}\nData: ${checkin} a ${checkout}\nValor: R$ ${valorTotal.toFixed(2)}`;
+            
+            const urlWpp = `https://api.callmebot.com/whatsapp.php?phone=${numeroWpp}&text=${encodeURIComponent(textoMsg)}&apikey=${apiKeyWpp}`;
+            
+            https.get(urlWpp, (resWpp) => {
+                resWpp.on('data', () => {});
+            }).on('error', (errWpp) => {
+                console.error("Erro secundário no WhatsApp:", errWpp.message);
+            });
+        } catch (wppErr) {
+            console.error("Falha ao tentar enviar WhatsApp:", wppErr);
+        }
 
-        
         res.json({
             sucesso: true,
             reservaId: reservaRes.rows[0].id,
@@ -553,4 +567,17 @@ setInterval(async () => {
 }, 5 * 60 * 1000);
 
 const PORT = process.env.PORT || 3000;
+app.get('/api/admin/limpar-testes', async (req, res) => {
+    try {
+        // Remove reservas e clientes associados aos testes com nome 'Marcus' ou 'Klessia'
+        await pool.query("DELETE FROM reservas WHERE cliente_id IN (SELECT id FROM clientes WHERE nome ILIKE 'Marcus' OR nome ILIKE 'Klessia')");
+        await pool.query("DELETE FROM clientes WHERE nome ILIKE 'Marcus' OR nome ILIKE 'Klessia'");
+        
+        res.send("Dados de teste removidos com sucesso!");
+    } catch (err) {
+        res.status(500).send("Erro ao limpar: " + err.message);
+    }
+});
+
+
 app.listen(PORT, () => console.log(`Servidor rodando na porta ${PORT}`));
