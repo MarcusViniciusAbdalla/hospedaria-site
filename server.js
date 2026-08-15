@@ -13,6 +13,17 @@ const pool = new Pool({
     ssl: { rejectUnauthorized: false }
 });
 
+// ATUALIZA A PRANCHETA DO SEGURANÇA (BANCO DE DADOS)
+pool.query(`
+    ALTER TABLE reservas DROP CONSTRAINT IF EXISTS reservas_status_pagamento_check;
+    ALTER TABLE reservas ADD CONSTRAINT reservas_status_pagamento_check 
+    CHECK (status_pagamento IN ('pendente', 'pago', 'cancelado', 'bloqueado_balcao', 'concluido', 'checkin', 'checkout'));
+`).then(() => {
+    console.log("Prancheta do banco de dados atualizada! Novos status liberados.");
+}).catch(err => {
+    console.log("Aviso ao atualizar banco (pode ignorar):", err.message);
+});
+
 const mpClient = new MercadoPagoConfig({ 
     accessToken: process.env.MP_ACCESS_TOKEN 
 });
