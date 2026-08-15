@@ -1,4 +1,3 @@
-```markdown
 # 🏨 Hospedaria Central Morrinhos — Sistema Completo de Gestão e Reservas
 
 Plataforma Web Full Stack desenvolvida do zero para automação do fluxo de reservas, verificação de disponibilidade em tempo real, geração de pagamentos via Pix com webhook de confirmação automática e painel administrativo mobile-first para gestão de balcão.
@@ -40,35 +39,24 @@ WHERE q.ativo = TRUE
         AND (data_checkin, data_checkout) OVERLAPS ($2::date, $3::date)
   ) 
 ORDER BY q.id ASC;
-
-```
-
-### 2. Estrutura Dinâmica de Tarifas
-
+2. Estrutura Dinâmica de Tarifas
 O cálculo de diárias e totais é processado no servidor por meio de uma função especialista, blindando a lógica financeira contra alterações maliciosas no cliente:
 
-* **Quartos Padrão:** Escalonamento por quantidade de hóspedes (1, 2 ou 3 pessoas).
-* **Suíte Master:** Precificação diferenciada baseada no perfil da acomodação.
+Quartos Padrão: Escalonamento por quantidade de hóspedes (1, 2 ou 3 pessoas).
 
-### 3. Tratamento Avançado de Datas e Fusos Horários
+Suíte Master: Precificação diferenciada baseada no perfil da acomodação.
 
-A captura das datas no cliente lida diretamente com o *Timezone Offset* para evitar a perda de um dia decorrente da conversão para UTC no `toISOString()`:
+3. Tratamento Avançado de Datas e Fusos Horários
+A captura das datas no cliente lida diretamente com o Timezone Offset para evitar a perda de um dia decorrente da conversão para UTC no toISOString():
 
-```javascript
+JavaScript
 const offsetMs = selectedDates[0].getTimezoneOffset() * 60000;
 const dateString = new Date(selectedDates[0].getTime() - offsetMs).toISOString().split('T')[0];
+4. Gestão Robusta de Estados e Constraints (Check-in/Checkout)
+Validação rígida no banco de dados através de CHECK CONSTRAINT na tabela de reservas, contemplando o ciclo completo de atendimento: pendente, pago, cancelado, bloqueado_balcao, concluido, checkin e checkout.
 
-```
-
-### 4. Gestão Robusta de Estados e Constraints (Check-in/Checkout)
-
-Validação rígida no banco de dados através de `CHECK CONSTRAINT` na tabela de reservas, contemplando o ciclo completo de atendimento: `pendente`, `pago`, `cancelado`, `bloqueado_balcao`, `concluido`, `checkin` e `checkout`.
-
----
-
-## 📂 Estrutura do Repositório
-
-```text
+📂 Estrutura do Repositório
+Plaintext
 hospedaria-site/
 ├── public/                # Camada Frontend (Static Web Server)
 │   ├── images/            # Assets visuais otimizados
@@ -81,96 +69,60 @@ hospedaria-site/
 ├── .gitignore             # Proteção de credenciais e dependências
 ├── package.json           # Manifesto de dependências do Node.js
 └── server.js              # Entrypoint da API Node.js e rotas de negócio
+🔌 Rotas da API
+Rotas Públicas e de Cliente
+Método	Rota	Descrição
+GET	/api/disponibilidade	Retorna datas ocupadas de um quarto para exibição no calendário.
+GET	/api/quartos-disponiveis	Filtra quartos livres por período e capacidade máxima.
+POST	/api/reservar	Cria pré-reserva, gera cobrança Pix no Mercado Pago e retorna o QR Code.
+POST	/api/processar-cartao	Processa pagamentos via cartão de crédito de forma transacional.
+POST	/api/webhook/mercadopago	Endpoint seguro para confirmação automática via Mercado Pago.
+Rotas Administrativas
+Método	Rota	Descrição
+GET	/api/admin/reservas	Lista todas as reservas ativas, bloqueios e estados de check-in.
+POST	/api/admin/bloquear	Permite travar datas no balcão sem emissão de cobrança.
+DELETE	/api/admin/reservas/:id	Libera datas e cancela registros de ocupação.
+🔧 Como Executar o Projeto Localmente
+Pré-requisitos
+Node.js (v18+)
 
-```
+PostgreSQL instalado ou instância no Neon / Supabase.
 
----
+Passo a Passo
+Clone o repositório:
 
-## 🔌 Rotas da API
-
-### Rotas Públicas e de Cliente
-
-| Método | Rota | Descrição |
-| --- | --- | --- |
-| `GET` | `/api/disponibilidade` | Retorna datas ocupadas de um quarto para exibição no calendário. |
-| `GET` | `/api/quartos-disponiveis` | Filtra quartos livres por período e capacidade máxima. |
-| `POST` | `/api/reservar` | Cria pré-reserva, gera cobrança Pix no Mercado Pago e retorna o QR Code. |
-| `POST` | `/api/processar-cartao` | Processa pagamentos via cartão de crédito de forma transacional. |
-| `POST` | `/api/webhook/mercadopago` | Endpoint seguro para confirmação automática via Mercado Pago. |
-
-### Rotas Administrativas
-
-| Método | Rota | Descrição |
-| --- | --- | --- |
-| `GET` | `/api/admin/reservas` | Lista todas as reservas ativas, bloqueios e estados de check-in. |
-| `POST` | `/api/admin/bloquear` | Permite travar datas no balcão sem emissão de cobrança. |
-| `DELETE` | `/api/admin/reservas/:id` | Libera datas e cancela registros de ocupação. |
-
----
-
-## 🔧 Como Executar o Projeto Localmente
-
-### Pré-requisitos
-
-* Node.js (v18+)
-* PostgreSQL instalado ou instância no Neon / Supabase.
-
-### Passo a Passo
-
-1. Clone o repositório:
-```bash
+Bash
 git clone [https://github.com/MarcusViniciusAbdalla/hospedaria-site.git](https://github.com/MarcusViniciusAbdalla/hospedaria-site.git)
 cd hospedaria-site
+Instale as dependências:
 
-```
-
-
-2. Instale as dependências:
-```bash
+Bash
 npm install
+Configure as Variáveis de Ambiente:
+Crie um arquivo .env na raiz do projeto com o seguinte formato:
 
-```
-
-
-3. Configure as Variáveis de Ambiente:
-Crie um arquivo `.env` na raiz do projeto com o seguinte formato:
-```env
+Snippet de código
 PORT=3000
 DATABASE_URL=postgresql://usuario:senha@host:5432/nomedobanco?sslmode=require
 MP_ACCESS_TOKEN=APP_USR-seu-access-token-aqui
+Inicie o servidor de desenvolvimento:
 
-```
-
-
-4. Inicie o servidor de desenvolvimento:
-```bash
+Bash
 npm start
+O servidor iniciará em http://localhost:3000
 
-```
-
-
-*O servidor iniciará em `http://localhost:3000*`
-
----
-
-## 🌐 Deploy em Produção
-
+🌐 Deploy em Produção
 O projeto foi implantado utilizando integração contínua (CI/CD) automatizada via GitHub e plataformas de nuvem serverless:
 
-* **Aplicação (Backend/Frontend):** Render Cloud Services
-* **Database Relacional:** Neon PostgreSQL
-* **Gateway de Pagamento:** Mercado Pago Developers
+Aplicação (Backend/Frontend): Render Cloud Services
 
----
+Database Relacional: Neon PostgreSQL
 
-## 👨‍💻 Desenvolvedor
+Gateway de Pagamento: Mercado Pago Developers
 
-**Marcus Vinicius Abdalla Teixeira e Silva**
+👨‍💻 Desenvolvedor
+Marcus Vinicius Abdalla Teixeira e Silva
 
 Desenvolvedor Full Stack & Administrador
 
-[LinkedIn](https://www.linkedin.com) | [GitHub](https://www.google.com/search?q=https://github.com/MarcusViniciusAbdalla)
-
-```
-
-```
+LinkedIn | GitHub
