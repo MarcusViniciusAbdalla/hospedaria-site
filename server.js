@@ -576,6 +576,61 @@ setInterval(async () => {
         }
     } catch (err) {}
 }, 5 * 60 * 1000);
+// ROTA ADMIN: ESTENDER DIÁRIA (+1 DIA)
+app.post('/api/admin/reservas/:id/estender', async (req, res) => {
+    const { id } = req.params;
+    const client = await pool.connect();
 
+    try {
+        await client.query('BEGIN');
+
+        // 1. Pega os dados atuais da reserva
+        const reservaAtual = await client.query('SELECT quarto_id, data_checkout, quantidade_hospedes FROM reservas WHERE id = $1', [id]);
+        if (reservaAtual.rows.length === 0) {
+            throw new Error('Reserva não encontrada.');
+        }
+
+        const { quarto_id, data_checkout, quantidade_hospedes } = reservaAtual.rows[0];
+
+        // 2. Calcula a data de amanhã usando o banco de dados
+        const novaDataRes = await client.query(`SELECT $1::date + INTERVAL '1 day' AS nova_data`, [data_checkout]);
+        const novaDataCheckout = novaDataRes.rows[0].nova_data;
+
+        // 3. Verifica se tem outra reserva para esse quarto no dia extra
+        const conflito = await client.query(`
+            SELECT id FROM reservas 
+            WHERE quarto_id = $1 
+            AND id != $2
+            AND status_pagamento IN ('pago', 'bloqueado_balcao', 'concluido', 'checkin')
+            AND (data_checkin, data_checkout) OVERLAPS ($3::date, $4::date)
+        `, [quarto_id, id, data_checkout, novaDataCheckout]);
+
+        if (conflito.rows.length > 0) {
+            await client.query('ROLLBACK');
+            return res.status(400).json({ erro: 'Quarto indisponível! Já existe uma reserva para amanhã.' });
+        }
+
+        // 4. Puxa o valor correto da diária usando a sua função atual
+        const valorDiariaExtra = calcularDiaria(quarto_id, quantidade_hospedes);
+
+        // 5. Atualiza a reserva (+1 dia e soma o valor no total)
+        await client.query(`
+            UPDATE reservas 
+            SET data_checkout = $1::date,
+                valor_total = valor_total + $2
+            WHERE id = $3
+        `, [novaDataCheckout, valorDiariaExtra, id]);
+
+        await client.query('COMMIT');
+        return res.json({ sucesso: true, mensagem: 'Diária estendida com sucesso!' });
+
+    } catch (error) {
+        await client.query('ROLLBACK');
+        console.error('Erro ao estender:', error);
+        return res.status(500).json({ erro: 'Erro interno ao estender a reserva.' });
+    } finally {
+        client.release();
+    }
+});
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log(`Servidor rodando na porta ${PORT}`));
