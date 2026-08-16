@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login - Hospedaria Central</title>
+    <style>
+        body { font-family: Arial, sans-serif; background-color: #f4f4f9; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
+        .login-box { background: white; padding: 30px; border-radius: 8px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); width: 100%; max-width: 350px; text-align: center; }
+        h2 { color: #d97757; margin-top: 0; }
+        input { width: 100%; padding: 10px; margin: 10px 0; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; }
+        button { width: 100%; padding: 10px; background-color: #d97757; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 16px; margin-top: 10px; font-weight: bold; }
+        button:hover { background-color: #b86448; }
+        #mensagem { color: red; margin-top: 15px; font-size: 14px; }
+    </style>
+</head>
+<body>
+    <div class="login-box">
+        <h2>Acesso Restrito</h2>
+        <p style="color: #666; font-size: 14px; margin-bottom: 20px;">Painel de Gestão - Hospedaria</p>
+        <form id="loginForm">
+            <input type="text" id="usuario" placeholder="Usuário" required>
+            <input type="password" id="senha" placeholder="Senha" required>
+            <button type="submit">Entrar no Painel</button>
+        </form>
+        <div id="mensagem"></div>
+    </div>
+
+    <script>
+        document.getElementById('loginForm').addEventListener('submit', async (e) => {
+            e.preventDefault(); // Impede a página de recarregar
+            const usuario = document.getElementById('usuario').value;
+            const senha = document.getElementById('senha').value;
+            const mensagem = document.getElementById('mensagem');
+
+            mensagem.style.color = '#333';
+            mensagem.textContent = "Verificando credenciais...";
+
+            try {
+                // Bate na porta do servidor que acabamos de criar
+                const response = await fetch('/api/admin/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ usuario, senha })
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    // DEU CERTO! Guarda a pulseira VIP na memória do navegador
+                    localStorage.setItem('tokenHospedaria', data.token);
+                    mensagem.style.color = 'green';
+                    mensagem.textContent = "Acesso liberado! Entrando...";
+                    
+                    // Joga você para dentro do painel
+                    setTimeout(() => {
+                        window.location.href = '/admin.html';
+                    }, 500);
+                } else {
+                    // DEU ERRO! Senha errada
+                    mensagem.style.color = 'red';
+                    mensagem.textContent = data.erro || "Usuário ou senha inválidos.";
+                }
+            } catch (error) {
+                mensagem.style.color = 'red';
+                mensagem.textContent = "Erro de conexão com o servidor.";
+            }
+        });
+    </script>
+</body>
+</html>
