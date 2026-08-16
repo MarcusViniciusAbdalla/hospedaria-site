@@ -495,6 +495,72 @@ app.delete('/api/admin/reservas/:id', async (req, res) => {
     }
 });
 
+// ROTA ADMIN: DISPARAR LEMBRETE MANUAL (E-MAIL + WHATSAPP)
+app.post('/api/admin/reservas/:id/lembrete', async (req, res) => {
+    const { id } = req.params;
+    
+    try {
+        const query = `
+            SELECT r.id, r.quarto_id, r.data_checkin, c.nome AS cliente_nome, c.email, c.telefone 
+            FROM reservas r
+            JOIN clientes c ON c.id = r.cliente_id
+            WHERE r.id = $1
+        `;
+        const result = await pool.query(query, [id]);
+
+        if (result.rows.length === 0) {
+            return res.status(404).json({ erro: 'Reserva não encontrada.' });
+        }
+
+        const reserva = result.rows[0];
+        const checkinBR = new Date(reserva.data_checkin).toLocaleDateString('pt-BR', {timeZone: 'UTC'});
+        const numQ = String(reserva.quarto_id).padStart(2, '0');
+
+        let emailEnviado = false;
+        let whatsappEnviado = false;
+
+        // 1. DISPARAR E-MAIL VIA BREVO (se tiver e-mail válido)
+        if (reserva.email && reserva.email.includes('@') && !reserva.email.includes('balcao')) {
+            await enviarEmailBrevo(
+                reserva.email,
+                reserva.cliente_nome,
+                'Lembrete: A sua reserva na Hospedaria Central é amanhã! 🧳',
+                htmlEmailLembrete(reserva.cliente_nome, numQ, checkinBR)
+            );
+            emailEnviado = true;
+        }
+
+        // 2. DISPARAR WHATSAPP (via CallMeBot)
+        if (reserva.telefone) {
+            const telLimpo = reserva.telefone.replace(/\D/g, '');
+            if (telLimpo.length >= 10) {
+                const numeroWppCliente = telLimpo.startsWith('55') ? telLimpo : `55${telLimpo}`;
+                const apiKeyWpp = '5774787'; // Sua api key existente
+                const textoMsg = `Olá, *${reserva.cliente_nome}*! 🏨 Passando para lembrar da sua reserva na *Hospedaria Central Morrinhos* para o dia *${checkinBR}* (Quarto 0${reserva.quarto_id}). Estamos te esperando! Dúvidas? (64) 98459-4781.`;
+                
+                const urlWpp = `https://api.callmebot.com/whatsapp.php?phone=${numeroWppCliente}&text=${encodeURIComponent(textoMsg)}&apikey=${apiKeyWpp}`;
+                
+                await new Promise((resolve) => {
+                    https.get(urlWpp, (resWpp) => {
+                        resWpp.on('data', () => {});
+                        resWpp.on('end', () => resolve(true));
+                    }).on('error', () => resolve(false));
+                });
+                whatsappEnviado = true;
+            }
+        }
+
+        res.json({ 
+            sucesso: true, 
+            mensagem: `Lembrete disparado! E-mail: ${emailEnviado ? 'Enviado' : 'Não enviado/Sem e-mail'}, WhatsApp: ${whatsappEnviado ? 'Enviado' : 'Não enviado'}` 
+        });
+
+    } catch (err) {
+        console.error("Erro ao disparar lembrete manual:", err);
+        res.status(500).json({ erro: 'Erro interno ao enviar lembrete.' });
+    }
+});
+
 // ROTA ADMIN: REGISTRAR CHECK-IN E ENVIAR E-MAIL VIA BREVO
 app.put('/api/admin/reservas/:id/checkin', async (req, res) => {
     const { id } = req.params;
@@ -828,6 +894,26 @@ cron.schedule('0 8 * * *', async () => {
         console.error('Erro no robô de lembretes:', err);
     }
 });
+
+async function enviarLembrete(idReserva) {
+    if (!confirm("Deseja enviar o e-mail e o WhatsApp de lembrete para este hóspede?")) return;
+    
+    try {
+        const response = await fetch(`/api/admin/reservas/${idReserva}/lembrete`, {
+            method: 'POST'
+        });
+        const data = await response.json();
+        
+        if (data.sucesso) {
+            alert(data.mensagem);
+        } else {
+            alert("Erro: " + (data.erro || "Não foi possível enviar."));
+        }
+    } catch (error) {
+        console.error("Erro:", error);
+        alert("Erro de conexão ao tentar enviar lembrete.");
+    }
+}
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log(`Servidor rodando na porta ${PORT}`));
