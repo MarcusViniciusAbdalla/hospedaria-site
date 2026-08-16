@@ -191,3 +191,84 @@
         justify-content: center;
     }
 }
+
+/* ==========================================
+   📱 MODO CELULAR (RESPONSIVIDADE PARA A KLESSIA)
+   ========================================== */
+@media (max-width: 768px) {
+    /* 1. Ajusta o tamanho da tela para não ter barra de rolagem horizontal */
+    .admin-container {
+        padding: 10px;
+        overflow-x: hidden;
+    }
+
+    /* 2. Empilha a barra de ferramentas superior */
+    .admin-toolbar {
+        flex-direction: column;
+        align-items: stretch;
+        text-align: center;
+    }
+    
+    .toolbar-actions {
+        flex-direction: column;
+        width: 100%;
+    }
+    
+    /* Botões do topo maiores e em tela cheia */
+    .btn-toolbar {
+        width: 100%;
+        justify-content: center;
+        padding: 14px; 
+        font-size: 14px;
+    }
+
+    /* 3. Coloca as caixas de Faturamento e Ocupação uma embaixo da outra */
+    .dashboard-grid {
+        grid-template-columns: 1fr;
+    }
+
+    /* 4. Calendários de consulta em coluna única */
+    .calendars-grid {
+        grid-template-columns: 1fr;
+    }
+
+    /* 5. Formulário de Travar Data com botões de toque fácil */
+    .admin-form-grid {
+        grid-template-columns: 1fr !important;
+    }
+    
+    .btn-admin-action {
+        font-size: 16px !important;
+        padding: 16px !important; /* Bem grande para não errar o clique */
+    }
+
+    /* 6. A mágica da Lista de Reservas */
+    /* Transforma a linha horizontal em um "cartão" de leitura fácil */
+    .reservation-item {
+        flex-direction: column;
+        align-items: flex-start !important;
+        padding: 15px;
+    }
+    
+    .reservation-info {
+        width: 100%;
+        margin-bottom: 15px;
+    }
+    
+    /* Agrupa os botões de ação (Check-in, Check-out, etc) */
+    .reservation-item > div:last-child {
+        width: 100%;
+        flex-direction: column;
+    }
+    
+    /* Deixa os botões de ação da reserva largos e fáceis de tocar */
+    .btn-status-confirm, .btn-status-cancel, .reservation-item button {
+        width: 100%;
+        padding: 14px !important;
+        font-size: 14px !important;
+        margin-left: 0 !important;
+        margin-bottom: 10px !important;
+        justify-content: center;
+        display: flex;
+    }
+}
