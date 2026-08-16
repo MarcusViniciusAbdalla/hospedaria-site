@@ -474,12 +474,12 @@ app.put('/api/admin/reservas/:id/checkin', async (req, res) => {
     try {
         await client.query('BEGIN');
         
-        // Atualiza para 'checkin' e pega os dados do cliente
+        // Atualiza para 'checkin' e pega os dados usando 'quarto_id'
         const result = await client.query(`
             UPDATE reservas 
             SET status_pagamento = 'checkin' 
             WHERE id = $1 
-            RETURNING numero_quarto, data_checkout, cliente_nome, email
+            RETURNING quarto_id, data_checkout, cliente_nome, email
         `, [id]);
 
         if (result.rows.length === 0) {
@@ -491,7 +491,7 @@ app.put('/api/admin/reservas/:id/checkin', async (req, res) => {
         // Se o hóspede tem um e-mail cadastrado, envia as boas-vindas e regras!
         if (reserva.email && reserva.email.includes('@')) {
             const checkoutBR = new Date(reserva.data_checkout).toLocaleDateString('pt-BR', {timeZone: 'UTC'});
-            const numQ = String(reserva.numero_quarto).replace(/\D/g, '').padStart(2, '0');
+            const numQ = String(reserva.quarto_id).padStart(2, '0');
             
             const mailOptions = {
                 from: process.env.EMAIL_USER,
@@ -776,7 +776,7 @@ cron.schedule('0 8 * * *', async () => {
         const dataIso = amanha.toISOString().split('T')[0];
 
         const result = await pool.query(`
-            SELECT id, cliente_nome, email, numero_quarto, data_checkin 
+            SELECT id, cliente_nome, email, quarto_id, data_checkin 
             FROM reservas 
             WHERE data_checkin = $1 
             AND status_pagamento = 'pago' 
@@ -785,7 +785,7 @@ cron.schedule('0 8 * * *', async () => {
 
         for (let r of result.rows) {
             const checkinBR = new Date(r.data_checkin).toLocaleDateString('pt-BR', {timeZone: 'UTC'});
-            const numQ = String(r.numero_quarto).replace(/\D/g, '').padStart(2, '0');
+            const numQ = String(r.quarto_id).padStart(2, '0');
             
             const mailOptions = {
                 from: process.env.EMAIL_USER,
@@ -801,7 +801,6 @@ cron.schedule('0 8 * * *', async () => {
         console.error('Erro no robô de lembretes:', err);
     }
 });
-
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log(`Servidor rodando na porta ${PORT}`));
