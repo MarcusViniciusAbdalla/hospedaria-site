@@ -282,7 +282,33 @@ app.post('/api/reservar', async (req, res) => {
 
         await client.query('COMMIT');
 
-        // AVISO NO WHATSAPP
+        // 1. AVISO POR E-MAIL PARA O ADMINISTRADOR (VOCÊ)
+        try {
+            const adminEmail = process.env.EMAIL_USER; // Envia para o e-mail da hospedaria
+            const assuntoAdmin = `🔔 Nova Reserva: Quarto 0${quartoId} - ${cliente.nome}`;
+            const htmlAdmin = `
+            <div style="font-family: Arial, sans-serif; color: #333; max-width: 500px; padding: 20px; border: 1px solid #ddd; border-radius: 8px;">
+                <h2 style="color: #d97757; margin-top: 0;">Nova Reserva Recebida! 🎉</h2>
+                <p>Uma nova solicitação de reserva acabou de ser feita no site.</p>
+                <div style="background-color: #f9f9f9; padding: 15px; border-radius: 5px;">
+                    <p style="margin: 5px 0;">👤 <strong>Hóspede:</strong> ${cliente.nome}</p>
+                    <p style="margin: 5px 0;">📞 <strong>Contato:</strong> ${cliente.telefone || 'Não informado'}</p>
+                    <p style="margin: 5px 0;">🛏️ <strong>Quarto:</strong> 0${quartoId}</p>
+                    <p style="margin: 5px 0;">📅 <strong>Período:</strong> ${checkin} a ${checkout}</p>
+                    <p style="margin: 5px 0;">💰 <strong>Valor:</strong> R$ ${valorTotal.toFixed(2)}</p>
+                </div>
+                <p style="font-size: 12px; color: #777;">O status atual é "pendente". Acesse o painel para acompanhar quando o hóspede realizar o pagamento.</p>
+            </div>
+            `;
+            
+            // Dispara sem travar a tela de carregamento do cliente
+            enviarEmailBrevo(adminEmail, 'Administrador', assuntoAdmin, htmlAdmin)
+                .catch(err => console.error("Falha ao enviar e-mail admin:", err));
+        } catch (emailErr) {
+            console.error("Erro interno ao preparar e-mail admin:", emailErr);
+        }
+
+        // 2. AVISO NO WHATSAPP PARA O SEU CELULAR (MANTIDO)
         try {
             const numeroWpp = '556484594781';
             const apiKeyWpp = '5774787';
