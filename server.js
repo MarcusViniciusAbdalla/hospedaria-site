@@ -3,6 +3,26 @@ const express = require('express');
 const https = require('https');
 const { Pool } = require('pg');
 const { MercadoPagoConfig, Payment } = require('mercadopago');
+const nodemailer = require('nodemailer');
+
+// Configuração do "Carteiro" que vai enviar os e-mails
+const transporter = nodemailer.createTransport({
+    service: 'gmail',
+    auth: {
+        user: process.env.EMAIL_USER,
+        pass: process.env.EMAIL_PASS
+    }
+});
+
+// Testa se o e-mail conseguiu logar quando o servidor liga
+transporter.verify(function (error, success) {
+    if (error) {
+        console.log("Erro ao conectar no E-mail:", error);
+    } else {
+        console.log("Servidor de E-mail conectado e pronto para enviar mensagens!");
+    }
+});
+
 
 const app = express();
 app.use(express.json());
