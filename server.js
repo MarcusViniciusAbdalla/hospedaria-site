@@ -25,8 +25,8 @@ pool.query(`
     console.log("Aviso ao atualizar banco (pode ignorar):", err.message);
 });
 
-const mpClient = new MercadoPagoConfig({ 
-    accessToken: process.env.MP_ACCESS_TOKEN 
+const mpClient = new MercadoPagoConfig({
+    accessToken: process.env.MP_ACCESS_TOKEN
 });
 const payment = new Payment(mpClient);
 
@@ -39,9 +39,9 @@ async function enviarEmailBrevo(destinatarioEmail, destinatarioNome, assunto, ht
     }
 
     const dadosEnvio = JSON.stringify({
-        sender: { 
-            name: "Hospedaria Central Morrinhos", 
-            email: process.env.EMAIL_USER 
+        sender: {
+            name: "Hospedaria Central Morrinhos",
+            email: process.env.EMAIL_USER
         },
         to: [{ email: destinatarioEmail, name: destinatarioNome }],
         subject: assunto,
@@ -120,17 +120,17 @@ app.post('/api/processar-cartao', async (req, res) => {
         });
 
         if (paymentResponse.status === 'approved') {
-            await pool.query("UPDATE reservas SET status_pagamento = 'pago', mp_payment_id = $1 WHERE id = $2", 
+            await pool.query("UPDATE reservas SET status_pagamento = 'pago', mp_payment_id = $1 WHERE id = $2",
                 [String(paymentResponse.id), reservaId]);
         } else {
-            await pool.query("UPDATE reservas SET mp_payment_id = $1 WHERE id = $2", 
+            await pool.query("UPDATE reservas SET mp_payment_id = $1 WHERE id = $2",
                 [String(paymentResponse.id), reservaId]);
         }
 
-        res.json({ 
-            sucesso: true, 
+        res.json({
+            sucesso: true,
             status: paymentResponse.status,
-            paymentId: paymentResponse.id 
+            paymentId: paymentResponse.id
         });
     } catch (error) {
         console.error('ERRO AO PROCESSAR CARTÃO:', error);
@@ -235,7 +235,8 @@ app.post('/api/reservar', async (req, res) => {
         await client.query('BEGIN');
 
         const cpfLimpo = cliente.cpf ? cliente.cpf.replace(/\D/g, '') : '';
-        const cpfFinal = cpfLimpo.length > 0 ? cpfLimpo : `SEM-CPF-${Date.now()}`;
+        // Pega no máximo 14 caracteres ou gera um código curto que cabe no banco
+        const cpfFinal = cpfLimpo.length > 0 ? cpfLimpo.substring(0, 14) : `C-${Date.now().toString().slice(-11)}`;
 
         let clienteRes = await client.query('SELECT id FROM clientes WHERE telefone = $1', [cliente.telefone]);
         let clienteId;
@@ -253,7 +254,7 @@ app.post('/api/reservar', async (req, res) => {
         const d1 = new Date(`${checkin}T00:00:00`);
         const d2 = new Date(`${checkout}T00:00:00`);
         const dias = Math.ceil((d2 - d1) / (1000 * 60 * 60 * 24));
-        
+
         if (dias <= 0) {
             await client.query('ROLLBACK');
             return res.status(400).json({ erro: 'Data de saída deve ser posterior à data de entrada.' });
@@ -300,7 +301,7 @@ app.post('/api/reservar', async (req, res) => {
                 <p style="font-size: 12px; color: #777;">O status atual é "pendente". Acesse o painel para acompanhar quando o hóspede realizar o pagamento.</p>
             </div>
             `;
-            
+
             // Dispara sem travar a tela de carregamento do cliente
             enviarEmailBrevo(adminEmail, 'Administrador', assuntoAdmin, htmlAdmin)
                 .catch(err => console.error("Falha ao enviar e-mail admin:", err));
@@ -313,11 +314,11 @@ app.post('/api/reservar', async (req, res) => {
             const numeroWpp = '556484594781';
             const apiKeyWpp = '5774787';
             const textoMsg = `🔔 *Nova Reserva!*\nQuarto: 0${quartoId}\nCliente: ${cliente.nome}\nData: ${checkin} a ${checkout}\nValor: R$ ${valorTotal.toFixed(2)}`;
-            
+
             const urlWpp = `https://api.callmebot.com/whatsapp.php?phone=${numeroWpp}&text=${encodeURIComponent(textoMsg)}&apikey=${apiKeyWpp}`;
-            
+
             https.get(urlWpp, (resWpp) => {
-                resWpp.on('data', () => {});
+                resWpp.on('data', () => { });
             }).on('error', (errWpp) => {
                 console.error("Erro secundário no WhatsApp:", errWpp.message);
             });
@@ -524,7 +525,7 @@ app.delete('/api/admin/reservas/:id', async (req, res) => {
 // ROTA ADMIN: DISPARAR LEMBRETE MANUAL (E-MAIL + WHATSAPP WEB)
 app.post('/api/admin/reservas/:id/lembrete', async (req, res) => {
     const { id } = req.params;
-    
+
     try {
         const query = `
             SELECT r.id, r.quarto_id, r.data_checkin, c.nome AS cliente_nome, c.email, c.telefone 
@@ -539,7 +540,7 @@ app.post('/api/admin/reservas/:id/lembrete', async (req, res) => {
         }
 
         const reserva = result.rows[0];
-        const checkinBR = new Date(reserva.data_checkin).toLocaleDateString('pt-BR', {timeZone: 'UTC'});
+        const checkinBR = new Date(reserva.data_checkin).toLocaleDateString('pt-BR', { timeZone: 'UTC' });
         const numQ = String(reserva.quarto_id).padStart(2, '0');
 
         let emailEnviado = false;
@@ -558,7 +559,7 @@ app.post('/api/admin/reservas/:id/lembrete', async (req, res) => {
         // 2. PREPARAR DADOS PARA O WHATSAPP WEB
         let telefoneFormatado = '';
         let textoMsg = '';
-        
+
         if (reserva.telefone) {
             const telLimpo = reserva.telefone.replace(/\D/g, '');
             if (telLimpo.length >= 10) {
@@ -567,8 +568,8 @@ app.post('/api/admin/reservas/:id/lembrete', async (req, res) => {
             }
         }
 
-        res.json({ 
-            sucesso: true, 
+        res.json({
+            sucesso: true,
             mensagem: `E-mail via Brevo processado! ${emailEnviado ? '(Enviado)' : '(Sem e-mail válido)'}`,
             telefoneCliente: telefoneFormatado,
             textoWhatsapp: textoMsg
@@ -587,7 +588,7 @@ app.put('/api/admin/reservas/:id/checkin', async (req, res) => {
 
     try {
         await client.query('BEGIN');
-        
+
         // 1. Atualiza status
         const result = await client.query(`
             UPDATE reservas 
@@ -612,15 +613,15 @@ app.put('/api/admin/reservas/:id/checkin', async (req, res) => {
         // AQUI ESTÁ A CORREÇÃO: vamos permitir o envio se for um e-mail válido, 
         // e se for o e-mail de balcão, vamos ignorar a trava para testes:
         const ehEmailValido = emailHospede && emailHospede.includes('@');
-        
+
         if (ehEmailValido) {
-            const checkoutBR = new Date(reserva.data_checkout).toLocaleDateString('pt-BR', {timeZone: 'UTC'});
+            const checkoutBR = new Date(reserva.data_checkout).toLocaleDateString('pt-BR', { timeZone: 'UTC' });
             const numQ = String(reserva.quarto_id).padStart(2, '0');
-            
+
             enviarEmailBrevo(
-                emailHospede, 
-                nomeHospede, 
-                'Bem-vindo(a) à Hospedaria Central Morrinhos! 🏨', 
+                emailHospede,
+                nomeHospede,
+                'Bem-vindo(a) à Hospedaria Central Morrinhos! 🏨',
                 htmlEmailCheckin(nomeHospede, numQ, checkoutBR)
             ).catch(err => console.error('Falha no envio do e-mail Check-in:', err));
         } else {
@@ -665,7 +666,7 @@ app.get('/api/admin/dashboard', async (req, res) => {
             const currentDate = new Date();
             firstDay = new Date(currentDate.getFullYear(), currentDate.getMonth(), 1).toISOString().split('T')[0];
             lastDay = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0).toISOString().split('T')[0];
-            
+
             textoPeriodo = currentDate.toLocaleString('pt-BR', { month: 'long', year: 'numeric' });
             textoPeriodo = textoPeriodo.charAt(0).toUpperCase() + textoPeriodo.slice(1);
         }
@@ -687,11 +688,11 @@ app.get('/api/admin/dashboard', async (req, res) => {
         `;
         const ocupacaoResult = await pool.query(ocupacaoQuery, [firstDay, lastDay]);
         const diasOcupados = ocupacaoResult.rows[0].dias_ocupados || 0;
-        
+
         const d1 = new Date(`${firstDay}T00:00:00`);
         const d2 = new Date(`${lastDay}T00:00:00`);
         const diasNaPesquisa = Math.max(1, Math.ceil((d2 - d1) / (1000 * 60 * 60 * 24)) + 1);
-        
+
         const totalDiariasPossiveis = diasNaPesquisa * 4;
         const taxaOcupacao = ((diasOcupados / totalDiariasPossiveis) * 100).toFixed(1);
 
@@ -750,11 +751,11 @@ setInterval(async () => {
             WHERE status_pagamento = 'pendente' 
             AND created_at < NOW() - INTERVAL '30 minutes'
         `);
-        
+
         if (limpeza.rowCount > 0) {
             console.log(`[LIMPEZA AUTOMÁTICA] Cancelou ${limpeza.rowCount} reserva(s) não paga(s).`);
         }
-    } catch (err) {}
+    } catch (err) { }
 }, 5 * 60 * 1000);
 
 // ROTA ADMIN: ESTENDER DIÁRIA (+1 DIA)
@@ -898,9 +899,9 @@ cron.schedule('0 8 * * *', async () => {
         `, [dataIso]);
 
         for (let r of result.rows) {
-            const checkinBR = new Date(r.data_checkin).toLocaleDateString('pt-BR', {timeZone: 'UTC'});
+            const checkinBR = new Date(r.data_checkin).toLocaleDateString('pt-BR', { timeZone: 'UTC' });
             const numQ = String(r.quarto_id).padStart(2, '0');
-            
+
             await enviarEmailBrevo(
                 r.email,
                 r.cliente_nome,
