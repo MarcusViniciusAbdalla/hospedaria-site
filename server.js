@@ -6,10 +6,32 @@ const { MercadoPagoConfig, Payment } = require('mercadopago');
 const cron = require('node-cron');
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
+const rateLimit = require('express-rate-limit');
+const xss = require('xss-clean');
 
 
 const app = express();
 app.use(express.json());
+// ==========================================
+// 🛡️ SISTEMA DE SEGURANÇA (BACKLOG FASE 1)
+// ==========================================
+
+// 1. Filtro de Sanitização (XSS Clean)
+// Limpa qualquer tentativa de injetar códigos maliciosos (vírus) nos campos de texto
+app.use(xss());
+
+// 2. A Roleta da Porta (Rate Limiting)
+// Lembra do IP do usuário por 15 minutos
+const limiter = rateLimit({
+    windowMs: 15 * 60 * 1000, // 15 minutos
+    max: 100, // Limite de 100 requisições por IP a cada 15 minutos
+    message: { erro: "Detectamos tráfego incomum. A roleta de segurança travou. Por favor, aguarde 15 minutos." }
+});
+
+// Aplica a roleta de segurança em TODAS as portas de entrada da nossa API
+app.use('/api/', limiter);
+
+// ==========================================
 app.use(express.static('public'));
 
 const pool = new Pool({
