@@ -6,12 +6,11 @@ const { MercadoPagoConfig, Payment } = require('mercadopago');
 const nodemailer = require('nodemailer');
 const cron = require('node-cron');
 
-// Configuração do "Carteiro" (Forçando IP v4 numérico do Google)
+// Configuração do "Carteiro" (SMTP Tradicional)
 const transporter = nodemailer.createTransport({
-    host: '142.250.150.108', // IP direto do smtp.gmail.com em IPv4
-    port: 587,
-    secure: false,
-    name: 'smtp.gmail.com', // Identifica o domínio corretamente para o Google
+    host: 'smtp.gmail.com',
+    port: 465,
+    secure: true,
     auth: {
         user: process.env.EMAIL_USER,
         pass: process.env.EMAIL_PASS
