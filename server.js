@@ -495,7 +495,7 @@ app.delete('/api/admin/reservas/:id', async (req, res) => {
     }
 });
 
-// ROTA ADMIN: DISPARAR LEMBRETE MANUAL (E-MAIL + WHATSAPP)
+// ROTA ADMIN: DISPARAR LEMBRETE MANUAL (E-MAIL + WHATSAPP WEB)
 app.post('/api/admin/reservas/:id/lembrete', async (req, res) => {
     const { id } = req.params;
     
@@ -517,7 +517,6 @@ app.post('/api/admin/reservas/:id/lembrete', async (req, res) => {
         const numQ = String(reserva.quarto_id).padStart(2, '0');
 
         let emailEnviado = false;
-        let whatsappEnviado = false;
 
         // 1. DISPARAR E-MAIL VIA BREVO (se tiver e-mail válido)
         if (reserva.email && reserva.email.includes('@') && !reserva.email.includes('balcao')) {
@@ -530,29 +529,23 @@ app.post('/api/admin/reservas/:id/lembrete', async (req, res) => {
             emailEnviado = true;
         }
 
-        // 2. DISPARAR WHATSAPP (via CallMeBot)
+        // 2. PREPARAR DADOS PARA O WHATSAPP WEB
+        let telefoneFormatado = '';
+        let textoMsg = '';
+        
         if (reserva.telefone) {
             const telLimpo = reserva.telefone.replace(/\D/g, '');
             if (telLimpo.length >= 10) {
-                const numeroWppCliente = telLimpo.startsWith('55') ? telLimpo : `55${telLimpo}`;
-                const apiKeyWpp = '5774787'; // Sua api key existente
-                const textoMsg = `Olá, *${reserva.cliente_nome}*! 🏨 Passando para lembrar da sua reserva na *Hospedaria Central Morrinhos* para o dia *${checkinBR}* (Quarto 0${reserva.quarto_id}). Estamos te esperando! Dúvidas? (64) 98459-4781.`;
-                
-                const urlWpp = `https://api.callmebot.com/whatsapp.php?phone=${numeroWppCliente}&text=${encodeURIComponent(textoMsg)}&apikey=${apiKeyWpp}`;
-                
-                await new Promise((resolve) => {
-                    https.get(urlWpp, (resWpp) => {
-                        resWpp.on('data', () => {});
-                        resWpp.on('end', () => resolve(true));
-                    }).on('error', () => resolve(false));
-                });
-                whatsappEnviado = true;
+                telefoneFormatado = telLimpo.startsWith('55') ? telLimpo : `55${telLimpo}`;
+                textoMsg = `Olá, *${reserva.cliente_nome}*! 🏨 Passando para lembrar da sua reserva na *Hospedaria Central Morrinhos* para o dia *${checkinBR}* (Quarto 0${reserva.quarto_id}). Estamos te esperando! Dúvidas? (64) 98459-4781.`;
             }
         }
 
         res.json({ 
             sucesso: true, 
-            mensagem: `Lembrete disparado! E-mail: ${emailEnviado ? 'Enviado' : 'Não enviado/Sem e-mail'}, WhatsApp: ${whatsappEnviado ? 'Enviado' : 'Não enviado'}` 
+            mensagem: `E-mail via Brevo processado! ${emailEnviado ? '(Enviado)' : '(Sem e-mail válido)'}`,
+            telefoneCliente: telefoneFormatado,
+            textoWhatsapp: textoMsg
         });
 
     } catch (err) {

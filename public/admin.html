@@ -1029,7 +1029,7 @@
             }
         }
         async function enviarLembrete(idReserva) {
-            if (!confirm("Deseja enviar o e-mail e o WhatsApp de lembrete para este hóspede?")) return;
+            if (!confirm("Deseja disparar o e-mail e abrir o WhatsApp de lembrete para este hóspede?")) return;
 
             try {
                 const response = await fetch(`/api/admin/reservas/${idReserva}/lembrete`, {
@@ -1038,13 +1038,19 @@
                 const data = await response.json();
 
                 if (data.sucesso) {
-                    alert(data.mensagem);
+                    // Se o sistema devolveu o telefone e o texto, abre a aba do WhatsApp
+                    if (data.telefoneCliente && data.textoWhatsapp) {
+                        const url = `https://wa.me/${data.telefoneCliente}?text=${encodeURIComponent(data.textoWhatsapp)}`;
+                        window.open(url, '_blank');
+                    } else {
+                        alert("O cliente não possui um telefone válido no cadastro para abrir o WhatsApp.");
+                    }
                 } else {
-                    alert("Erro: " + (data.erro || "Não foi possível enviar."));
+                    alert("Erro: " + (data.erro || "Não foi possível processar."));
                 }
             } catch (error) {
                 console.error("Erro:", error);
-                alert("Erro de conexão ao tentar enviar lembrete.");
+                alert("Erro de conexão ao tentar processar o lembrete.");
             }
         }
 
