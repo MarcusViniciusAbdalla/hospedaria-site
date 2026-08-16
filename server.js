@@ -7,7 +7,6 @@ const cron = require('node-cron');
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 const rateLimit = require('express-rate-limit');
-const xss = require('xss-clean');
 
 
 const app = express();
@@ -18,7 +17,6 @@ app.use(express.json());
 
 // 1. Filtro de Sanitização (XSS Clean)
 // Limpa qualquer tentativa de injetar códigos maliciosos (vírus) nos campos de texto
-app.use(xss());
 
 // 2. A Roleta da Porta (Rate Limiting)
 // Lembra do IP do usuário por 15 minutos
