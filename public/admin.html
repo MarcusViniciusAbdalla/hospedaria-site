@@ -23,24 +23,6 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
     <style>
-        .login-overlay {
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            min-height: 80vh;
-        }
-
-        .login-card {
-            background: var(--white);
-            padding: 40px;
-            border-radius: 12px;
-            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
-            text-align: center;
-            max-width: 400px;
-            width: 100%;
-            border-top: 5px solid var(--terracotta);
-        }
-
         .admin-toolbar {
             background: var(--brown-dark);
             padding: 12px 20px;
@@ -265,26 +247,8 @@
         </div>
     </header>
 
-    <!-- TELA DE LOGIN -->
-    <div id="login-screen" class="login-overlay">
-        <div class="login-card">
-            <i class="fa-solid fa-user-shield"
-                style="font-size: 40px; color: var(--terracotta); margin-bottom: 15px;"></i>
-            <h3 style="font-family: 'Playfair Display', serif; color: var(--brown-dark); margin-bottom: 10px;">Acesso
-                Restrito</h3>
-            <p style="font-size: 13px; color: #666; margin-bottom: 20px;">Digite a senha para gerenciar o balcão e
-                conferir a agenda:</p>
-
-            <form id="form-login">
-                <input type="password" id="admin-pass" placeholder="Senha de Acesso" required
-                    style="width: 100%; padding: 12px; border: 1px solid #ccc; border-radius: 6px; margin-bottom: 15px; text-align: center;">
-                <button type="submit" class="btn-admin-action">Entrar no Painel</button>
-            </form>
-        </div>
-    </div>
-
     <!-- CONTEÚDO DO PAINEL -->
-    <div id="admin-content" class="admin-container" style="display: none;">
+    <div id="admin-content" class="admin-container">
 
         <!-- BARRA DE FERRAMENTAS -->
         <div class="admin-toolbar">
@@ -297,7 +261,6 @@
                 <button onclick="exportarLeadsCSV()" class="btn-toolbar" style="background: #28a745; color: white;">
                     <i class="fa-solid fa-users"></i> Exportar Leads
                 </button>
-                <!-- BOTÃO DE DRE/FATURAMENTO ATUALIZADO AQUI -->
                 <button onclick="exportarFaturamentoCSV()" class="btn-toolbar"
                     style="background: var(--terracotta); color: white;">
                     <i class="fa-solid fa-file-csv"></i> Exportar DRE (CSV)
@@ -305,10 +268,16 @@
             </div>
         </div>
 
-        <h2
-            style="color: var(--brown-dark); text-align: center; margin-bottom: 15px; font-family: 'Playfair Display', serif;">
+        <h2 style="color: var(--brown-dark); text-align: center; margin-bottom: 5px; font-family: 'Playfair Display', serif;">
             Painel Administrativo & Ocupação
         </h2>
+        
+        <!-- BOTÃO DE SAIR ADICIONADO AQUI, BEM ABAIXO DO TÍTULO -->
+        <div style="text-align: center; margin-bottom: 25px;">
+            <button onclick="sairDoPainel()" style="background-color: #d9534f; color: white; padding: 8px 15px; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; font-size: 13px; box-shadow: 0 2px 5px rgba(0,0,0,0.2);">
+                <i class="fa-solid fa-door-closed"></i> Sair do Sistema
+            </button>
+        </div>
 
         <!-- FILTRO E DASHBOARD FINANCEIRO -->
         <div
@@ -511,24 +480,13 @@
     </footer>
 
     <script>
-        const SENHA_CORRETA = "123456";
-
-        document.getElementById('form-login').addEventListener('submit', (e) => {
-            e.preventDefault();
-            const senhaDigitada = document.getElementById('admin-pass').value.trim();
-
-            if (senhaDigitada === SENHA_CORRETA) {
-                document.getElementById('login-screen').setAttribute('style', 'display: none !important');
-                document.getElementById('admin-content').style.display = 'block';
-                carregarTudo();
-            } else {
-                alert("Senha incorreta!");
-                document.getElementById('admin-pass').value = '';
-            }
-        });
+        // --- FUNÇÃO DE SAIR (LOGOUT) ---
+        function sairDoPainel() {
+            localStorage.removeItem('tokenHospedaria'); // Joga a pulseira no lixo
+            window.location.href = '/login.html'; // Volta pra porta da rua
+        }
 
         let checkinBloqueio = '', checkoutBloqueio = '', dataObj1 = null, dataObj2 = null;
-
         let dashStart = '';
         let dashEnd = '';
 
@@ -568,7 +526,9 @@
                 if (start && end) {
                     url += `?start=${start}&end=${end}`;
                 }
-                const resp = await fetch(url);
+                const resp = await fetch(url, {
+                    headers: { 'Authorization': 'Bearer ' + localStorage.getItem('tokenHospedaria') }
+                });
                 if (resp.ok) {
                     const data = await resp.json();
                     document.getElementById('dash-mes').innerText = data.mesAtual;
@@ -584,7 +544,9 @@
 
         async function carregarGraficoFaturamento() {
             try {
-                const resp = await fetch('/api/admin/grafico-faturamento');
+                const resp = await fetch('/api/admin/grafico-faturamento', {
+                    headers: { 'Authorization': 'Bearer ' + localStorage.getItem('tokenHospedaria') }
+                });
                 if (resp.ok) {
                     const data = await resp.json();
 
@@ -642,10 +604,11 @@
             }
         }
 
-        // --- NOVA FUNÇÃO PARA EXPORTAR DRE ---
         async function exportarFaturamentoCSV() {
             try {
-                const resp = await fetch('/api/admin/exportar-faturamento');
+                const resp = await fetch('/api/admin/exportar-faturamento', {
+                    headers: { 'Authorization': 'Bearer ' + localStorage.getItem('tokenHospedaria') }
+                });
                 const data = await resp.json();
 
                 if (!data.faturamento || data.faturamento.length === 0) {
@@ -680,7 +643,6 @@
                 alert("Erro ao gerar a planilha de faturamento.");
             }
         }
-        // ------------------------------------
 
         function obterDiariaReferencia(quartoId, hospedes) {
             const id = parseInt(quartoId);
@@ -743,17 +705,22 @@
             }
         });
 
+        // Modificamos a chamada para ela rodar logo que a página abrir
         function carregarTudo() {
             carregarDashboard();
             carregarGraficoFaturamento();
             carregarAgenda();
             [1, 2, 3, 4].forEach(quartoId => carregarCalendarioQuarto(quartoId));
         }
+        
+        // Ativa o carregamento inicial da página automaticamente
+        carregarTudo();
 
         async function carregarCalendarioQuarto(quartoId) {
             const elem = document.getElementById(`cal-quarto-${quartoId}`);
             if (!elem) return;
             try {
+                // Rota pública de disponibilidade, não exige token
                 const resp = await fetch(`/api/disponibilidade?quartoId=${quartoId}`);
                 let datasOcupadas = [];
                 if (resp.ok) {
@@ -785,20 +752,18 @@
         async function carregarAgenda() {
             const container = document.getElementById('lista-reservas');
             try {
-                // 2. Levanta o braço e mostra a pulseira para o servidor liberar os dados
                 const response = await fetch('/api/admin/reservas', {
                     headers: {
                         'Authorization': 'Bearer ' + localStorage.getItem('tokenHospedaria')
                     }
                 });
 
-                // Se o servidor disser que a pulseira venceu (erro 401 ou 403), manda fazer login de novo
                 if (response.status === 401 || response.status === 403) {
                     localStorage.removeItem('tokenHospedaria');
                     window.location.href = '/login.html';
                     return;
                 }
-                const data = await resp.json();
+                const data = await response.json();
                 container.innerHTML = '';
                 if (!data.reservas || data.reservas.length === 0) {
                     container.innerHTML = '<p style="text-align: center; color: #777; padding: 20px;">Nenhuma reserva ativa cadastrada no momento.</p>';
@@ -875,7 +840,9 @@
 
         async function exportarLeadsCSV() {
             try {
-                const resp = await fetch('/api/admin/exportar-leads');
+                const resp = await fetch('/api/admin/exportar-leads', {
+                    headers: { 'Authorization': 'Bearer ' + localStorage.getItem('tokenHospedaria') }
+                });
                 const data = await resp.json();
                 if (!data.leads || data.leads.length === 0) {
                     alert("Nenhum lead encontrado para exportar.");
@@ -940,7 +907,10 @@
             try {
                 const resp = await fetch('/api/admin/bloquear', {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
+                    headers: { 
+                        'Content-Type': 'application/json',
+                        'Authorization': 'Bearer ' + localStorage.getItem('tokenHospedaria') 
+                    },
                     body: JSON.stringify(payload)
                 });
                 const resData = await resp.json();
@@ -974,7 +944,10 @@
             try {
                 const resp = await fetch(`/api/admin/reservas/${id}/efetivar`, {
                     method: 'PUT',
-                    headers: { 'Content-Type': 'application/json' },
+                    headers: { 
+                        'Content-Type': 'application/json',
+                        'Authorization': 'Bearer ' + localStorage.getItem('tokenHospedaria')
+                    },
                     body: JSON.stringify({ nome, telefone })
                 });
                 if (resp.ok) {
@@ -987,7 +960,10 @@
         async function cancelarReserva(id) {
             if (confirm("Tem certeza que deseja CANCELAR esta reserva e liberar a data no calendário?")) {
                 try {
-                    const resp = await fetch(`/api/admin/reservas/${id}`, { method: 'DELETE' });
+                    const resp = await fetch(`/api/admin/reservas/${id}`, { 
+                        method: 'DELETE',
+                        headers: { 'Authorization': 'Bearer ' + localStorage.getItem('tokenHospedaria') }
+                    });
                     const data = await resp.json();
                     if (resp.ok) {
                         alert(data.mensagem);
@@ -1000,7 +976,10 @@
         async function fazerCheckin(id) {
             if (confirm("Confirmar a entrada do hóspede (Check-in)?")) {
                 try {
-                    const resp = await fetch(`/api/admin/reservas/${id}/checkin`, { method: 'PUT' });
+                    const resp = await fetch(`/api/admin/reservas/${id}/checkin`, { 
+                        method: 'PUT',
+                        headers: { 'Authorization': 'Bearer ' + localStorage.getItem('tokenHospedaria') }
+                    });
                     if (resp.ok) carregarTudo();
                     else alert("Erro ao registrar Check-in.");
                 } catch (e) { alert("Erro de conexão."); }
@@ -1010,7 +989,10 @@
         async function fazerCheckout(id) {
             if (confirm("Confirmar a saída do hóspede (Check-out)? A reserva sairá da lista principal.")) {
                 try {
-                    const resp = await fetch(`/api/admin/reservas/${id}/checkout`, { method: 'PUT' });
+                    const resp = await fetch(`/api/admin/reservas/${id}/checkout`, { 
+                        method: 'PUT',
+                        headers: { 'Authorization': 'Bearer ' + localStorage.getItem('tokenHospedaria') }
+                    });
                     if (resp.ok) carregarTudo();
                     else alert("Erro ao registrar Check-out.");
                 } catch (e) { alert("Erro de conexão."); }
@@ -1034,7 +1016,8 @@
             if (confirm('Deseja estender a diária deste quarto por mais 1 dia?')) {
                 try {
                     const res = await fetch(`/api/admin/reservas/${id}/estender`, {
-                        method: 'POST'
+                        method: 'POST',
+                        headers: { 'Authorization': 'Bearer ' + localStorage.getItem('tokenHospedaria') }
                     });
                     const data = await res.json();
 
@@ -1049,6 +1032,7 @@
                 }
             }
         }
+        
         async function enviarLembrete(idReserva) {
             if (!confirm("Deseja disparar o e-mail e abrir o WhatsApp de lembrete para este hóspede?")) return;
 
@@ -1057,7 +1041,8 @@
 
             try {
                 const response = await fetch(`/api/admin/reservas/${idReserva}/lembrete`, {
-                    method: 'POST'
+                    method: 'POST',
+                    headers: { 'Authorization': 'Bearer ' + localStorage.getItem('tokenHospedaria') }
                 });
                 const data = await response.json();
 
@@ -1083,5 +1068,4 @@
 
     </script>
 </body>
-
 </html>
