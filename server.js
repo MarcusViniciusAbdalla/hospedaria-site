@@ -17,7 +17,7 @@ const pool = new Pool({
     ssl: { rejectUnauthorized: false }
 });
 
-// ATUALIZA A PRANCHETA DO BANCO DE DADOS E CRIA O USUÁRIO ADMIN
+// ATUALIZA A PRANCHETA DO BANCO DE DADOS E CRIA OS USUÁRIOS ADMIN
 pool.query(`
     ALTER TABLE reservas DROP CONSTRAINT IF EXISTS reservas_status_pagamento_check;
     ALTER TABLE reservas ADD CONSTRAINT reservas_status_pagamento_check 
@@ -31,13 +31,22 @@ pool.query(`
 `).then(async () => {
     console.log("Prancheta do banco de dados atualizada!");
     
-    // Confere se já existe um admin. Se não existir, cria o padrão:
-    const checkAdmin = await pool.query('SELECT * FROM administradores WHERE usuario = $1', ['admin']);
-    if (checkAdmin.rows.length === 0) {
+    // 1. Cria o seu usuário (Marcus)
+    const checkMarcus = await pool.query('SELECT * FROM administradores WHERE usuario = $1', ['marcus']);
+    if (checkMarcus.rows.length === 0 && process.env.SENHA_MARCUS) {
         const salt = await bcrypt.genSalt(10);
-        const hash = await bcrypt.hash('central2026', salt); // Senha inicial padrão
-        await pool.query('INSERT INTO administradores (usuario, senha_hash) VALUES ($1, $2)', ['admin', hash]);
-        console.log("Fechadura instalada! Usuário 'admin' criado com sucesso.");
+        const hash = await bcrypt.hash(process.env.SENHA_MARCUS, salt);
+        await pool.query('INSERT INTO administradores (usuario, senha_hash) VALUES ($1, $2)', ['marcus', hash]);
+        console.log("Usuário 'marcus' criado com sucesso na fechadura digital.");
+    }
+
+    // 2. Cria o usuário da sua esposa (Klessia)
+    const checkKlessia = await pool.query('SELECT * FROM administradores WHERE usuario = $1', ['klessia']);
+    if (checkKlessia.rows.length === 0 && process.env.SENHA_KLESSIA) {
+        const salt = await bcrypt.genSalt(10);
+        const hash = await bcrypt.hash(process.env.SENHA_KLESSIA, salt);
+        await pool.query('INSERT INTO administradores (usuario, senha_hash) VALUES ($1, $2)', ['klessia', hash]);
+        console.log("Usuário 'klessia' criado com sucesso na fechadura digital.");
     }
 }).catch(err => {
     console.log("Aviso ao atualizar banco (pode ignorar):", err.message);
