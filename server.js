@@ -3,28 +3,7 @@ const express = require('express');
 const https = require('https');
 const { Pool } = require('pg');
 const { MercadoPagoConfig, Payment } = require('mercadopago');
-const nodemailer = require('nodemailer');
 const cron = require('node-cron');
-
-// Configuração do "Carteiro" (SMTP Tradicional)
-const transporter = nodemailer.createTransport({
-    host: 'smtp.gmail.com',
-    port: 465,
-    secure: true,
-    auth: {
-        user: process.env.EMAIL_USER,
-        pass: process.env.EMAIL_PASS
-    }
-});
-
-// Testa se o e-mail conseguiu logar quando o servidor liga
-transporter.verify(function (error, success) {
-    if (error) {
-        console.log("Erro ao conectar no E-mail:", error);
-    } else {
-        console.log("Servidor de E-mail conectado e pronto para enviar mensagens!");
-    }
-});
 
 const app = express();
 app.use(express.json());
@@ -35,7 +14,7 @@ const pool = new Pool({
     ssl: { rejectUnauthorized: false }
 });
 
-// ATUALIZA A PRANCHETA DO SEGURANÇA (BANCO DE DADOS)
+// ATUALIZA A PRANCHETA DO BANCO DE DADOS
 pool.query(`
     ALTER TABLE reservas DROP CONSTRAINT IF EXISTS reservas_status_pagamento_check;
     ALTER TABLE reservas ADD CONSTRAINT reservas_status_pagamento_check 
@@ -50,6 +29,62 @@ const mpClient = new MercadoPagoConfig({
     accessToken: process.env.MP_ACCESS_TOKEN 
 });
 const payment = new Payment(mpClient);
+
+// FUNÇÃO DE ENVIO VIA API DO BREVO (HTTPS - PORTA 443 100% LIVRE)
+async function enviarEmailBrevo(destinatarioEmail, destinatarioNome, assunto, htmlConteudo) {
+    const apiKey = process.env.BREVO_API_KEY;
+    if (!apiKey) {
+        console.error("ERRO: Chave BREVO_API_KEY não configurada nas variáveis de ambiente!");
+        return;
+    }
+
+    const dadosEnvio = JSON.stringify({
+        sender: { 
+            name: "Hospedaria Central Morrinhos", 
+            email: process.env.EMAIL_USER 
+        },
+        to: [{ email: destinatarioEmail, name: destinatarioNome }],
+        subject: assunto,
+        htmlContent: htmlConteudo
+    });
+
+    const options = {
+        hostname: 'api.brevo.com',
+        port: 443,
+        path: '/v3/smtp/email',
+        method: 'POST',
+        headers: {
+            'accept': 'application/json',
+            'api-key': apiKey,
+            'content-type': 'application/json',
+            'content-length': Buffer.byteLength(dadosEnvio)
+        }
+    };
+
+    return new Promise((resolve, reject) => {
+        const req = https.request(options, (res) => {
+            let body = '';
+            res.on('data', (chunk) => body += chunk);
+            res.on('end', () => {
+                if (res.statusCode >= 200 && res.statusCode < 300) {
+                    console.log(`[BREVO] E-mail enviado com sucesso para: ${destinatarioEmail}`);
+                    resolve(true);
+                } else {
+                    console.error(`[BREVO] Erro ao enviar e-mail (${res.statusCode}):`, body);
+                    reject(new Error(body));
+                }
+            });
+        });
+
+        req.on('error', (error) => {
+            console.error('[BREVO] Erro na requisição HTTPS:', error);
+            reject(error);
+        });
+
+        req.write(dadosEnvio);
+        req.end();
+    });
+}
 
 function calcularDiaria(quartoId, hospedes) {
     const numHospedes = parseInt(hospedes) || 1;
@@ -67,9 +102,7 @@ function calcularDiaria(quartoId, hospedes) {
     return 75.00;
 }
 
-// ==========================================================================
-// ROTA: PROCESSAR PAGAMENTO COM CARTÃO (CRÉDITO / DÉBITO)
-// ==========================================================================
+// ROTA: PROCESSAR PAGAMENTO COM CARTÃO
 app.post('/api/processar-cartao', async (req, res) => {
     try {
         const { token, paymentMethodId, issuerId, installments, email, description, amount, reservaId } = req.body;
@@ -105,10 +138,7 @@ app.post('/api/processar-cartao', async (req, res) => {
     }
 });
 
-/* ==========================================================================
-   ROTAS PÚBLICAS
-   ========================================================================== */
-
+// ROTAS PÚBLICAS
 app.get('/api/disponibilidade', async (req, res) => {
     const { quartoId } = req.query;
 
@@ -252,7 +282,7 @@ app.post('/api/reservar', async (req, res) => {
 
         await client.query('COMMIT');
 
-        // AVISO NO WHATSAPP (CALLMEBOT SEGURO)
+        // AVISO NO WHATSAPP
         try {
             const numeroWpp = '556484594781';
             const apiKeyWpp = '5774787';
@@ -286,7 +316,7 @@ app.post('/api/reservar', async (req, res) => {
     }
 });
 
-// WEBHOOK ATUALIZADO (SUPORTA PIX E CARTÃO COM SEGURANÇA MÁXIMA)
+// WEBHOOK MERCADO PAGO
 app.post('/api/webhook/mercadopago', async (req, res) => {
     const { type, data } = req.body;
     try {
@@ -303,10 +333,7 @@ app.post('/api/webhook/mercadopago', async (req, res) => {
     }
 });
 
-/* ==========================================================================
-   ROTAS ADMINISTRATIVAS
-   ========================================================================== */
-
+// ROTAS ADMINISTRATIVAS
 app.get('/api/admin/reservas', async (req, res) => {
     try {
         const query = `
@@ -468,9 +495,7 @@ app.delete('/api/admin/reservas/:id', async (req, res) => {
     }
 });
 
-// ==========================================
-// ROTA ADMIN: REGISTRAR CHECK-IN E ENVIAR E-MAIL
-// ==========================================
+// ROTA ADMIN: REGISTRAR CHECK-IN E ENVIAR E-MAIL VIA BREVO
 app.put('/api/admin/reservas/:id/checkin', async (req, res) => {
     const { id } = req.params;
     const client = await pool.connect();
@@ -478,7 +503,6 @@ app.put('/api/admin/reservas/:id/checkin', async (req, res) => {
     try {
         await client.query('BEGIN');
         
-        // 1. Atualiza o status e recupera a referência da reserva
         const result = await client.query(`
             UPDATE reservas 
             SET status_pagamento = 'checkin' 
@@ -492,26 +516,20 @@ app.put('/api/admin/reservas/:id/checkin', async (req, res) => {
 
         const reserva = result.rows[0];
 
-        // 2. Busca os dados de contato corretos na tabela de clientes
         const clienteRes = await client.query('SELECT nome, email FROM clientes WHERE id = $1', [reserva.cliente_id]);
         const nomeHospede = clienteRes.rows.length > 0 ? clienteRes.rows[0].nome : 'Hóspede';
         const emailHospede = clienteRes.rows.length > 0 ? clienteRes.rows[0].email : '';
 
-        // 3. Se o e-mail for real (e não um falso preenchido pelo sistema), dispara o e-mail
         if (emailHospede && emailHospede.includes('@') && emailHospede !== 'balcao@hospedariacentral.com.br' && emailHospede !== 'cliente@hospedariacentral.com.br') {
             const checkoutBR = new Date(reserva.data_checkout).toLocaleDateString('pt-BR', {timeZone: 'UTC'});
             const numQ = String(reserva.quarto_id).padStart(2, '0');
             
-            const mailOptions = {
-                from: process.env.EMAIL_USER,
-                to: emailHospede,
-                subject: 'Bem-vindo(a) à Hospedaria Central Morrinhos! 🏨',
-                html: htmlEmailCheckin(nomeHospede, numQ, checkoutBR)
-            };
-            
-            transporter.sendMail(mailOptions)
-                .then(() => console.log(`E-mail de Check-in enviado para ${emailHospede}`))
-                .catch(err => console.error('Falha ao enviar e-mail:', err));
+            enviarEmailBrevo(
+                emailHospede, 
+                nomeHospede, 
+                'Bem-vindo(a) à Hospedaria Central Morrinhos! 🏨', 
+                htmlEmailCheckin(nomeHospede, numQ, checkoutBR)
+            ).catch(err => console.error('Falha no envio do e-mail Check-in:', err));
         }
 
         await client.query('COMMIT');
@@ -628,9 +646,7 @@ app.get('/api/admin/grafico-faturamento', async (req, res) => {
     }
 });
 
-/* ==========================================================================
-   ROTINA DE LIMPEZA AUTOMÁTICA
-   ========================================================================== */
+// ROTINA DE LIMPEZA AUTOMÁTICA
 setInterval(async () => {
     try {
         const limpeza = await pool.query(`
@@ -698,10 +714,7 @@ app.post('/api/admin/reservas/:id/estender', async (req, res) => {
     }
 });
 
-// ==========================================
-// MÓDULO DE E-MAILS (TEMPLATES E AUTOMAÇÃO)
-// ==========================================
-
+// TEMPLATES DE E-MAIL
 function htmlEmailCheckin(nome, quarto, checkout) {
     return `
     <div style="font-family: Arial, sans-serif; color: #333; max-width: 600px; margin: 0 auto; border: 1px solid #ddd; border-radius: 8px; overflow: hidden;">
@@ -771,14 +784,13 @@ function htmlEmailLembrete(nome, quarto, checkin) {
     </div>`;
 }
 
-// ⏰ ROBÔ DO LEMBRETE DE 24 HORAS (Roda todo dia às 08:00 da manhã)
+// ⏰ ROBÔ DO LEMBRETE DE 24 HORAS
 cron.schedule('0 8 * * *', async () => {
     try {
         const amanha = new Date();
         amanha.setDate(amanha.getDate() + 1);
         const dataIso = amanha.toISOString().split('T')[0];
 
-        // Usamos JOIN para buscar o nome e e-mail reais do cliente lá na tabela de 'clientes'
         const result = await pool.query(`
             SELECT r.id, c.nome AS cliente_nome, c.email, r.quarto_id, r.data_checkin 
             FROM reservas r
@@ -794,15 +806,13 @@ cron.schedule('0 8 * * *', async () => {
             const checkinBR = new Date(r.data_checkin).toLocaleDateString('pt-BR', {timeZone: 'UTC'});
             const numQ = String(r.quarto_id).padStart(2, '0');
             
-            const mailOptions = {
-                from: process.env.EMAIL_USER,
-                to: r.email,
-                subject: 'A sua reserva na Hospedaria Central Morrinhos é amanhã! 🧳',
-                html: htmlEmailLembrete(r.cliente_nome, numQ, checkinBR)
-            };
-            
-            await transporter.sendMail(mailOptions);
-            console.log(`[CRON] Lembrete 24h enviado para: ${r.email}`);
+            await enviarEmailBrevo(
+                r.email,
+                r.cliente_nome,
+                'A sua reserva na Hospedaria Central Morrinhos é amanhã! 🧳',
+                htmlEmailLembrete(r.cliente_nome, numQ, checkinBR)
+            );
+            console.log(`[CRON] Lembrete 24h enviado via Brevo para: ${r.email}`);
         }
     } catch (err) {
         console.error('Erro no robô de lembretes:', err);
