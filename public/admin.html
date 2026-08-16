@@ -749,7 +749,7 @@
                     onDayCreate: function (dObj, dStr, fp, dayElem) {
                         const dataFormatada = dayElem.dateObj.toISOString().split('T')[0];
                         const eReserva = datasOcupadas.some(faixa => {
-                            return dataFormatada >= faixa.from && dataFormatada <= faixa.to;
+                            return dataFormatada >= faixa.from && dataFormatada < faixa.to;
                         });
                         if (eReserva) dayElem.classList.add("dia-ocupado");
                     }
