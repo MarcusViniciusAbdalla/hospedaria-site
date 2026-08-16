@@ -4,6 +4,7 @@ const https = require('https');
 const { Pool } = require('pg');
 const { MercadoPagoConfig, Payment } = require('mercadopago');
 const nodemailer = require('nodemailer');
+const cron = require('node-cron');
 
 // Configuração do "Carteiro" que vai enviar os e-mails
 const transporter = nodemailer.createTransport({
@@ -22,7 +23,6 @@ transporter.verify(function (error, success) {
         console.log("Servidor de E-mail conectado e pronto para enviar mensagens!");
     }
 });
-
 
 const app = express();
 app.use(express.json());
@@ -466,7 +466,9 @@ app.delete('/api/admin/reservas/:id', async (req, res) => {
     }
 });
 
-// ROTA ADMIN: REGISTRAR CHECK-IN E ENVIAR E-MAIL DE BOAS-VINDAS
+// ==========================================
+// ROTA ADMIN: REGISTRAR CHECK-IN E ENVIAR E-MAIL
+// ==========================================
 app.put('/api/admin/reservas/:id/checkin', async (req, res) => {
     const { id } = req.params;
     const client = await pool.connect();
@@ -474,12 +476,12 @@ app.put('/api/admin/reservas/:id/checkin', async (req, res) => {
     try {
         await client.query('BEGIN');
         
-        // Atualiza para 'checkin' e pega os dados usando 'quarto_id'
+        // 1. Atualiza o status e recupera a referência da reserva
         const result = await client.query(`
             UPDATE reservas 
             SET status_pagamento = 'checkin' 
             WHERE id = $1 
-            RETURNING quarto_id, data_checkout, cliente_nome, email
+            RETURNING quarto_id, data_checkout, cliente_id
         `, [id]);
 
         if (result.rows.length === 0) {
@@ -488,21 +490,25 @@ app.put('/api/admin/reservas/:id/checkin', async (req, res) => {
 
         const reserva = result.rows[0];
 
-        // Se o hóspede tem um e-mail cadastrado, envia as boas-vindas e regras!
-        if (reserva.email && reserva.email.includes('@')) {
+        // 2. Busca os dados de contato corretos na tabela de clientes
+        const clienteRes = await client.query('SELECT nome, email FROM clientes WHERE id = $1', [reserva.cliente_id]);
+        const nomeHospede = clienteRes.rows.length > 0 ? clienteRes.rows[0].nome : 'Hóspede';
+        const emailHospede = clienteRes.rows.length > 0 ? clienteRes.rows[0].email : '';
+
+        // 3. Se o e-mail for real (e não um falso preenchido pelo sistema), dispara o e-mail
+        if (emailHospede && emailHospede.includes('@') && emailHospede !== 'balcao@hospedariacentral.com.br' && emailHospede !== 'cliente@hospedariacentral.com.br') {
             const checkoutBR = new Date(reserva.data_checkout).toLocaleDateString('pt-BR', {timeZone: 'UTC'});
             const numQ = String(reserva.quarto_id).padStart(2, '0');
             
             const mailOptions = {
                 from: process.env.EMAIL_USER,
-                to: reserva.email,
+                to: emailHospede,
                 subject: 'Bem-vindo(a) à Hospedaria Central Morrinhos! 🏨',
-                html: htmlEmailCheckin(reserva.cliente_nome, numQ, checkoutBR)
+                html: htmlEmailCheckin(nomeHospede, numQ, checkoutBR)
             };
             
-            // Dispara sem travar o sistema (assíncrono)
             transporter.sendMail(mailOptions)
-                .then(() => console.log(`E-mail de Check-in enviado para ${reserva.email}`))
+                .then(() => console.log(`E-mail de Check-in enviado para ${emailHospede}`))
                 .catch(err => console.error('Falha ao enviar e-mail:', err));
         }
 
@@ -637,6 +643,7 @@ setInterval(async () => {
         }
     } catch (err) {}
 }, 5 * 60 * 1000);
+
 // ROTA ADMIN: ESTENDER DIÁRIA (+1 DIA)
 app.post('/api/admin/reservas/:id/estender', async (req, res) => {
     const { id } = req.params;
@@ -645,7 +652,6 @@ app.post('/api/admin/reservas/:id/estender', async (req, res) => {
     try {
         await client.query('BEGIN');
 
-        // 1. Pega os dados atuais da reserva
         const reservaAtual = await client.query('SELECT quarto_id, data_checkout, quantidade_hospedes FROM reservas WHERE id = $1', [id]);
         if (reservaAtual.rows.length === 0) {
             throw new Error('Reserva não encontrada.');
@@ -653,11 +659,9 @@ app.post('/api/admin/reservas/:id/estender', async (req, res) => {
 
         const { quarto_id, data_checkout, quantidade_hospedes } = reservaAtual.rows[0];
 
-        // 2. Calcula a data de amanhã usando o banco de dados
         const novaDataRes = await client.query(`SELECT $1::date + INTERVAL '1 day' AS nova_data`, [data_checkout]);
         const novaDataCheckout = novaDataRes.rows[0].nova_data;
 
-        // 3. Verifica se tem outra reserva para esse quarto no dia extra
         const conflito = await client.query(`
             SELECT id FROM reservas 
             WHERE quarto_id = $1 
@@ -671,10 +675,8 @@ app.post('/api/admin/reservas/:id/estender', async (req, res) => {
             return res.status(400).json({ erro: 'Quarto indisponível! Já existe uma reserva para amanhã.' });
         }
 
-        // 4. Puxa o valor correto da diária usando a sua função atual
         const valorDiariaExtra = calcularDiaria(quarto_id, quantidade_hospedes);
 
-        // 5. Atualiza a reserva (+1 dia e soma o valor no total)
         await client.query(`
             UPDATE reservas 
             SET data_checkout = $1::date,
@@ -697,7 +699,6 @@ app.post('/api/admin/reservas/:id/estender', async (req, res) => {
 // ==========================================
 // MÓDULO DE E-MAILS (TEMPLATES E AUTOMAÇÃO)
 // ==========================================
-const cron = require('node-cron');
 
 function htmlEmailCheckin(nome, quarto, checkout) {
     return `
@@ -775,12 +776,16 @@ cron.schedule('0 8 * * *', async () => {
         amanha.setDate(amanha.getDate() + 1);
         const dataIso = amanha.toISOString().split('T')[0];
 
+        // Usamos JOIN para buscar o nome e e-mail reais do cliente lá na tabela de 'clientes'
         const result = await pool.query(`
-            SELECT id, cliente_nome, email, quarto_id, data_checkin 
-            FROM reservas 
-            WHERE data_checkin = $1 
-            AND status_pagamento = 'pago' 
-            AND email IS NOT NULL AND email != ''
+            SELECT r.id, c.nome AS cliente_nome, c.email, r.quarto_id, r.data_checkin 
+            FROM reservas r
+            JOIN clientes c ON c.id = r.cliente_id
+            WHERE r.data_checkin = $1 
+            AND r.status_pagamento = 'pago' 
+            AND c.email IS NOT NULL 
+            AND c.email LIKE '%@%'
+            AND c.email NOT IN ('balcao@hospedariacentral.com.br', 'cliente@hospedariacentral.com.br')
         `, [dataIso]);
 
         for (let r of result.rows) {
