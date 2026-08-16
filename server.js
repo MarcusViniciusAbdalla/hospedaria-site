@@ -1,5 +1,8 @@
 require('dotenv').config();
 const express = require('express');
+const app = express();
+app.set('trust proxy', 1);
+app.use(express.json());
 const https = require('https');
 const { Pool } = require('pg');
 const { MercadoPagoConfig, Payment } = require('mercadopago');
@@ -9,8 +12,8 @@ const jwt = require('jsonwebtoken');
 const rateLimit = require('express-rate-limit');
 
 
-const app = express();
-app.use(express.json());
+
+
 // ==========================================
 // 🛡️ SISTEMA DE SEGURANÇA (BACKLOG FASE 1)
 // ==========================================
