@@ -9,9 +9,9 @@ const cron = require('node-cron');
 // Configuração do "Carteiro" que vai enviar os e-mails
 const transporter = nodemailer.createTransport({
     host: 'smtp.gmail.com',
-    port: 465,
-    secure: true,
-    family: 4, // <-- FORÇA O SERVIDOR A USAR A REDE ANTIGA (IPv4)
+    port: 587,
+    secure: false, // false para a porta 587 (usa STARTTLS)
+    family: 4,     // força o IPv4 para evitar o bloqueio do Render
     auth: {
         user: process.env.EMAIL_USER,
         pass: process.env.EMAIL_PASS
