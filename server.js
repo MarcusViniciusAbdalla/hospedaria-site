@@ -587,7 +587,8 @@ app.post('/api/admin/bloquear', async (req, res) => {
             `SELECT id FROM reservas 
              WHERE quarto_id = $1 
              AND status_pagamento IN ('pago', 'bloqueado_balcao', 'concluido', 'checkin')
-             AND (data_checkin, data_checkout) OVERLAPS ($2::date, $3::date)`,
+             AND data_checkin < $3::date 
+             AND data_checkout > $2::date`,
             [quartoId, checkin, checkout]
         );
 
