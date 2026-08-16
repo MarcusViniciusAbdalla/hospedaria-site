@@ -10,7 +10,8 @@ const cron = require('node-cron');
 const transporter = nodemailer.createTransport({
     host: 'smtp.gmail.com',
     port: 465,
-    secure: true, // Garante que a conexão seja criptografada e não seja bloqueada
+    secure: true,
+    family: 4, // <-- FORÇA O SERVIDOR A USAR A REDE ANTIGA (IPv4)
     auth: {
         user: process.env.EMAIL_USER,
         pass: process.env.EMAIL_PASS
