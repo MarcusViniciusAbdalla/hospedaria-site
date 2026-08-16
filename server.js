@@ -520,7 +520,6 @@ app.put('/api/admin/reservas/:id/checkin', async (req, res) => {
         const nomeHospede = clienteRes.rows.length > 0 ? clienteRes.rows[0].nome : 'Hóspede';
         const emailHospede = clienteRes.rows.length > 0 ? clienteRes.rows[0].email : '';
 
-        // --- COLOCA O LOG AQUI EMBAIXO, ONDE A VARIÁVEL JÁ EXISTE ---
         console.log("Tentando disparar e-mail para o cliente:", nomeHospede, "E-mail:", emailHospede);
 
         if (emailHospede && emailHospede.includes('@') && emailHospede !== 'balcao@hospedariacentral.com.br' && emailHospede !== 'cliente@hospedariacentral.com.br') {
