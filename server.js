@@ -4,6 +4,9 @@ const https = require('https');
 const { Pool } = require('pg');
 const { MercadoPagoConfig, Payment } = require('mercadopago');
 const cron = require('node-cron');
+const bcrypt = require('bcrypt');
+const jwt = require('jsonwebtoken');
+
 
 const app = express();
 app.use(express.json());
@@ -14,13 +17,28 @@ const pool = new Pool({
     ssl: { rejectUnauthorized: false }
 });
 
-// ATUALIZA A PRANCHETA DO BANCO DE DADOS
+// ATUALIZA A PRANCHETA DO BANCO DE DADOS E CRIA O USUÁRIO ADMIN
 pool.query(`
     ALTER TABLE reservas DROP CONSTRAINT IF EXISTS reservas_status_pagamento_check;
     ALTER TABLE reservas ADD CONSTRAINT reservas_status_pagamento_check 
     CHECK (status_pagamento IN ('pendente', 'pago', 'cancelado', 'bloqueado_balcao', 'concluido', 'checkin', 'checkout'));
-`).then(() => {
-    console.log("Prancheta do banco de dados atualizada! Novos status liberados.");
+
+    CREATE TABLE IF NOT EXISTS administradores (
+        id SERIAL PRIMARY KEY,
+        usuario VARCHAR(50) UNIQUE NOT NULL,
+        senha_hash VARCHAR(255) NOT NULL
+    );
+`).then(async () => {
+    console.log("Prancheta do banco de dados atualizada!");
+    
+    // Confere se já existe um admin. Se não existir, cria o padrão:
+    const checkAdmin = await pool.query('SELECT * FROM administradores WHERE usuario = $1', ['admin']);
+    if (checkAdmin.rows.length === 0) {
+        const salt = await bcrypt.genSalt(10);
+        const hash = await bcrypt.hash('central2026', salt); // Senha inicial padrão
+        await pool.query('INSERT INTO administradores (usuario, senha_hash) VALUES ($1, $2)', ['admin', hash]);
+        console.log("Fechadura instalada! Usuário 'admin' criado com sucesso.");
+    }
 }).catch(err => {
     console.log("Aviso ao atualizar banco (pode ignorar):", err.message);
 });
@@ -407,6 +425,58 @@ app.post('/api/webhook/mercadopago', async (req, res) => {
 });
 
 // ROTAS ADMINISTRATIVAS
+// ---------------------------------------------------------
+// SISTEMA DE SEGURANÇA VIP (LOGIN E PROTEÇÃO DE ROTAS)
+// ---------------------------------------------------------
+
+// A Chave Mestra para fabricar as Pulseiras VIP (idealmente guardada no Render)
+const JWT_SECRET = process.env.JWT_SECRET || 'segredo_chave_mestra_hospedaria';
+
+// 1. ROTA DE LOGIN: Onde o usuário mostra a senha para tentar pegar a pulseira
+app.post('/api/admin/login', async (req, res) => {
+    const { usuario, senha } = req.body;
+    try {
+        const result = await pool.query('SELECT * FROM administradores WHERE usuario = $1', [usuario]);
+        if (result.rows.length === 0) {
+            return res.status(401).json({ erro: 'Usuário ou senha incorretos' });
+        }
+
+        const admin = result.rows[0];
+        
+        // Passa a senha digitada no moedor e compara com a que tá no banco
+        const senhaValida = await bcrypt.compare(senha, admin.senha_hash);
+
+        if (!senhaValida) {
+            return res.status(401).json({ erro: 'Usuário ou senha incorretos' });
+        }
+
+        // Deu certo! Fabrica a pulseira VIP que dura 8 horas
+        const token = jwt.sign({ id: admin.id, usuario: admin.usuario }, JWT_SECRET, { expiresIn: '8h' });
+
+        res.json({ sucesso: true, token, mensagem: 'Bem-vindo de volta!' });
+    } catch (err) {
+        console.error("Erro no login:", err);
+        res.status(500).json({ erro: 'Erro interno no servidor' });
+    }
+});
+
+// 2. O SEGURANÇA (MIDDLEWARE): Fica na porta das outras rotas cobrando a pulseira
+function verificarPulseiraVIP(req, res, next) {
+    const tokenHeader = req.headers['authorization'];
+    if (!tokenHeader) return res.status(403).json({ erro: 'Acesso negado. Área restrita.' });
+
+    // O token vem no formato "Bearer asdasdasd...", então pegamos só o código
+    const token = tokenHeader.split(" ")[1];
+
+    jwt.verify(token, JWT_SECRET, (err, decoded) => {
+        if (err) return res.status(401).json({ erro: 'Sessão expirada ou pulseira inválida. Faça login novamente.' });
+        req.adminId = decoded.id; // Anota quem é o admin que está passando
+        next(); // Libera a catraca! Pode entrar.
+    });
+}
+// ---------------------------------------------------------
+
+
 app.get('/api/admin/reservas', async (req, res) => {
     try {
         const query = `
