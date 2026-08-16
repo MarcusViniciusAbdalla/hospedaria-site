@@ -819,9 +819,9 @@
                             <button class="btn-status-cancel" onclick="cancelarReserva(${r.id})">
                             <i class="fa-solid fa-xmark"></i> Cancelar
                             </button>
-                            <button onclick="enviarLembrete(${reserva.id})" style="background-color: #3b82f6; color: white; border: none; padding: 5px 10px; border-radius: 4px; cursor: pointer;">
-    🔔 Lembrete
-</button>
+                            <button onclick="enviarLembrete(${r.id})" style="background-color: #3b82f6; color: white; border: none; padding: 5px 10px; border-radius: 4px; cursor: pointer; margin-left: 5px;">
+                            <i class="fa-solid fa-bell"></i> Lembrete
+                            </button>  
                         `;
                     } else {
                         botoesAcao = `
