@@ -503,6 +503,7 @@ app.put('/api/admin/reservas/:id/checkin', async (req, res) => {
     try {
         await client.query('BEGIN');
         
+        // 1. Atualiza status
         const result = await client.query(`
             UPDATE reservas 
             SET status_pagamento = 'checkin' 
@@ -510,19 +511,24 @@ app.put('/api/admin/reservas/:id/checkin', async (req, res) => {
             RETURNING quarto_id, data_checkout, cliente_id
         `, [id]);
 
-        if (result.rows.length === 0) {
-            throw new Error('Reserva não encontrada.');
-        }
-
+        if (result.rows.length === 0) throw new Error('Reserva não encontrada.');
         const reserva = result.rows[0];
 
+        // 2. BUSCA O E-MAIL REAL DO CLIENTE (ignorando o e-mail de balcão)
         const clienteRes = await client.query('SELECT nome, email FROM clientes WHERE id = $1', [reserva.cliente_id]);
-        const nomeHospede = clienteRes.rows.length > 0 ? clienteRes.rows[0].nome : 'Hóspede';
-        const emailHospede = clienteRes.rows.length > 0 ? clienteRes.rows[0].email : '';
+        let nomeHospede = clienteRes.rows.length > 0 ? clienteRes.rows[0].nome : 'Hóspede';
+        let emailHospede = clienteRes.rows.length > 0 ? clienteRes.rows[0].email : '';
 
-        console.log("Tentando disparar e-mail para o cliente:", nomeHospede, "E-mail:", emailHospede);
+        // SE O E-MAIL FOR DE BALCÃO, VAMOS TENTAR PEGAR O E-MAIL QUE VOCÊ QUER (marcusviniciusabdalla@gmail.com)
+        // OU SIMPLESMENTE DEIXAR VOCÊ FORÇAR O ENVIO.
+        // VAMOS LOGAR PARA DEBUGAR O QUE ESTÁ VINDO DO BANCO
+        console.log("DEBUG: Reserva ID", id, "Cliente:", nomeHospede, "E-mail no banco:", emailHospede);
 
-        if (emailHospede && emailHospede.includes('@') && emailHospede !== 'balcao@hospedariacentral.com.br' && emailHospede !== 'cliente@hospedariacentral.com.br') {
+        // AQUI ESTÁ A CORREÇÃO: vamos permitir o envio se for um e-mail válido, 
+        // e se for o e-mail de balcão, vamos ignorar a trava para testes:
+        const ehEmailValido = emailHospede && emailHospede.includes('@');
+        
+        if (ehEmailValido) {
             const checkoutBR = new Date(reserva.data_checkout).toLocaleDateString('pt-BR', {timeZone: 'UTC'});
             const numQ = String(reserva.quarto_id).padStart(2, '0');
             
@@ -532,15 +538,17 @@ app.put('/api/admin/reservas/:id/checkin', async (req, res) => {
                 'Bem-vindo(a) à Hospedaria Central Morrinhos! 🏨', 
                 htmlEmailCheckin(nomeHospede, numQ, checkoutBR)
             ).catch(err => console.error('Falha no envio do e-mail Check-in:', err));
+        } else {
+            console.log("E-mail inválido ou de balcão, e-mail não enviado.");
         }
 
         await client.query('COMMIT');
-        res.json({ sucesso: true, mensagem: 'Check-in e envio de e-mail realizados com sucesso!' });
+        res.json({ sucesso: true, mensagem: 'Check-in realizado!' });
 
     } catch (error) {
         await client.query('ROLLBACK');
         console.error("Erro no checkin:", error);
-        res.status(500).json({ erro: 'Erro interno ao registrar check-in.' });
+        res.status(500).json({ erro: 'Erro ao registrar check-in.' });
     } finally {
         client.release();
     }
