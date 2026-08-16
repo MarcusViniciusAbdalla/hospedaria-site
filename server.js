@@ -895,25 +895,5 @@ cron.schedule('0 8 * * *', async () => {
     }
 });
 
-async function enviarLembrete(idReserva) {
-    if (!confirm("Deseja enviar o e-mail e o WhatsApp de lembrete para este hóspede?")) return;
-    
-    try {
-        const response = await fetch(`/api/admin/reservas/${idReserva}/lembrete`, {
-            method: 'POST'
-        });
-        const data = await response.json();
-        
-        if (data.sucesso) {
-            alert(data.mensagem);
-        } else {
-            alert("Erro: " + (data.erro || "Não foi possível enviar."));
-        }
-    } catch (error) {
-        console.error("Erro:", error);
-        alert("Erro de conexão ao tentar enviar lembrete.");
-    }
-}
-
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log(`Servidor rodando na porta ${PORT}`));
