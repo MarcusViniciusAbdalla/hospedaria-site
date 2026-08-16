@@ -347,13 +347,59 @@ app.post('/api/reservar', async (req, res) => {
 app.post('/api/webhook/mercadopago', async (req, res) => {
     const { type, data } = req.body;
     try {
+        // Se o Mercado Pago gritar no walkie-talkie que é um pagamento...
         if (type === 'payment' && data?.id) {
             const pagamentoInfo = await payment.get({ id: data.id });
+            
+            // E se ele confirmar que o dinheiro realmente caiu na conta...
             if (pagamentoInfo.status === 'approved') {
-                await pool.query("UPDATE reservas SET status_pagamento = 'pago' WHERE mp_payment_id = $1", [String(data.id)]);
+                
+                // 1. Muda a prancheta para 'pago' e anota os dados da reserva
+                const result = await pool.query(`
+                    UPDATE reservas 
+                    SET status_pagamento = 'pago' 
+                    WHERE mp_payment_id = $1 AND status_pagamento != 'pago'
+                    RETURNING id, quarto_id, cliente_id, data_checkin, valor_total
+                `, [String(data.id)]);
+
+                // 2. Se mudou com sucesso, vamos avisar o cliente por e-mail!
+                if (result.rows.length > 0) {
+                    const reserva = result.rows[0];
+                    const clienteRes = await pool.query('SELECT nome, email FROM clientes WHERE id = $1', [reserva.cliente_id]);
+                    
+                    if (clienteRes.rows.length > 0) {
+                        const cliente = clienteRes.rows[0];
+                        
+                        // Verifica se é um e-mail de verdade (não é de balcão)
+                        if (cliente.email && cliente.email.includes('@') && !cliente.email.includes('balcao')) {
+                            const checkinBR = new Date(reserva.data_checkin).toLocaleDateString('pt-BR', {timeZone: 'UTC'});
+                            const numQ = String(reserva.quarto_id).padStart(2, '0');
+                            
+                            const htmlConfirmacao = `
+                            <div style="font-family: Arial, sans-serif; color: #333; max-width: 600px; margin: 0 auto; border: 1px solid #ddd; border-radius: 8px; overflow: hidden;">
+                                <div style="background-color: #2e8b57; padding: 20px; text-align: center;">
+                                    <h2 style="color: #fff; margin: 0;">Pagamento Confirmado! ✅</h2>
+                                </div>
+                                <div style="padding: 20px;">
+                                    <p>Olá, <strong>${cliente.nome}</strong>!</p>
+                                    <p>O seu pagamento via PIX no valor de R$ ${Number(reserva.valor_total).toFixed(2)} foi aprovado. A sua reserva está <strong>100% garantida</strong>!</p>
+                                    <div style="background-color: #f9f9f9; padding: 15px; border-left: 4px solid #2e8b57; margin: 20px 0;">
+                                        <p style="margin: 0;">🛏️ <strong>Quarto:</strong> ${numQ}<br>
+                                        📅 <strong>Data de Entrada:</strong> ${checkinBR} a partir das 14h</p>
+                                    </div>
+                                    <p>Falta pouco para você relaxar! Um dia antes da sua chegada, enviaremos outro e-mail com as instruções e senha do Wi-Fi.</p>
+                                </div>
+                            </div>`;
+                            
+                            // Dispara o e-mail invisível
+                            await enviarEmailBrevo(cliente.email, cliente.nome, 'Reserva Confirmada com Sucesso! 🎉', htmlConfirmacao);
+                            console.log(`[WEBHOOK] Pagamento do PIX confirmado e e-mail enviado para: ${cliente.email}`);
+                        }
+                    }
+                }
             }
         }
-        res.sendStatus(200);
+        res.sendStatus(200); // Fala pro Mercado Pago: "Câmbio, desligo! Recebi a mensagem."
     } catch (err) {
         console.error("Erro no Webhook:", err);
         res.sendStatus(500);
