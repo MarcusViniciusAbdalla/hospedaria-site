@@ -5,6 +5,14 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Painel de Controle | Hospedaria Central</title>
+    <!-- Conectando o PWA (Aplicativo) -->
+    <link rel="manifest" href="/manifest.json">
+    <meta name="theme-color" content="#d97757">
+    <script>
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('/sw.js');
+        }
+    </script>
 
     <link rel="stylesheet" href="css/global.css">
     <link rel="stylesheet" href="css/admin.css">
