@@ -466,14 +466,55 @@ app.delete('/api/admin/reservas/:id', async (req, res) => {
     }
 });
 
+// ROTA ADMIN: REGISTRAR CHECK-IN E ENVIAR E-MAIL DE BOAS-VINDAS
 app.put('/api/admin/reservas/:id/checkin', async (req, res) => {
     const { id } = req.params;
+    const client = await pool.connect();
+
     try {
-        await pool.query("UPDATE reservas SET status_pagamento = 'checkin' WHERE id = $1", [id]);
-        res.json({ mensagem: 'Check-in realizado! Hóspede na pousada.' });
-    } catch (err) {
-        console.error("Erro ao fazer check-in:", err);
-        res.status(500).json({ erro: 'Erro ao registrar check-in.' });
+        await client.query('BEGIN');
+        
+        // Atualiza para 'checkin' e pega os dados do cliente
+        const result = await client.query(`
+            UPDATE reservas 
+            SET status_pagamento = 'checkin' 
+            WHERE id = $1 
+            RETURNING numero_quarto, data_checkout, cliente_nome, email
+        `, [id]);
+
+        if (result.rows.length === 0) {
+            throw new Error('Reserva não encontrada.');
+        }
+
+        const reserva = result.rows[0];
+
+        // Se o hóspede tem um e-mail cadastrado, envia as boas-vindas e regras!
+        if (reserva.email && reserva.email.includes('@')) {
+            const checkoutBR = new Date(reserva.data_checkout).toLocaleDateString('pt-BR', {timeZone: 'UTC'});
+            const numQ = String(reserva.numero_quarto).replace(/\D/g, '').padStart(2, '0');
+            
+            const mailOptions = {
+                from: process.env.EMAIL_USER,
+                to: reserva.email,
+                subject: 'Bem-vindo(a) à Hospedaria Central Morrinhos! 🏨',
+                html: htmlEmailCheckin(reserva.cliente_nome, numQ, checkoutBR)
+            };
+            
+            // Dispara sem travar o sistema (assíncrono)
+            transporter.sendMail(mailOptions)
+                .then(() => console.log(`E-mail de Check-in enviado para ${reserva.email}`))
+                .catch(err => console.error('Falha ao enviar e-mail:', err));
+        }
+
+        await client.query('COMMIT');
+        res.json({ sucesso: true, mensagem: 'Check-in e envio de e-mail realizados com sucesso!' });
+
+    } catch (error) {
+        await client.query('ROLLBACK');
+        console.error("Erro no checkin:", error);
+        res.status(500).json({ erro: 'Erro interno ao registrar check-in.' });
+    } finally {
+        client.release();
     }
 });
 
@@ -652,5 +693,115 @@ app.post('/api/admin/reservas/:id/estender', async (req, res) => {
         client.release();
     }
 });
+
+// ==========================================
+// MÓDULO DE E-MAILS (TEMPLATES E AUTOMAÇÃO)
+// ==========================================
+const cron = require('node-cron');
+
+function htmlEmailCheckin(nome, quarto, checkout) {
+    return `
+    <div style="font-family: Arial, sans-serif; color: #333; max-width: 600px; margin: 0 auto; border: 1px solid #ddd; border-radius: 8px; overflow: hidden;">
+        <div style="background-color: #5c4033; padding: 20px; text-align: center;">
+            <h2 style="color: #fff; margin: 0;">Bem-vindo(a) à Hospedaria Central Morrinhos! 🏨</h2>
+        </div>
+        <div style="padding: 20px;">
+            <p>Olá, <strong>${nome}</strong>!</p>
+            <p>É um prazer receber você. Seu check-in foi realizado com sucesso no nosso sistema.</p>
+            
+            <div style="background-color: #f9f9f9; padding: 15px; border-left: 4px solid #d97757; margin: 20px 0;">
+                <p style="margin: 0; font-size: 16px;">🛏️ Quarto: <strong>${quarto}</strong><br>
+                📅 Data de Saída: <strong>${checkout}</strong></p>
+            </div>
+            
+            <p><strong>Informações Úteis:</strong><br>
+            📶 <strong>Wi-Fi:</strong> Hospedagem | Senha: <em>84594781</em><br>
+            ☕ Aproveite também para conhecer a nossa cafeteria, a <strong>Cafeteria Central</strong>, anexa à nossa estrutura! Estamos localizados em frente ao Hospital Sylvio de Mello para sua maior conveniência.</p>
+            
+            <hr style="border: none; border-top: 1px solid #eee; margin: 30px 0;">
+            
+            <h3 style="color: #d97757; text-align: center;">🏠 REGRAS DA HOSPEDARIA CENTRAL MORRINHOS</h3>
+            <p style="text-align: center; font-size: 13px; color: #666;"><em>Seja bem-vindo! Bom senso é a base da boa convivência.</em></p>
+            
+            <ul style="font-size: 13px; line-height: 1.6; padding-left: 20px;">
+                <li>📞 <strong>Emergências e Contato:</strong> (64) 9 8459-4781 ou (64) 9 9236-2298. (Não há recepcionista 24h).</li>
+                <li>🕒 <strong>Check-in / Check-out:</strong> Check-in a partir das 14h | Check-out até as 12h. Apresente documento na chegada.</li>
+                <li>🚪 <strong>Ao Sair do Dormitório:</strong> Avise a saída com antecedência, deixe a chave no local indicado e confira portas e janelas.</li>
+                <li>🔇 <strong>Horário de Silêncio (22h às 8h):</strong> Nada de som alto, conversas em corredores ou bagunça.</li>
+                <li>🚿 <strong>Banheiros Compartilhados:</strong> Mantenha seco e limpo. Use chinelos dentro do box.</li>
+                <li>🔒 <strong>Segurança:</strong> O hostel não se responsabiliza por objetos não guardados. Tranque a porta ao sair.</li>
+                <li>🚫 <strong>Não é Permitido:</strong> Entrada de visitas sem autorização, fumar nos quartos, drogas ilícitas e perturbar o sossego.</li>
+                <li>🤝 <strong>Respeito Sempre:</strong> Trate todos com educação. O desrespeito às regras pode levar à saída do hóspede sem reembolso.</li>
+            </ul>
+            <p style="text-align: center; font-weight: bold; margin-top: 20px;">Obrigado e aproveite sua estadia! 🌟</p>
+        </div>
+    </div>`;
+}
+
+function htmlEmailLembrete(nome, quarto, checkin) {
+    return `
+    <div style="font-family: Arial, sans-serif; color: #333; max-width: 600px; margin: 0 auto; border: 1px solid #ddd; border-radius: 8px; overflow: hidden;">
+        <div style="background-color: #d97757; padding: 20px; text-align: center;">
+            <h2 style="color: #fff; margin: 0;">A sua reserva é amanhã! 🧳</h2>
+        </div>
+        <div style="padding: 20px;">
+            <p>Olá, <strong>${nome}</strong>!</p>
+            <p>Estamos passando para lembrar que a sua estadia conosco começa amanhã, dia <strong>${checkin}</strong>. O seu <strong>Quarto ${quarto}</strong> já está sendo preparado para te receber com muito conforto!</p>
+            
+            <p>📍 <strong>Nosso Endereço:</strong> Centro de Morrinhos (em frente ao Hospital e Maternidade Sylvio de Mello).</p>
+            <p>Para que você já chegue por dentro de como funcionamos, adiantamos abaixo as nossas diretrizes de convivência:</p>
+            
+            <hr style="border: none; border-top: 1px solid #eee; margin: 20px 0;">
+            <h3 style="color: #5c4033; text-align: center;">🏠 REGRAS DA HOSPEDARIA CENTRAL MORRINHOS</h3>
+            <ul style="font-size: 13px; line-height: 1.6; padding-left: 20px;">
+                <li>📞 <strong>Emergências/Contato:</strong> (64) 9 8459-4781 ou (64) 9 9236-2298. (Sem recepção 24h).</li>
+                <li>🕒 <strong>Check-in/Out:</strong> Entrada a partir das 14h | Saída até as 12h. Traga documento.</li>
+                <li>🚪 <strong>Saídas:</strong> Avise antecedência, deixe a chave no local indicado.</li>
+                <li>🔇 <strong>Silêncio (22h-8h):</strong> Sem som alto, conversas altas em corredores ou bagunça.</li>
+                <li>🚿 <strong>Banheiros:</strong> Mantenha seco e limpo após usar.</li>
+                <li>🔒 <strong>Segurança:</strong> Tranque a porta. Não nos responsabilizamos por pertences soltos.</li>
+                <li>🚫 <strong>Proibido:</strong> Visitas sem autorização, fumo interno, drogas, e perturbar o sossego.</li>
+                <li>🤝 <strong>Respeito:</strong> O desrespeito pode causar cancelamento sem reembolso.</li>
+            </ul>
+            <p>Se precisar alterar o seu horário de chegada, é só responder a este e-mail. Desejamos uma excelente viagem!</p>
+        </div>
+    </div>`;
+}
+
+// ⏰ ROBÔ DO LEMBRETE DE 24 HORAS (Roda todo dia às 08:00 da manhã)
+cron.schedule('0 8 * * *', async () => {
+    try {
+        const amanha = new Date();
+        amanha.setDate(amanha.getDate() + 1);
+        const dataIso = amanha.toISOString().split('T')[0];
+
+        const result = await pool.query(`
+            SELECT id, cliente_nome, email, numero_quarto, data_checkin 
+            FROM reservas 
+            WHERE data_checkin = $1 
+            AND status_pagamento = 'pago' 
+            AND email IS NOT NULL AND email != ''
+        `, [dataIso]);
+
+        for (let r of result.rows) {
+            const checkinBR = new Date(r.data_checkin).toLocaleDateString('pt-BR', {timeZone: 'UTC'});
+            const numQ = String(r.numero_quarto).replace(/\D/g, '').padStart(2, '0');
+            
+            const mailOptions = {
+                from: process.env.EMAIL_USER,
+                to: r.email,
+                subject: 'A sua reserva na Hospedaria Central Morrinhos é amanhã! 🧳',
+                html: htmlEmailLembrete(r.cliente_nome, numQ, checkinBR)
+            };
+            
+            await transporter.sendMail(mailOptions);
+            console.log(`[CRON] Lembrete 24h enviado para: ${r.email}`);
+        }
+    } catch (err) {
+        console.error('Erro no robô de lembretes:', err);
+    }
+});
+
+
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log(`Servidor rodando na porta ${PORT}`));
