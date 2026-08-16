@@ -823,7 +823,10 @@
                     } else {
                         botoesAcao = `
                             <button class="btn-status-cancel" style="background: #343a40;" onclick="fazerCheckout(${r.id})">
-                                <i class="fa-solid fa-person-walking-arrow-right"></i> Registrar Check-out
+                            <i class="fa-solid fa-person-walking-arrow-right"></i> Registrar Check-out
+                            </button>
+                            <button class="btn-status-cancel" style="background: #dc3545; margin-left: 8px;" onclick="cancelarReserva(${r.id})">
+                            <i class="fa-solid fa-trash"></i> Excluir
                             </button>
                         `;
                     }
