@@ -137,8 +137,24 @@ async function enviarEmailBrevo(destinatarioEmail, destinatarioNome, assunto, ht
 }
 
 function calcularDiaria(quartoId, hospedes) {
-    return 1.00; // 🛑 VALOR FIXO TEMPORÁRIO PARA O TESTE DE R$ 1,00
+    const numHospedes = parseInt(hospedes) || 1;
+    const idQuarto = parseInt(quartoId);
+
+    if (idQuarto === 3) {
+        if (numHospedes === 1) return 100.00;
+        if (numHospedes === 2) return 150.00;
+        if (numHospedes === 3) return 200.00;
+    } else {
+        if (numHospedes === 1) return 75.00;
+        if (numHospedes === 2) return 130.00;
+        if (numHospedes === 3) return 180.00;
+    }
+    return 75.00;
 }
+
+//function calcularDiaria(quartoId, hospedes) {
+  //  return 1.00; // 🛑 VALOR FIXO TEMPORÁRIO PARA O TESTE DE R$ 1,00
+//}
 
 // ROTA: PROCESSAR PAGAMENTO COM CARTÃO
 app.post('/api/processar-cartao', async (req, res) => {
@@ -439,11 +455,10 @@ app.post('/api/webhook/mercadopago', async (req, res) => {
                                     <div style="background-color: #f9f9f9; padding: 15px; border-left: 4px solid #2e8b57; margin: 20px 0;">
                                         <p style="margin: 0;">🛏️ <strong>Quarto:</strong> 0${numQ}<br>
                                         📅 <strong>Data de Entrada:</strong> ${checkinBR} a partir das 14h</p>
-                                        📍 <strong>Endereço:</strong> Centro de Morrinhos (em frente ao Hospital Sylvio de Mello)<br>
-                                        📶 <strong>Wi-Fi:</strong> Hospedagem | Senha: <em>84594781</em>
+                                        📍 <strong>Endereço:</strong> Centro de Morrinhos (em frente ao Hospital Sylvio de Mello)
                                     </div>
                                     <p>📞 <strong>Contatos:</strong> (64) 98459-4781 / (64) 99236-2298</p>
-                                    <p>Falta pouco para você relaxar! Um dia antes da sua chegada, enviaremos outro e-mail com as instruções completas.</p>
+                                    <p>Falta pouco para você relaxar! <strong>Um dia antes da sua chegada</strong>, enviaremos outro e-mail com as instruções de acesso e a senha do Wi-Fi.</p>
                                 </div>
                             </div>`;
                             
@@ -455,7 +470,7 @@ app.post('/api/webhook/mercadopago', async (req, res) => {
                             const telLimpo = cliente.telefone.replace(/\D/g, '');
                             if (telLimpo.length >= 10) {
                                 const telefoneFormatado = telLimpo.startsWith('55') ? telLimpo : `55${telLimpo}`;
-                                const textoConfirmacaoWpp = `✅ *Pagamento Confirmado!*\n\nOlá, *${cliente.nome}*! O seu pagamento foi processado com sucesso. A sua reserva na *Hospedaria Central* está 100% garantida!\n\n🛏️ Quarto: 0${numQ}\n📅 Entrada: ${checkinBR} (a partir das 14h)\n📍 Endereço: Em frente ao Hospital Sylvio de Mello, Morrinhos-GO.\n📶 Wi-Fi: Hospedagem | Senha: 84594781\n\n📞 Dúvidas? (64) 98459-4781.`;
+                                const textoConfirmacaoWpp = `✅ *Pagamento Confirmado!*\n\nOlá, *${cliente.nome}*! O seu pagamento foi processado com sucesso. A sua reserva na *Hospedaria Central* está 100% garantida!\n\n🛏️ Quarto: 0${numQ}\n📅 Entrada: ${checkinBR} (a partir das 14h)\n📍 Endereço: Em frente ao Hospital Sylvio de Mello, Morrinhos-GO.\n\n🔐 *Atenção:* As instruções de acesso e a senha do Wi-Fi serão enviadas para você 1 dia antes do seu check-in!\n\n📞 Dúvidas? Fale conosco por aqui!`;
                                 
                                 const urlWppCliente = `https://api.callmebot.com/whatsapp.php?phone=${telefoneFormatado}&text=${encodeURIComponent(textoConfirmacaoWpp)}&apikey=5774787`;
                                 https.get(urlWppCliente, (resWpp) => { resWpp.on('data', () => {}); }).on('error', () => {});
