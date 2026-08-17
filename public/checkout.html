@@ -408,6 +408,7 @@
 
         let reservaIdGlobal = null;
         let valorTotalGlobal = 0;
+        let checandoPagamento = null;
 
         document.getElementById('sum-checkin').innerText = start || '--/--/----';
         document.getElementById('sum-checkout').innerText = end || '--/--/----';
@@ -454,8 +455,8 @@
 
             if (!lgpdCheckbox.checked) {
                 alert("⚠️ Por favor, marque a caixa concordando com os termos de privacidade para continuar com a reserva.");
-                lgpdCheckbox.focus(); // Joga o foco do mouse direto na caixinha
-                return; // Interrompe o envio
+                lgpdCheckbox.focus();
+                return;
             }
 
             const payload = {
@@ -466,11 +467,11 @@
                 cliente: {
                     nome: document.getElementById('cust-nome').value.trim(),
                     telefone: telLimpo,
-                    // Substitua a linha do e-mail por esta abaixo:
                     email: document.getElementById('cust-email').value.trim() || 'cliente@hospedariacentral.com.br'
-                }, 
+                },
                 aceiteLgpd: lgpdCheckbox.checked
             };
+
             try {
                 const resp = await fetch('/api/reservar', {
                     method: 'POST',
@@ -487,6 +488,9 @@
 
                     document.getElementById('pix-qr-img').src = `data:image/jpeg;base64,${resData.qrCodeBase64}`;
                     document.getElementById('pix-copia-cola').value = resData.pixCopiaECola;
+
+                    // Inicia a verificação automática se o Pix foi pago
+                    iniciarVerificacaoPix();
                 } else {
                     alert(resData.erro || "Erro ao registrar reserva.");
                 }
@@ -494,6 +498,43 @@
                 alert("Erro ao comunicar com o servidor.");
             }
         });
+
+        function iniciarVerificacaoPix() {
+            if (checandoPagamento) clearInterval(checandoPagamento);
+
+            checandoPagamento = setInterval(async () => {
+                if (!reservaIdGlobal) return;
+                try {
+                    const resp = await fetch(`/api/admin/reservas`);
+                    const data = await resp.json();
+                    const reservaAtual = (data.reservas || []).find(r => r.id == reservaIdGlobal);
+
+                    if (reservaAtual && reservaAtual.status_pagamento === 'pago') {
+                        clearInterval(checandoPagamento);
+                        
+                        // Transforma a tela de pagamento em comprovante de sucesso bonito
+                        document.getElementById('card-pagamento').innerHTML = `
+                            <div style="text-align: center; padding: 20px;">
+                                <i class="fa-solid fa-circle-check" style="font-size: 60px; color: #28a745; margin-bottom: 15px;"></i>
+                                <h3 style="color: #28a745; border: none;">Pagamento Confirmado!</h3>
+                                <p style="color: #555; margin-bottom: 20px;">Sua reserva na Hospedaria Central está <strong>100% garantida</strong>.</p>
+                                <div style="background: #f9f9f9; padding: 15px; border-radius: 8px; text-align: left; margin-bottom: 20px; border: 1px solid #e5e7eb; font-size: 14px;">
+                                    <p style="margin: 5px 0;">🛏️ <strong>Quarto:</strong> 0${quartoId}</p>
+                                    <p style="margin: 5px 0;">📅 <strong>Entrada:</strong> ${start} (a partir das 14h)</p>
+                                    <p style="margin: 5px 0;">📅 <strong>Saída:</strong> ${end} (até as 12h)</p>
+                                    <p style="margin: 5px 0;">📍 <strong>Local:</strong> Em frente ao Hospital Sylvio de Mello</p>
+                                    <p style="margin: 5px 0;">📶 <strong>Wi-Fi:</strong> Hospedagem | Senha: <em>84594781</em></p>
+                                </div>
+                                <p style="font-size: 13px; color: #666; margin-bottom: 20px;">Enviamos os dados completos, regras de convivência e contatos para o seu WhatsApp e E-mail!</p>
+                                <a href="index.html" class="btn-pay-now" style="display: inline-block; text-decoration: none; text-align: center; background-color: #2e8b57; color: white; padding: 12px 24px; border-radius: 6px; font-weight: bold;">Voltar para a Página Inicial</a>
+                            </div>
+                        `;
+                    }
+                } catch (err) {
+                    console.error("Erro ao verificar status do Pix:", err);
+                }
+            }, 4000); // Checa a cada 4 segundos
+        }
 
         function alternarMetodo(metodo) {
             if (metodo === 'cartao') {

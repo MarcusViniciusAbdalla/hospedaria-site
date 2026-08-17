@@ -401,15 +401,15 @@ app.post('/api/webhook/mercadopago', async (req, res) => {
 
                 if (result.rows.length > 0) {
                     const reserva = result.rows[0];
-                    const clienteRes = await pool.query('SELECT nome, email FROM clientes WHERE id = $1', [reserva.cliente_id]);
+                    const clienteRes = await pool.query('SELECT nome, email, telefone FROM clientes WHERE id = $1', [reserva.cliente_id]);
                     
                     if (clienteRes.rows.length > 0) {
                         const cliente = clienteRes.rows[0];
+                        const checkinBR = new Date(reserva.data_checkin).toLocaleDateString('pt-BR', {timeZone: 'UTC'});
+                        const numQ = String(reserva.quarto_id).padStart(2, '0');
                         
+                        // 1. ENVIA E-MAIL DE CONFIRMAÇÃO COM REGRAS E CONTATOS
                         if (cliente.email && cliente.email.includes('@') && !cliente.email.includes('balcao')) {
-                            const checkinBR = new Date(reserva.data_checkin).toLocaleDateString('pt-BR', {timeZone: 'UTC'});
-                            const numQ = String(reserva.quarto_id).padStart(2, '0');
-                            
                             const htmlConfirmacao = `
                             <div style="font-family: Arial, sans-serif; color: #333; max-width: 600px; margin: 0 auto; border: 1px solid #ddd; border-radius: 8px; overflow: hidden;">
                                 <div style="background-color: #2e8b57; padding: 20px; text-align: center;">
@@ -421,12 +421,27 @@ app.post('/api/webhook/mercadopago', async (req, res) => {
                                     <div style="background-color: #f9f9f9; padding: 15px; border-left: 4px solid #2e8b57; margin: 20px 0;">
                                         <p style="margin: 0;">🛏️ <strong>Quarto:</strong> ${numQ}<br>
                                         📅 <strong>Data de Entrada:</strong> ${checkinBR} a partir das 14h</p>
+                                        📍 <strong>Endereço:</strong> Centro de Morrinhos (em frente ao Hospital Sylvio de Mello)<br>
+                                        📶 <strong>Wi-Fi:</strong> Hospedagem | Senha: <em>84594781</em>
                                     </div>
-                                    <p>Falta pouco para você relaxar! Um dia antes da sua chegada, enviaremos outro e-mail com as instruções e senha do Wi-Fi.</p>
+                                    <p>📞 <strong>Contatos:</strong> (64) 98459-4781 / (64) 99236-2298</p>
+                                    <p>Falta pouco para você relaxar! Um dia antes da sua chegada, enviaremos outro e-mail com instruções complementares.</p>
                                 </div>
                             </div>`;
                             
                             await enviarEmailBrevo(cliente.email, cliente.nome, 'Reserva Confirmada com Sucesso! 🎉', htmlConfirmacao);
+                        }
+
+                        // 2. ENVIA WHATSAPP DE CONFIRMAÇÃO COM REGRAS E CONTATOS
+                        if (cliente.telefone) {
+                            const telLimpo = cliente.telefone.replace(/\D/g, '');
+                            if (telLimpo.length >= 10) {
+                                const telefoneFormatado = telLimpo.startsWith('55') ? telLimpo : `55${telLimpo}`;
+                                const textoConfirmacaoWpp = `✅ *Pagamento Confirmado!*\n\nOlá, *${cliente.nome}*! Sua reserva na *Hospedaria Central* está 100% garantida!\n\n🛏️ Quarto: 0${numQ}\n📅 Entrada: ${checkinBR} (a partir das 14h)\n📍 Endereço: Em frente ao Hospital Sylvio de Mello, Morrinhos-GO.\n📶 Wi-Fi: Hospedagem | Senha: 84594781\n\n📞 Dúvidas ou emergências? (64) 98459-4781 ou (64) 99236-2298. Bom descanso!`;
+                                
+                                const urlWppCliente = `https://api.callmebot.com/whatsapp.php?phone=${telefoneFormatado}&text=${encodeURIComponent(textoConfirmacaoWpp)}&apikey=5774787`;
+                                https.get(urlWppCliente, (resWpp) => { resWpp.on('data', () => {}); }).on('error', () => {});
+                            }
                         }
                     }
                 }
