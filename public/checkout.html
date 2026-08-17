@@ -1,19 +1,22 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Finalizar Reserva | Hospedaria Central</title>
-    
+
     <link rel="stylesheet" href="css/global.css">
     <link rel="stylesheet" href="css/busca.css">
-    
-    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;600;700&family=Playfair+Display:wght@700&display=swap" rel="stylesheet">
+
+    <link
+        href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;600;700&family=Playfair+Display:wght@700&display=swap"
+        rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    
+
     <!-- SDK oficial do Mercado Pago para cartões seguros -->
     <script src="https://sdk.mercadopago.com/js/v2"></script>
-    
+
     <style>
         body {
             background-color: #f7f4f0;
@@ -33,7 +36,7 @@
             background: #ffffff;
             padding: 30px;
             border-radius: 12px;
-            box-shadow: 0 4px 20px rgba(0,0,0,0.06);
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.06);
             border: 1px solid #eaeaea;
         }
 
@@ -124,6 +127,7 @@
             gap: 10px;
             margin-bottom: 20px;
         }
+
         .tab-btn {
             flex: 1;
             padding: 12px;
@@ -136,6 +140,7 @@
             text-align: center;
             transition: all 0.2s;
         }
+
         .tab-btn.active {
             background: var(--brown-dark, #3e2723);
             color: white;
@@ -145,6 +150,7 @@
         .form-row {
             margin-bottom: 15px;
         }
+
         .form-row label {
             font-size: 13px;
             font-weight: 600;
@@ -152,13 +158,16 @@
             display: block;
             margin-bottom: 5px;
         }
-        .form-row input, .form-row select {
+
+        .form-row input,
+        .form-row select {
             width: 100%;
             padding: 12px;
             border: 1px solid #ccc;
             border-radius: 6px;
             font-size: 14px;
         }
+
         .form-grid-2 {
             display: grid;
             grid-template-columns: 1fr 1fr;
@@ -169,15 +178,18 @@
             .checkout-container {
                 grid-template-columns: 1fr;
             }
+
             .room-gallery {
                 grid-template-columns: 1fr;
             }
+
             .room-gallery img.main-img {
                 height: 220px;
             }
         }
     </style>
 </head>
+
 <body>
 
     <header>
@@ -186,7 +198,8 @@
                 <i class="fa-solid fa-hotel"></i> Hospedaria Central
             </a>
             <div class="nav-right">
-                <a href="javascript:history.back()" style="color: white; text-decoration: none; font-weight: 600; font-size: 13px;">
+                <a href="javascript:history.back()"
+                    style="color: white; text-decoration: none; font-weight: 600; font-size: 13px;">
                     <i class="fa-solid fa-arrow-left"></i> Voltar à Busca
                 </a>
             </div>
@@ -194,27 +207,31 @@
     </header>
 
     <main class="checkout-container">
-        
+
         <div>
             <!-- DETALHES DO QUARTO -->
             <div class="checkout-card" style="margin-bottom: 25px;">
                 <h3 id="room-title"><i class="fa-solid fa-bed"></i> Detalhes da Acomodação</h3>
-                
+
                 <div class="room-gallery">
-                    <img src="images/quarto-main.jpg" class="main-img" alt="Quarto" onerror="this.src='https://images.unsplash.com/photo-1590490360182-c33d57733427?auto=format&fit=crop&w=800&q=80'">
-                    <img src="images/quarto-banheiro.jpg" alt="Banheiro" onerror="this.src='https://images.unsplash.com/photo-1584622650111-993a426fbf0a?auto=format&fit=crop&w=400&q=80'">
-                    <img src="images/quarto-detalhes.jpg" alt="Acomodação" onerror="this.src='https://images.unsplash.com/photo-1566665797739-1674de7a421a?auto=format&fit=crop&w=400&q=80'">
+                    <img src="images/quarto-main.jpg" class="main-img" alt="Quarto"
+                        onerror="this.src='https://images.unsplash.com/photo-1590490360182-c33d57733427?auto=format&fit=crop&w=800&q=80'">
+                    <img src="images/quarto-banheiro.jpg" alt="Banheiro"
+                        onerror="this.src='https://images.unsplash.com/photo-1584622650111-993a426fbf0a?auto=format&fit=crop&w=400&q=80'">
+                    <img src="images/quarto-detalhes.jpg" alt="Acomodação"
+                        onerror="this.src='https://images.unsplash.com/photo-1566665797739-1674de7a421a?auto=format&fit=crop&w=400&q=80'">
                 </div>
 
                 <p id="room-desc" style="color: #666; font-size: 14px; line-height: 1.6;">
-                    Quarto aconchegante, higienizado, equipado com ar-condicionado, Wi-Fi de alta velocidade e localizado estrategicamente em frente ao Hospital Sylvio de Mello.
+                    Quarto aconchegante, higienizado, equipado com ventilador, Wi-Fi de alta velocidade e localizado
+                    estrategicamente em frente ao Hospital Sylvio de Mello.
                 </p>
             </div>
 
             <!-- PASSO 1: DADOS DO HÓSPEDE -->
             <div class="checkout-card" id="card-dados">
                 <h3><i class="fa-solid fa-user-check"></i> 1. Dados do Hóspede Principal</h3>
-                
+
                 <form id="form-checkout-page">
                     <div class="form-row">
                         <label>Nome Completo:</label>
@@ -229,7 +246,20 @@
                     <div class="form-row">
                         <label>E-mail:</label>
                         <input type="email" id="cust-email" placeholder="seuemail@email.com">
-                        <small style="color: #666; font-size: 11px;">* Opcional: cadastre seu e-mail para receber novidades e promoções!</small>
+                        <small style="color: #666; font-size: 11px;">* Opcional: cadastre seu e-mail para receber
+                            novidades e promoções!</small>
+                    </div>
+
+                    <!-- CAIXA DE ACEITE LGPD DESTACADA -->
+                    <div
+                        style="background-color: #fcf8f5; border: 1px solid #e2d2c5; padding: 12px 15px; border-radius: 8px; margin: 15px 0; display: flex; align-items: flex-start; gap: 10px;">
+                        <input type="checkbox" id="lgpd-aceite" required
+                            style="width: 18px; height: 18px; margin-top: 2px; cursor: pointer; accent-color: var(--terracotta, #b85d33);">
+                        <label for="lgpd-aceite"
+                            style="font-size: 13px; color: #444; cursor: pointer; line-height: 1.4;">
+                            <strong>Termos de Privacidade (LGPD):</strong> Concordo com o tratamento dos meus dados
+                            pessoais para fins de gestão desta reserva e contato.
+                        </label>
                     </div>
 
                     <button type="submit" class="btn-pay-now">
@@ -241,7 +271,7 @@
             <!-- PASSO 2: ESCOLHA O MEIO DE PAGAMENTO (CARTÃO OU PIX) -->
             <div class="checkout-card" id="card-pagamento" style="display: none;">
                 <h3><i class="fa-solid fa-wallet"></i> 2. Escolha a Forma de Pagamento</h3>
-                
+
                 <div class="payment-tabs">
                     <button type="button" class="tab-btn active" onclick="alternarMetodo('cartao')">
                         <i class="fa-solid fa-credit-card"></i> Cartão de Crédito
@@ -256,7 +286,8 @@
                     <form id="form-pagamento-cartao">
                         <div class="form-row">
                             <label>Número do Cartão:</label>
-                            <input type="text" id="form-card-number" placeholder="4000 0000 0000 0000" maxlength="19" required>
+                            <input type="text" id="form-card-number" placeholder="4000 0000 0000 0000" maxlength="19"
+                                required>
                         </div>
 
                         <div class="form-row">
@@ -291,18 +322,23 @@
                 <!-- MÉTODO PIX -->
                 <div id="metodo-pix" style="display: none; text-align: center;">
                     <div class="alert-urgency">
-                        <i class="fa-solid fa-clock"></i> Atenção: Realize o pagamento em até 30 minutos. Após este prazo, a reserva não paga será cancelada automaticamente.
+                        <i class="fa-solid fa-clock"></i> Atenção: Realize o pagamento em até 30 minutos. Após este
+                        prazo, a reserva não paga será cancelada automaticamente.
                     </div>
 
-                    <p style="font-size: 14px; color: #666; margin-bottom: 20px;">Escaneie o QR Code abaixo no app do seu banco ou copie a chave Pix:</p>
+                    <p style="font-size: 14px; color: #666; margin-bottom: 20px;">Escaneie o QR Code abaixo no app do
+                        seu banco ou copie a chave Pix:</p>
 
                     <div style="margin-bottom: 20px;">
-                        <img id="pix-qr-img" src="" alt="QR Code Pix" style="max-width: 220px; border: 2px solid #eee; border-radius: 12px; padding: 10px;">
+                        <img id="pix-qr-img" src="" alt="QR Code Pix"
+                            style="max-width: 220px; border: 2px solid #eee; border-radius: 12px; padding: 10px;">
                     </div>
 
                     <div style="max-width: 400px; margin: 0 auto 20px;">
-                        <input type="text" id="pix-copia-cola" readonly style="width: 100%; padding: 12px; border: 1px solid #ccc; border-radius: 6px; font-size: 13px; text-align: center; margin-bottom: 10px;">
-                        <button onclick="copiarPix()" class="btn-pay-now" style="background: var(--brown-dark, #3e2723); padding: 12px;">
+                        <input type="text" id="pix-copia-cola" readonly
+                            style="width: 100%; padding: 12px; border: 1px solid #ccc; border-radius: 6px; font-size: 13px; text-align: center; margin-bottom: 10px;">
+                        <button onclick="copiarPix()" class="btn-pay-now"
+                            style="background: var(--brown-dark, #3e2723); padding: 12px;">
                             <i class="fa-regular fa-copy"></i> Copiar Chave Pix
                         </button>
                     </div>
@@ -314,11 +350,15 @@
             </div>
 
             <!-- TELA DE SUCESSO DO CARTÃO -->
-            <div class="checkout-card" id="card-sucesso-cartao" style="display: none; text-align: center; padding: 40px;">
+            <div class="checkout-card" id="card-sucesso-cartao"
+                style="display: none; text-align: center; padding: 40px;">
                 <i class="fa-solid fa-circle-check" style="font-size: 60px; color: #28a745; margin-bottom: 15px;"></i>
                 <h3 style="color: #28a745; border: none;">Pagamento Aprovado com Sucesso!</h3>
-                <p style="color: #555; margin-bottom: 20px;">Sua reserva na Hospedaria Central está 100% garantida. Enviamos os detalhes para o seu WhatsApp/E-mail.</p>
-                <a href="index.html" class="btn-pay-now" style="display: inline-block; text-decoration: none; max-width: 250px; margin: 0 auto;">Voltar ao Início</a>
+                <p style="color: #555; margin-bottom: 20px;">Sua reserva na Hospedaria Central está 100% garantida.
+                    Enviamos os detalhes para o seu WhatsApp/E-mail.</p>
+                <a href="index.html" class="btn-pay-now"
+                    style="display: inline-block; text-decoration: none; max-width: 250px; margin: 0 auto;">Voltar ao
+                    Início</a>
             </div>
         </div>
 
@@ -374,7 +414,7 @@
         document.getElementById('sum-adults').innerText = `${adults} pessoa(s)`;
         document.getElementById('sum-room-name').innerText = `Quarto 0${quartoId || '1'} ${quartoId == 3 ? '(Suíte Master)' : ''}`;
 
-        document.getElementById('cust-tel').addEventListener('input', function(e) {
+        document.getElementById('cust-tel').addEventListener('input', function (e) {
             let valor = e.target.value.replace(/\D/g, '');
             if (valor.length > 11) valor = valor.slice(0, 11);
             if (valor.length > 10) valor = valor.replace(/^(\d{2})(\d{5})(\d{4})$/, '($1) $2-$3');
@@ -396,7 +436,7 @@
                     document.getElementById('sum-total-price').innerText = `R$ ${valorTotalGlobal.toFixed(2)}`;
                     document.getElementById('room-title').innerHTML = `<i class="fa-solid fa-bed"></i> Quarto 0${quarto.id} ${quarto.id == 3 ? '(Suíte Master)' : ''}`;
                 }
-            } catch(e) {
+            } catch (e) {
                 console.error("Erro ao carregar detalhes:", e);
             }
         }
@@ -410,18 +450,27 @@
                 return;
             }
 
+            const lgpdCheckbox = document.getElementById('lgpd-aceite');
+
+            if (!lgpdCheckbox.checked) {
+                alert("⚠️ Por favor, marque a caixa concordando com os termos de privacidade para continuar com a reserva.");
+                lgpdCheckbox.focus(); // Joga o foco do mouse direto na caixinha
+                return; // Interrompe o envio
+            }
+
             const payload = {
-                  quartoId: quartoId,
-                  hospedes: adults,
-                  checkin: start,
-                  checkout: end,
-                  cliente: {
-                  nome: document.getElementById('cust-nome').value.trim(),
-                  telefone: telLimpo,
-                  // Substitua a linha do e-mail por esta abaixo:
-                  email: document.getElementById('cust-email').value.trim() || 'cliente@hospedariacentral.com.br'
-                }
-                };
+                quartoId: quartoId,
+                hospedes: adults,
+                checkin: start,
+                checkout: end,
+                cliente: {
+                    nome: document.getElementById('cust-nome').value.trim(),
+                    telefone: telLimpo,
+                    // Substitua a linha do e-mail por esta abaixo:
+                    email: document.getElementById('cust-email').value.trim() || 'cliente@hospedariacentral.com.br'
+                }, 
+                aceiteLgpd: lgpdCheckbox.checked
+            };
             try {
                 const resp = await fetch('/api/reservar', {
                     method: 'POST',
@@ -432,7 +481,7 @@
                 const resData = await resp.json();
                 if (resp.ok && resData.sucesso) {
                     reservaIdGlobal = resData.reservaId;
-                    
+
                     document.getElementById('card-dados').style.display = 'none';
                     document.getElementById('card-pagamento').style.display = 'block';
 
@@ -462,7 +511,7 @@
 
         document.getElementById('form-pagamento-cartao').addEventListener('submit', async (e) => {
             e.preventDefault();
-            
+
             const cardNumber = document.getElementById('form-card-number').value.replace(/\s+/g, '');
             const cardHolder = document.getElementById('form-card-holder').value.trim();
             const expiry = document.getElementById('form-card-expiry').value.split('/');
@@ -527,4 +576,5 @@
         carregarDetalhes();
     </script>
 </body>
+
 </html>

@@ -53,7 +53,7 @@ pool.query(`
     );
 `).then(async () => {
     console.log("Prancheta do banco de dados atualizada!");
-    
+
     // 1. Cria o seu usuário (Marcus)
     const checkMarcus = await pool.query('SELECT * FROM administradores WHERE usuario = $1', ['marcus']);
     if (checkMarcus.rows.length === 0 && process.env.SENHA_MARCUS) {
@@ -264,7 +264,11 @@ app.get('/api/quartos-disponiveis', async (req, res) => {
 app.post('/api/reservar', async (req, res) => {
     const client = await pool.connect();
     try {
-        const { quartoId, hospedes, cliente, checkin, checkout } = req.body;
+        const { quartoId, hospedes, cliente, checkin, checkout, aceiteLgpd } = req.body;
+
+        if (!aceiteLgpd) {
+            return res.status(400).json({ erro: 'Você precisa aceitar os termos da LGPD para finalizar a reserva.' });
+        }
 
         if (!quartoId || !cliente || !checkin || !checkout) {
             return res.status(400).json({ erro: 'Dados incompletos para a reserva.' });
@@ -401,10 +405,10 @@ app.post('/api/webhook/mercadopago', async (req, res) => {
         // Se o Mercado Pago gritar no walkie-talkie que é um pagamento...
         if (type === 'payment' && data?.id) {
             const pagamentoInfo = await payment.get({ id: data.id });
-            
+
             // E se ele confirmar que o dinheiro realmente caiu na conta...
             if (pagamentoInfo.status === 'approved') {
-                
+
                 // 1. Muda a prancheta para 'pago' e anota os dados da reserva
                 const result = await pool.query(`
                     UPDATE reservas 
@@ -417,15 +421,15 @@ app.post('/api/webhook/mercadopago', async (req, res) => {
                 if (result.rows.length > 0) {
                     const reserva = result.rows[0];
                     const clienteRes = await pool.query('SELECT nome, email FROM clientes WHERE id = $1', [reserva.cliente_id]);
-                    
+
                     if (clienteRes.rows.length > 0) {
                         const cliente = clienteRes.rows[0];
-                        
+
                         // Verifica se é um e-mail de verdade (não é de balcão)
                         if (cliente.email && cliente.email.includes('@') && !cliente.email.includes('balcao')) {
-                            const checkinBR = new Date(reserva.data_checkin).toLocaleDateString('pt-BR', {timeZone: 'UTC'});
+                            const checkinBR = new Date(reserva.data_checkin).toLocaleDateString('pt-BR', { timeZone: 'UTC' });
                             const numQ = String(reserva.quarto_id).padStart(2, '0');
-                            
+
                             const htmlConfirmacao = `
                             <div style="font-family: Arial, sans-serif; color: #333; max-width: 600px; margin: 0 auto; border: 1px solid #ddd; border-radius: 8px; overflow: hidden;">
                                 <div style="background-color: #2e8b57; padding: 20px; text-align: center;">
@@ -441,7 +445,7 @@ app.post('/api/webhook/mercadopago', async (req, res) => {
                                     <p>Falta pouco para você relaxar! Um dia antes da sua chegada, enviaremos outro e-mail com as instruções e senha do Wi-Fi.</p>
                                 </div>
                             </div>`;
-                            
+
                             // Dispara o e-mail invisível
                             await enviarEmailBrevo(cliente.email, cliente.nome, 'Reserva Confirmada com Sucesso! 🎉', htmlConfirmacao);
                             console.log(`[WEBHOOK] Pagamento do PIX confirmado e e-mail enviado para: ${cliente.email}`);
@@ -475,7 +479,7 @@ app.post('/api/admin/login', async (req, res) => {
         }
 
         const admin = result.rows[0];
-        
+
         // Passa a senha digitada no moedor e compara com a que tá no banco
         const senhaValida = await bcrypt.compare(senha, admin.senha_hash);
 
