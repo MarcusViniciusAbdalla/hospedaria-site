@@ -53,7 +53,7 @@ pool.query(`
     );
 `).then(async () => {
     console.log("Prancheta do banco de dados atualizada!");
-
+    
     // 1. Cria o seu usuário (Marcus)
     const checkMarcus = await pool.query('SELECT * FROM administradores WHERE usuario = $1', ['marcus']);
     if (checkMarcus.rows.length === 0 && process.env.SENHA_MARCUS) {
@@ -137,19 +137,7 @@ async function enviarEmailBrevo(destinatarioEmail, destinatarioNome, assunto, ht
 }
 
 function calcularDiaria(quartoId, hospedes) {
-    const numHospedes = parseInt(hospedes) || 1;
-    const idQuarto = parseInt(quartoId);
-
-    if (idQuarto === 3) {
-        if (numHospedes === 1) return 100.00;
-        if (numHospedes === 2) return 150.00;
-        if (numHospedes === 3) return 200.00;
-    } else {
-        if (numHospedes === 1) return 75.00;
-        if (numHospedes === 2) return 130.00;
-        if (numHospedes === 3) return 180.00;
-    }
-    return 75.00;
+    return 1.00; // 🛑 VALOR FIXO TEMPORÁRIO PARA O TESTE DE R$ 1,00
 }
 
 // ROTA: PROCESSAR PAGAMENTO COM CARTÃO
@@ -290,7 +278,6 @@ app.post('/api/reservar', async (req, res) => {
         await client.query('BEGIN');
 
         const cpfLimpo = cliente.cpf ? cliente.cpf.replace(/\D/g, '') : '';
-        // Pega no máximo 14 caracteres ou gera um código curto que cabe no banco
         const cpfFinal = cpfLimpo.length > 0 ? cpfLimpo.substring(0, 14) : `C-${Date.now().toString().slice(-11)}`;
 
         let clienteRes = await client.query('SELECT id FROM clientes WHERE telefone = $1', [cliente.telefone]);
@@ -340,7 +327,7 @@ app.post('/api/reservar', async (req, res) => {
 
         // 1. AVISO POR E-MAIL PARA O ADMINISTRADOR (VOCÊ)
         try {
-            const adminEmail = process.env.EMAIL_USER; // Envia para o e-mail da hospedaria
+            const adminEmail = process.env.EMAIL_USER;
             const assuntoAdmin = `🔔 Nova Reserva: Quarto 0${quartoId} - ${cliente.nome}`;
             const htmlAdmin = `
             <div style="font-family: Arial, sans-serif; color: #333; max-width: 500px; padding: 20px; border: 1px solid #ddd; border-radius: 8px;">
@@ -357,14 +344,13 @@ app.post('/api/reservar', async (req, res) => {
             </div>
             `;
 
-            // Dispara sem travar a tela de carregamento do cliente
             enviarEmailBrevo(adminEmail, 'Administrador', assuntoAdmin, htmlAdmin)
                 .catch(err => console.error("Falha ao enviar e-mail admin:", err));
         } catch (emailErr) {
             console.error("Erro interno ao preparar e-mail admin:", emailErr);
         }
 
-        // 2. AVISO NO WHATSAPP PARA O SEU CELULAR (MANTIDO)
+        // 2. AVISO NO WHATSAPP PARA O SEU CELULAR
         try {
             const numeroWpp = '556484594781';
             const apiKeyWpp = '5774787';
@@ -402,14 +388,10 @@ app.post('/api/reservar', async (req, res) => {
 app.post('/api/webhook/mercadopago', async (req, res) => {
     const { type, data } = req.body;
     try {
-        // Se o Mercado Pago gritar no walkie-talkie que é um pagamento...
         if (type === 'payment' && data?.id) {
             const pagamentoInfo = await payment.get({ id: data.id });
-
-            // E se ele confirmar que o dinheiro realmente caiu na conta...
+            
             if (pagamentoInfo.status === 'approved') {
-
-                // 1. Muda a prancheta para 'pago' e anota os dados da reserva
                 const result = await pool.query(`
                     UPDATE reservas 
                     SET status_pagamento = 'pago' 
@@ -417,19 +399,17 @@ app.post('/api/webhook/mercadopago', async (req, res) => {
                     RETURNING id, quarto_id, cliente_id, data_checkin, valor_total
                 `, [String(data.id)]);
 
-                // 2. Se mudou com sucesso, vamos avisar o cliente por e-mail!
                 if (result.rows.length > 0) {
                     const reserva = result.rows[0];
                     const clienteRes = await pool.query('SELECT nome, email FROM clientes WHERE id = $1', [reserva.cliente_id]);
-
+                    
                     if (clienteRes.rows.length > 0) {
                         const cliente = clienteRes.rows[0];
-
-                        // Verifica se é um e-mail de verdade (não é de balcão)
+                        
                         if (cliente.email && cliente.email.includes('@') && !cliente.email.includes('balcao')) {
-                            const checkinBR = new Date(reserva.data_checkin).toLocaleDateString('pt-BR', { timeZone: 'UTC' });
+                            const checkinBR = new Date(reserva.data_checkin).toLocaleDateString('pt-BR', {timeZone: 'UTC'});
                             const numQ = String(reserva.quarto_id).padStart(2, '0');
-
+                            
                             const htmlConfirmacao = `
                             <div style="font-family: Arial, sans-serif; color: #333; max-width: 600px; margin: 0 auto; border: 1px solid #ddd; border-radius: 8px; overflow: hidden;">
                                 <div style="background-color: #2e8b57; padding: 20px; text-align: center;">
@@ -445,16 +425,14 @@ app.post('/api/webhook/mercadopago', async (req, res) => {
                                     <p>Falta pouco para você relaxar! Um dia antes da sua chegada, enviaremos outro e-mail com as instruções e senha do Wi-Fi.</p>
                                 </div>
                             </div>`;
-
-                            // Dispara o e-mail invisível
+                            
                             await enviarEmailBrevo(cliente.email, cliente.nome, 'Reserva Confirmada com Sucesso! 🎉', htmlConfirmacao);
-                            console.log(`[WEBHOOK] Pagamento do PIX confirmado e e-mail enviado para: ${cliente.email}`);
                         }
                     }
                 }
             }
         }
-        res.sendStatus(200); // Fala pro Mercado Pago: "Câmbio, desligo! Recebi a mensagem."
+        res.sendStatus(200);
     } catch (err) {
         console.error("Erro no Webhook:", err);
         res.sendStatus(500);
@@ -462,14 +440,8 @@ app.post('/api/webhook/mercadopago', async (req, res) => {
 });
 
 // ROTAS ADMINISTRATIVAS
-// ---------------------------------------------------------
-// SISTEMA DE SEGURANÇA VIP (LOGIN E PROTEÇÃO DE ROTAS)
-// ---------------------------------------------------------
-
-// A Chave Mestra para fabricar as Pulseiras VIP (idealmente guardada no Render)
 const JWT_SECRET = process.env.JWT_SECRET || 'segredo_chave_mestra_hospedaria';
 
-// 1. ROTA DE LOGIN: Onde o usuário mostra a senha para tentar pegar a pulseira
 app.post('/api/admin/login', async (req, res) => {
     const { usuario, senha } = req.body;
     try {
@@ -479,15 +451,12 @@ app.post('/api/admin/login', async (req, res) => {
         }
 
         const admin = result.rows[0];
-
-        // Passa a senha digitada no moedor e compara com a que tá no banco
         const senhaValida = await bcrypt.compare(senha, admin.senha_hash);
 
         if (!senhaValida) {
             return res.status(401).json({ erro: 'Usuário ou senha incorretos' });
         }
 
-        // Deu certo! Fabrica a pulseira VIP que dura 8 horas
         const token = jwt.sign({ id: admin.id, usuario: admin.usuario }, JWT_SECRET, { expiresIn: '8h' });
 
         res.json({ sucesso: true, token, mensagem: 'Bem-vindo de volta!' });
@@ -497,22 +466,18 @@ app.post('/api/admin/login', async (req, res) => {
     }
 });
 
-// 2. O SEGURANÇA (MIDDLEWARE): Fica na porta das outras rotas cobrando a pulseira
 function verificarPulseiraVIP(req, res, next) {
     const tokenHeader = req.headers['authorization'];
     if (!tokenHeader) return res.status(403).json({ erro: 'Acesso negado. Área restrita.' });
 
-    // O token vem no formato "Bearer asdasdasd...", então pegamos só o código
     const token = tokenHeader.split(" ")[1];
 
     jwt.verify(token, JWT_SECRET, (err, decoded) => {
         if (err) return res.status(401).json({ erro: 'Sessão expirada ou pulseira inválida. Faça login novamente.' });
-        req.adminId = decoded.id; // Anota quem é o admin que está passando
-        next(); // Libera a catraca! Pode entrar.
+        req.adminId = decoded.id;
+        next();
     });
 }
-// ---------------------------------------------------------
-
 
 app.get('/api/admin/reservas', async (req, res) => {
     try {
@@ -676,7 +641,6 @@ app.delete('/api/admin/reservas/:id', async (req, res) => {
     }
 });
 
-// ROTA ADMIN: DISPARAR LEMBRETE MANUAL (E-MAIL + WHATSAPP WEB)
 app.post('/api/admin/reservas/:id/lembrete', async (req, res) => {
     const { id } = req.params;
 
@@ -699,7 +663,6 @@ app.post('/api/admin/reservas/:id/lembrete', async (req, res) => {
 
         let emailEnviado = false;
 
-        // 1. DISPARAR E-MAIL VIA BREVO (se tiver e-mail válido)
         if (reserva.email && reserva.email.includes('@') && !reserva.email.includes('balcao')) {
             await enviarEmailBrevo(
                 reserva.email,
@@ -710,7 +673,6 @@ app.post('/api/admin/reservas/:id/lembrete', async (req, res) => {
             emailEnviado = true;
         }
 
-        // 2. PREPARAR DADOS PARA O WHATSAPP WEB
         let telefoneFormatado = '';
         let textoMsg = '';
 
@@ -735,7 +697,6 @@ app.post('/api/admin/reservas/:id/lembrete', async (req, res) => {
     }
 });
 
-// ROTA ADMIN: REGISTRAR CHECK-IN E ENVIAR E-MAIL VIA BREVO
 app.put('/api/admin/reservas/:id/checkin', async (req, res) => {
     const { id } = req.params;
     const client = await pool.connect();
@@ -743,7 +704,6 @@ app.put('/api/admin/reservas/:id/checkin', async (req, res) => {
     try {
         await client.query('BEGIN');
 
-        // 1. Atualiza status
         const result = await client.query(`
             UPDATE reservas 
             SET status_pagamento = 'checkin' 
@@ -754,18 +714,10 @@ app.put('/api/admin/reservas/:id/checkin', async (req, res) => {
         if (result.rows.length === 0) throw new Error('Reserva não encontrada.');
         const reserva = result.rows[0];
 
-        // 2. BUSCA O E-MAIL REAL DO CLIENTE (ignorando o e-mail de balcão)
         const clienteRes = await client.query('SELECT nome, email FROM clientes WHERE id = $1', [reserva.cliente_id]);
         let nomeHospede = clienteRes.rows.length > 0 ? clienteRes.rows[0].nome : 'Hóspede';
         let emailHospede = clienteRes.rows.length > 0 ? clienteRes.rows[0].email : '';
 
-        // SE O E-MAIL FOR DE BALCÃO, VAMOS TENTAR PEGAR O E-MAIL QUE VOCÊ QUER (marcusviniciusabdalla@gmail.com)
-        // OU SIMPLESMENTE DEIXAR VOCÊ FORÇAR O ENVIO.
-        // VAMOS LOGAR PARA DEBUGAR O QUE ESTÁ VINDO DO BANCO
-        console.log("DEBUG: Reserva ID", id, "Cliente:", nomeHospede, "E-mail no banco:", emailHospede);
-
-        // AQUI ESTÁ A CORREÇÃO: vamos permitir o envio se for um e-mail válido, 
-        // e se for o e-mail de balcão, vamos ignorar a trava para testes:
         const ehEmailValido = emailHospede && emailHospede.includes('@');
 
         if (ehEmailValido) {
@@ -778,8 +730,6 @@ app.put('/api/admin/reservas/:id/checkin', async (req, res) => {
                 'Bem-vindo(a) à Hospedaria Central Morrinhos! 🏨',
                 htmlEmailCheckin(nomeHospede, numQ, checkoutBR)
             ).catch(err => console.error('Falha no envio do e-mail Check-in:', err));
-        } else {
-            console.log("E-mail inválido ou de balcão, e-mail não enviado.");
         }
 
         await client.query('COMMIT');
@@ -896,7 +846,6 @@ app.get('/api/admin/grafico-faturamento', async (req, res) => {
     }
 });
 
-// ROTINA DE LIMPEZA AUTOMÁTICA
 setInterval(async () => {
     try {
         const limpeza = await pool.query(`
@@ -912,7 +861,6 @@ setInterval(async () => {
     } catch (err) { }
 }, 5 * 60 * 1000);
 
-// ROTA ADMIN: ESTENDER DIÁRIA (+1 DIA)
 app.post('/api/admin/reservas/:id/estender', async (req, res) => {
     const { id } = req.params;
     const client = await pool.connect();
@@ -964,7 +912,6 @@ app.post('/api/admin/reservas/:id/estender', async (req, res) => {
     }
 });
 
-// TEMPLATES DE E-MAIL
 function htmlEmailCheckin(nome, quarto, checkout) {
     return `
     <div style="font-family: Arial, sans-serif; color: #333; max-width: 600px; margin: 0 auto; border: 1px solid #ddd; border-radius: 8px; overflow: hidden;">
@@ -1034,7 +981,6 @@ function htmlEmailLembrete(nome, quarto, checkin) {
     </div>`;
 }
 
-// ⏰ ROBÔ DO LEMBRETE DE 24 HORAS
 cron.schedule('0 8 * * *', async () => {
     try {
         const amanha = new Date();
@@ -1062,7 +1008,6 @@ cron.schedule('0 8 * * *', async () => {
                 'A sua reserva na Hospedaria Central Morrinhos é amanhã! 🧳',
                 htmlEmailLembrete(r.cliente_nome, numQ, checkinBR)
             );
-            console.log(`[CRON] Lembrete 24h enviado via Brevo para: ${r.email}`);
         }
     } catch (err) {
         console.error('Erro no robô de lembretes:', err);
