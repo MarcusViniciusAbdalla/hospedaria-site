@@ -489,7 +489,7 @@
                     document.getElementById('pix-qr-img').src = `data:image/jpeg;base64,${resData.qrCodeBase64}`;
                     document.getElementById('pix-copia-cola').value = resData.pixCopiaECola;
 
-                    // Inicia a verificação automática se o Pix foi pago
+                    // Inicia a verificação automática se o Pix foi pago NA NOVA ROTA SEGURA
                     iniciarVerificacaoPix();
                 } else {
                     alert(resData.erro || "Erro ao registrar reserva.");
@@ -505,11 +505,11 @@
             checandoPagamento = setInterval(async () => {
                 if (!reservaIdGlobal) return;
                 try {
-                    const resp = await fetch(`/api/admin/reservas`);
+                    // O site agora pergunta na porta correta e segura!
+                    const resp = await fetch(`/api/reservas/${reservaIdGlobal}/status`);
                     const data = await resp.json();
-                    const reservaAtual = (data.reservas || []).find(r => r.id == reservaIdGlobal);
 
-                    if (reservaAtual && reservaAtual.status_pagamento === 'pago') {
+                    if (data.status === 'pago') {
                         clearInterval(checandoPagamento);
                         
                         // Transforma a tela de pagamento em comprovante de sucesso bonito

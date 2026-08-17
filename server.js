@@ -248,6 +248,19 @@ app.get('/api/quartos-disponiveis', async (req, res) => {
         res.status(500).json({ erro: 'Erro interno ao buscar quartos.' });
     }
 });
+// NOVA ROTA: O SITE PERGUNTA SE O PIX FOI PAGO
+app.get('/api/reservas/:id/status', async (req, res) => {
+    try {
+        const result = await pool.query('SELECT status_pagamento FROM reservas WHERE id = $1', [req.params.id]);
+        if (result.rows.length > 0) {
+            res.json({ status: result.rows[0].status_pagamento });
+        } else {
+            res.status(404).json({ erro: 'Reserva não encontrada' });
+        }
+    } catch (err) {
+        res.status(500).json({ erro: 'Erro interno' });
+    }
+});
 
 app.post('/api/reservar', async (req, res) => {
     const client = await pool.connect();
@@ -305,11 +318,13 @@ app.post('/api/reservar', async (req, res) => {
         const valorDiaria = calcularDiaria(quartoId, hospedes);
         const valorTotal = dias * valorDiaria;
 
+        // A MÁGICA AQUI: O notification_url fala para o Mercado Pago onde nos avisar!
         const paymentResponse = await payment.create({
             body: {
                 transaction_amount: Number(valorTotal),
                 description: `Reserva Quarto ${quartoId} - Hospedaria Central`,
                 payment_method_id: 'pix',
+                notification_url: 'https://hospedaria-site.onrender.com/api/webhook/mercadopago',
                 payer: {
                     email: cliente.email || 'cliente@hospedariacentral.com.br',
                     first_name: cliente.nome
@@ -386,10 +401,12 @@ app.post('/api/reservar', async (req, res) => {
 
 // WEBHOOK MERCADO PAGO
 app.post('/api/webhook/mercadopago', async (req, res) => {
-    const { type, data } = req.body;
     try {
-        if (type === 'payment' && data?.id) {
-            const pagamentoInfo = await payment.get({ id: data.id });
+        // O Mercado Pago às vezes manda o ID em lugares diferentes da carta
+        const pagamentoId = req.body?.data?.id || req.query?.['data.id'] || req.query?.id;
+        
+        if (pagamentoId) {
+            const pagamentoInfo = await payment.get({ id: pagamentoId });
             
             if (pagamentoInfo.status === 'approved') {
                 const result = await pool.query(`
@@ -397,10 +414,11 @@ app.post('/api/webhook/mercadopago', async (req, res) => {
                     SET status_pagamento = 'pago' 
                     WHERE mp_payment_id = $1 AND status_pagamento != 'pago'
                     RETURNING id, quarto_id, cliente_id, data_checkin, valor_total
-                `, [String(data.id)]);
+                `, [String(pagamentoId)]);
 
                 if (result.rows.length > 0) {
                     const reserva = result.rows[0];
+                    // Busca nome, email e TELEFONE para o WhatsApp!
                     const clienteRes = await pool.query('SELECT nome, email, telefone FROM clientes WHERE id = $1', [reserva.cliente_id]);
                     
                     if (clienteRes.rows.length > 0) {
@@ -408,7 +426,7 @@ app.post('/api/webhook/mercadopago', async (req, res) => {
                         const checkinBR = new Date(reserva.data_checkin).toLocaleDateString('pt-BR', {timeZone: 'UTC'});
                         const numQ = String(reserva.quarto_id).padStart(2, '0');
                         
-                        // 1. ENVIA E-MAIL DE CONFIRMAÇÃO COM REGRAS E CONTATOS
+                        // 1. ENVIA E-MAIL PARA O CLIENTE
                         if (cliente.email && cliente.email.includes('@') && !cliente.email.includes('balcao')) {
                             const htmlConfirmacao = `
                             <div style="font-family: Arial, sans-serif; color: #333; max-width: 600px; margin: 0 auto; border: 1px solid #ddd; border-radius: 8px; overflow: hidden;">
@@ -419,25 +437,25 @@ app.post('/api/webhook/mercadopago', async (req, res) => {
                                     <p>Olá, <strong>${cliente.nome}</strong>!</p>
                                     <p>O seu pagamento via PIX no valor de R$ ${Number(reserva.valor_total).toFixed(2)} foi aprovado. A sua reserva está <strong>100% garantida</strong>!</p>
                                     <div style="background-color: #f9f9f9; padding: 15px; border-left: 4px solid #2e8b57; margin: 20px 0;">
-                                        <p style="margin: 0;">🛏️ <strong>Quarto:</strong> ${numQ}<br>
+                                        <p style="margin: 0;">🛏️ <strong>Quarto:</strong> 0${numQ}<br>
                                         📅 <strong>Data de Entrada:</strong> ${checkinBR} a partir das 14h</p>
                                         📍 <strong>Endereço:</strong> Centro de Morrinhos (em frente ao Hospital Sylvio de Mello)<br>
                                         📶 <strong>Wi-Fi:</strong> Hospedagem | Senha: <em>84594781</em>
                                     </div>
                                     <p>📞 <strong>Contatos:</strong> (64) 98459-4781 / (64) 99236-2298</p>
-                                    <p>Falta pouco para você relaxar! Um dia antes da sua chegada, enviaremos outro e-mail com instruções complementares.</p>
+                                    <p>Falta pouco para você relaxar! Um dia antes da sua chegada, enviaremos outro e-mail com as instruções completas.</p>
                                 </div>
                             </div>`;
                             
                             await enviarEmailBrevo(cliente.email, cliente.nome, 'Reserva Confirmada com Sucesso! 🎉', htmlConfirmacao);
                         }
 
-                        // 2. ENVIA WHATSAPP DE CONFIRMAÇÃO COM REGRAS E CONTATOS
+                        // 2. ENVIA WHATSAPP DE CONFIRMAÇÃO PARA O CLIENTE
                         if (cliente.telefone) {
                             const telLimpo = cliente.telefone.replace(/\D/g, '');
                             if (telLimpo.length >= 10) {
                                 const telefoneFormatado = telLimpo.startsWith('55') ? telLimpo : `55${telLimpo}`;
-                                const textoConfirmacaoWpp = `✅ *Pagamento Confirmado!*\n\nOlá, *${cliente.nome}*! Sua reserva na *Hospedaria Central* está 100% garantida!\n\n🛏️ Quarto: 0${numQ}\n📅 Entrada: ${checkinBR} (a partir das 14h)\n📍 Endereço: Em frente ao Hospital Sylvio de Mello, Morrinhos-GO.\n📶 Wi-Fi: Hospedagem | Senha: 84594781\n\n📞 Dúvidas ou emergências? (64) 98459-4781 ou (64) 99236-2298. Bom descanso!`;
+                                const textoConfirmacaoWpp = `✅ *Pagamento Confirmado!*\n\nOlá, *${cliente.nome}*! O seu pagamento foi processado com sucesso. A sua reserva na *Hospedaria Central* está 100% garantida!\n\n🛏️ Quarto: 0${numQ}\n📅 Entrada: ${checkinBR} (a partir das 14h)\n📍 Endereço: Em frente ao Hospital Sylvio de Mello, Morrinhos-GO.\n📶 Wi-Fi: Hospedagem | Senha: 84594781\n\n📞 Dúvidas? (64) 98459-4781.`;
                                 
                                 const urlWppCliente = `https://api.callmebot.com/whatsapp.php?phone=${telefoneFormatado}&text=${encodeURIComponent(textoConfirmacaoWpp)}&apikey=5774787`;
                                 https.get(urlWppCliente, (resWpp) => { resWpp.on('data', () => {}); }).on('error', () => {});
@@ -447,12 +465,13 @@ app.post('/api/webhook/mercadopago', async (req, res) => {
                 }
             }
         }
-        res.sendStatus(200);
+        res.sendStatus(200); // Fala pro Mercado Pago: "Câmbio, desligo! Recebi a mensagem."
     } catch (err) {
         console.error("Erro no Webhook:", err);
         res.sendStatus(500);
     }
 });
+
 
 // ROTAS ADMINISTRATIVAS
 const JWT_SECRET = process.env.JWT_SECRET || 'segredo_chave_mestra_hospedaria';
