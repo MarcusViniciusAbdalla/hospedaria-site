@@ -1063,5 +1063,33 @@ cron.schedule('0 8 * * *', async () => {
     }
 });
 
+// ==========================================
+// 🤖 ROBÔ DE AUTO CHECK-OUT (Todos os dias às 13:00)
+// ==========================================
+cron.schedule('0 13 * * *', async () => {
+    try {
+        // Pega a data de hoje certinha
+        const dataHojeIso = new Date().toISOString().split('T')[0];
+
+        // Manda o banco de dados liberar os quartos cuja data de saída é hoje (ou antes de hoje)
+        const limpeza = await pool.query(`
+            UPDATE reservas 
+            SET status_pagamento = 'checkout' 
+            WHERE status_pagamento IN ('checkin', 'pago', 'concluido', 'bloqueado_balcao') 
+            AND data_checkout <= $1
+        `, [dataHojeIso]);
+
+        if (limpeza.rowCount > 0) {
+            console.log(`[AUTO CHECK-OUT] ${limpeza.rowCount} quarto(s) liberado(s) automaticamente às 13h!`);
+        }
+    } catch (err) {
+        console.error('Erro no robô de auto check-out:', err);
+    }
+}, {
+    scheduled: true,
+    timezone: "America/Sao_Paulo" // Garante que será às 13h no horário de Brasília/Goiás!
+});
+
+
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log(`Servidor rodando na porta ${PORT}`));
