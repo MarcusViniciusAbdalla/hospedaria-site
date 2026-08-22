@@ -528,7 +528,7 @@ function verificarPulseiraVIP(req, res, next) {
     });
 }
 
-app.get('/api/admin/reservas', async (req, res) => {
+app.get('/api/admin/reservas', verificarPulseiraVIP, async (req, res) => {
     try {
         const query = `
             SELECT r.id, r.quarto_id, q.numero_quarto, r.quantidade_hospedes,
@@ -549,7 +549,7 @@ app.get('/api/admin/reservas', async (req, res) => {
     }
 });
 
-app.get('/api/admin/exportar-leads', async (req, res) => {
+app.get('/api/admin/exportar-leads', verificarPulseiraVIP, async (req, res) => {
     try {
         const query = `
             SELECT 
@@ -572,7 +572,7 @@ app.get('/api/admin/exportar-leads', async (req, res) => {
     }
 });
 
-app.get('/api/admin/exportar-faturamento', async (req, res) => {
+app.get('/api/admin/exportar-faturamento', verificarPulseiraVIP, async (req, res) => {
     try {
         const query = `
             SELECT 
@@ -597,7 +597,7 @@ app.get('/api/admin/exportar-faturamento', async (req, res) => {
     }
 });
 
-app.post('/api/admin/bloquear', async (req, res) => {
+app.post('/api/admin/bloquear', verificarPulseiraVIP, async (req, res) => {
     const { quartoId, hospedes, checkin, checkout, valorTotal } = req.body;
 
     if (!quartoId || !checkin || !checkout) {
@@ -659,7 +659,7 @@ app.post('/api/admin/bloquear', async (req, res) => {
     }
 });
 
-app.put('/api/admin/reservas/:id/efetivar', async (req, res) => {
+app.put('/api/admin/reservas/:id/efetivar', verificarPulseiraVIP, async (req, res) => {
     const { id } = req.params;
     const { nome, telefone } = req.body;
 
@@ -679,7 +679,7 @@ app.put('/api/admin/reservas/:id/efetivar', async (req, res) => {
     }
 });
 
-app.delete('/api/admin/reservas/:id', async (req, res) => {
+app.delete('/api/admin/reservas/:id', verificarPulseiraVIP, async (req, res) => {
     const { id } = req.params;
     try {
         await pool.query("UPDATE reservas SET status_pagamento = 'cancelado' WHERE id = $1", [id]);
@@ -690,7 +690,7 @@ app.delete('/api/admin/reservas/:id', async (req, res) => {
     }
 });
 
-app.post('/api/admin/reservas/:id/lembrete', async (req, res) => {
+app.post('/api/admin/reservas/:id/lembrete', verificarPulseiraVIP, async (req, res) => {
     const { id } = req.params;
 
     try {
@@ -746,7 +746,7 @@ app.post('/api/admin/reservas/:id/lembrete', async (req, res) => {
     }
 });
 
-app.put('/api/admin/reservas/:id/checkin', async (req, res) => {
+app.put('/api/admin/reservas/:id/checkin', verificarPulseiraVIP, async (req, res) => {
     const { id } = req.params;
     const client = await pool.connect();
 
@@ -793,7 +793,7 @@ app.put('/api/admin/reservas/:id/checkin', async (req, res) => {
     }
 });
 
-app.put('/api/admin/reservas/:id/checkout', async (req, res) => {
+app.put('/api/admin/reservas/:id/checkout', verificarPulseiraVIP, async (req, res) => {
     const { id } = req.params;
     try {
         await pool.query("UPDATE reservas SET status_pagamento = 'checkout' WHERE id = $1", [id]);
@@ -804,7 +804,7 @@ app.put('/api/admin/reservas/:id/checkout', async (req, res) => {
     }
 });
 
-app.get('/api/admin/dashboard', async (req, res) => {
+app.get('/api/admin/dashboard', verificarPulseiraVIP, async (req, res) => {
     try {
         const { start, end } = req.query;
         let firstDay, lastDay, textoPeriodo;
@@ -860,7 +860,7 @@ app.get('/api/admin/dashboard', async (req, res) => {
     }
 });
 
-app.get('/api/admin/grafico-faturamento', async (req, res) => {
+app.get('/api/admin/grafico-faturamento', verificarPulseiraVIP, async (req, res) => {
     try {
         const query = `
             SELECT 
@@ -910,7 +910,7 @@ setInterval(async () => {
     } catch (err) { }
 }, 5 * 60 * 1000);
 
-app.post('/api/admin/reservas/:id/estender', async (req, res) => {
+app.post('/api/admin/reservas/:id/estender', verificarPulseiraVIP, async (req, res) => {
     const { id } = req.params;
     const client = await pool.connect();
 
