@@ -276,13 +276,15 @@
             </div>
         </div>
 
-        <h2 style="color: var(--brown-dark); text-align: center; margin-bottom: 5px; font-family: 'Playfair Display', serif;">
+        <h2
+            style="color: var(--brown-dark); text-align: center; margin-bottom: 5px; font-family: 'Playfair Display', serif;">
             Painel Administrativo & Ocupação
         </h2>
-        
+
         <!-- BOTÃO DE SAIR ADICIONADO AQUI, BEM ABAIXO DO TÍTULO -->
         <div style="text-align: center; margin-bottom: 25px;">
-            <button onclick="sairDoPainel()" style="background-color: #d9534f; color: white; padding: 8px 15px; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; font-size: 13px; box-shadow: 0 2px 5px rgba(0,0,0,0.2);">
+            <button onclick="sairDoPainel()"
+                style="background-color: #d9534f; color: white; padding: 8px 15px; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; font-size: 13px; box-shadow: 0 2px 5px rgba(0,0,0,0.2);">
                 <i class="fa-solid fa-door-closed"></i> Sair do Sistema
             </button>
         </div>
@@ -731,7 +733,7 @@
             carregarAgenda();
             [1, 2, 3, 4].forEach(quartoId => carregarCalendarioQuarto(quartoId));
         }
-        
+
         // Ativa o carregamento inicial da página automaticamente
         carregarTudo();
 
@@ -930,9 +932,9 @@
             try {
                 const resp = await fetch('/api/admin/bloquear', {
                     method: 'POST',
-                    headers: { 
+                    headers: {
                         'Content-Type': 'application/json',
-                        'Authorization': 'Bearer ' + localStorage.getItem('tokenHospedaria') 
+                        'Authorization': 'Bearer ' + localStorage.getItem('tokenHospedaria')
                     },
                     body: JSON.stringify(payload)
                 });
@@ -970,7 +972,7 @@
             try {
                 const resp = await fetch(`/api/admin/reservas/${id}/efetivar`, {
                     method: 'PUT',
-                    headers: { 
+                    headers: {
                         'Content-Type': 'application/json',
                         'Authorization': 'Bearer ' + localStorage.getItem('tokenHospedaria')
                     },
@@ -986,7 +988,7 @@
         async function cancelarReserva(id) {
             if (confirm("Tem certeza que deseja CANCELAR esta reserva e liberar a data no calendário?")) {
                 try {
-                    const resp = await fetch(`/api/admin/reservas/${id}`, { 
+                    const resp = await fetch(`/api/admin/reservas/${id}`, {
                         method: 'DELETE',
                         headers: { 'Authorization': 'Bearer ' + localStorage.getItem('tokenHospedaria') }
                     });
@@ -1002,7 +1004,7 @@
         async function fazerCheckin(id) {
             if (confirm("Confirmar a entrada do hóspede (Check-in)?")) {
                 try {
-                    const resp = await fetch(`/api/admin/reservas/${id}/checkin`, { 
+                    const resp = await fetch(`/api/admin/reservas/${id}/checkin`, {
                         method: 'PUT',
                         headers: { 'Authorization': 'Bearer ' + localStorage.getItem('tokenHospedaria') }
                     });
@@ -1015,7 +1017,7 @@
         async function fazerCheckout(id) {
             if (confirm("Confirmar a saída do hóspede (Check-out)? A reserva sairá da lista principal.")) {
                 try {
-                    const resp = await fetch(`/api/admin/reservas/${id}/checkout`, { 
+                    const resp = await fetch(`/api/admin/reservas/${id}/checkout`, {
                         method: 'PUT',
                         headers: { 'Authorization': 'Bearer ' + localStorage.getItem('tokenHospedaria') }
                     });
@@ -1058,7 +1060,7 @@
                 }
             }
         }
-        
+
         async function enviarLembrete(idReserva) {
             if (!confirm("Deseja disparar o e-mail e abrir o WhatsApp de lembrete para este hóspede?")) return;
 
@@ -1092,6 +1094,86 @@
             }
         }
 
+        // ==========================================
+        // 📊 RELATÓRIOS (EXPORTAR PARA EXCEL/CSV)
+        // ==========================================
+
+        // Função auxiliar que cria o arquivo e força o download
+        function baixarArquivoCSV(conteudo, nomeArquivo) {
+            // O "\uFEFF" mágico garante que o Excel do Windows não quebre a acentuação do português!
+            const blob = new Blob(["\uFEFF" + conteudo], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement("a");
+            const url = URL.createObjectURL(blob);
+
+            link.setAttribute("href", url);
+            link.setAttribute("download", nomeArquivo);
+            link.style.visibility = 'hidden';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        }
+
+        // 1. Exportar Leads (Lista de Clientes) - Nome igual ao seu onclick
+        async function exportarLeadsCSV() {
+            try {
+                const token = localStorage.getItem('tokenAdmin');
+                const response = await fetch('/api/admin/exportar-leads', {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+
+                if (!response.ok) throw new Error('Erro ao buscar leads');
+                const data = await response.json();
+
+                if (!data.leads || data.leads.length === 0) {
+                    alert('Nenhum lead encontrado.');
+                    return;
+                }
+
+                let csvContent = "Nome,Telefone,Email,Total Estadias,Total Gasto (R$)\n";
+
+                data.leads.forEach(lead => {
+                    const valorGasto = Number(lead.total_gasto || 0).toFixed(2).replace('.', ',');
+                    csvContent += `"${lead.nome}","${lead.telefone}","${lead.email}",${lead.total_estadias},"${valorGasto}"\n`;
+                });
+
+                baixarArquivoCSV(csvContent, 'Hospedaria_Lista_Clientes.csv');
+            } catch (error) {
+                console.error(error);
+                alert('Erro ao exportar lista de clientes.');
+            }
+        }
+
+        // 2. Exportar Faturamento - Nome igual ao seu onclick
+        async function exportarFaturamentoCSV() {
+            try {
+                const token = localStorage.getItem('tokenAdmin');
+                const response = await fetch('/api/admin/exportar-faturamento', {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+
+                if (!response.ok) throw new Error('Erro ao buscar faturamento');
+                const data = await response.json();
+
+                if (!data.faturamento || data.faturamento.length === 0) {
+                    alert('Nenhum dado financeiro encontrado.');
+                    return;
+                }
+
+                let csvContent = "ID Reserva,Entrada,Saída,Quarto,Cliente,Valor Total (R$),Status\n";
+
+                data.faturamento.forEach(item => {
+                    const valor = Number(item.valor_total || 0).toFixed(2).replace('.', ',');
+                    csvContent += `${item.id},"${item.data_entrada}","${item.data_saida}",Quarto 0${item.numero_quarto},"${item.cliente}","${valor}","${item.status_pagamento.toUpperCase()}"\n`;
+                });
+
+                baixarArquivoCSV(csvContent, 'Hospedaria_Faturamento.csv');
+            } catch (error) {
+                console.error(error);
+                alert('Erro ao baixar faturamento.');
+            }
+        }
+
     </script>
 </body>
+
 </html>
