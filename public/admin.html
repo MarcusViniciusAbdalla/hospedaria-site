@@ -691,6 +691,17 @@
             return `${partes[2]}/${partes[1]}/${partes[0]}`;
         }
 
+        // Evita que nomes/telefones com código malicioso (ex: <img onerror=...>) rodem no painel
+        function escapeHTML(texto) {
+            if (texto === null || texto === undefined) return '';
+            return String(texto)
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#039;');
+        }
+
         document.getElementById('bloqueio-quarto').addEventListener('change', calcularValorSugerido);
         document.getElementById('bloqueio-hospedes').addEventListener('change', calcularValorSugerido);
 
@@ -773,6 +784,7 @@
                 }
                 const data = await response.json();
                 container.innerHTML = '';
+                window.cacheReservas = {}; // guarda nome/telefone por id, evita colocar texto livre dentro de atributos HTML
                 if (!data.reservas || data.reservas.length === 0) {
                     container.innerHTML = '<p style="text-align: center; color: #777; padding: 20px;">Nenhuma reserva ativa cadastrada no momento.</p>';
                     return;
@@ -793,8 +805,11 @@
 
                     const numQuarto = String(r.numero_quarto).replace(/\D/g, '').padStart(2, '0');
                     const valorFormatado = Number(r.valor_total || 0).toFixed(2);
-                    const nomeHospede = r.cliente_nome || 'Hóspede Não Identificado';
-                    const telHospede = r.telefone ? r.telefone : 'Sem Telefone';
+                    const nomeHospedeCru = r.cliente_nome || 'Hóspede Não Identificado';
+                    const telHospedeCru = r.telefone ? r.telefone : 'Sem Telefone';
+                    const nomeHospede = escapeHTML(nomeHospedeCru);
+                    const telHospede = escapeHTML(telHospedeCru);
+                    window.cacheReservas[r.id] = { nome: nomeHospedeCru, telefone: telHospedeCru };
                     const qtdHospedes = r.quantidade_hospedes || 1;
                     const checkinBR = formatarDataBR(r.data_checkin);
                     const checkoutBR = formatarDataBR(r.data_checkout);
@@ -804,7 +819,7 @@
                             <button class="btn-status-confirm" style="background: #17a2b8;" onclick="fazerCheckin(${r.id})">
                             <i class="fa-solid fa-door-open"></i> Check-in
                             </button>
-                            <button class="btn-status-confirm" onclick="abrirModalEfetivar(${r.id}, '${nomeHospede.replace(/'/g, "\\'")}', '${telHospede}')">
+                            <button class="btn-status-confirm" onclick="abrirModalEfetivar(${r.id})">
                             <i class="fa-solid fa-pen"></i> Editar
                             </button>
                             <button class="btn-status-confirm" style="background: #e67e22;" onclick="estenderReserva(${r.id})">
@@ -935,7 +950,10 @@
             } catch (err) { alert("Erro ao comunicar com o servidor."); }
         });
 
-        function abrirModalEfetivar(id, nomeAtual, telAtual) {
+        function abrirModalEfetivar(id) {
+            const dados = (window.cacheReservas && window.cacheReservas[id]) || { nome: '', telefone: '' };
+            const nomeAtual = dados.nome;
+            const telAtual = dados.telefone;
             document.getElementById('efetivar-reserva-id').value = id;
             document.getElementById('efetivar-nome').value = (nomeAtual.includes('Balcão') || nomeAtual.includes('Hóspede Não')) ? '' : nomeAtual;
             document.getElementById('efetivar-telefone').value = (telAtual.includes('Balcão') || telAtual.includes('Sem')) ? '' : telAtual;
