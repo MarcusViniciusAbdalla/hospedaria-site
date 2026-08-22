@@ -46,22 +46,39 @@
 
 .results-list { display: flex; flex-direction: column; gap: 25px; }
 
+/* ==========================================================================
+   CARTÕES DE RESULTADO PREMIUM (Com Micro-interações)
+   ========================================================================== */
+.results-list { display: flex; flex-direction: column; gap: 25px; }
+
 .room-result-card { 
     display: flex; 
     background: var(--white); 
-    border-radius: 12px; 
+    border-radius: 16px; /* Bordas um pouco mais arredondadas e modernas */
     overflow: hidden; 
-    box-shadow: 0 4px 15px rgba(92, 64, 51, 0.08); 
-    transition: transform 0.3s ease;
+    /* Sombra mais difusa e elegante, estilo Apple/Airbnb */
+    box-shadow: 0 10px 30px rgba(92, 64, 51, 0.08); 
+    border: 1px solid rgba(0,0,0,0.03);
+    /* Transição ultra-suave para o efeito de flutuar */
+    transition: all 0.4s cubic-bezier(0.165, 0.84, 0.44, 1);
 }
 
-.room-result-card:hover { transform: translateY(-3px); }
+.room-result-card:hover { 
+    transform: translateY(-5px); 
+    box-shadow: 0 15px 35px rgba(92, 64, 51, 0.15); 
+}
 
 .room-result-img { 
     width: 35%; 
     background-size: cover; 
     background-position: center; 
     min-height: 220px; 
+    transition: transform 0.6s ease; /* Prepara a foto para o zoom */
+}
+
+/* O Efeito Mágico: Quando o mouse passa no cartão, a foto dá um zoom suave */
+.room-result-card:hover .room-result-img {
+    transform: scale(1.05);
 }
 
 .room-result-details { 
@@ -70,6 +87,8 @@
     display: flex; 
     flex-direction: column; 
     justify-content: space-between; 
+    background: var(--white); /* Protege o texto do zoom da imagem */
+    z-index: 2; /* Mantém o texto por cima */
 }
 
 .no-rooms { 

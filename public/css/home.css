@@ -40,12 +40,18 @@
     font-size: 24px !important; /* Aumenta o texto do logo caso seja texto puro */
 }
 
-/* BARRA RÁPIDA DE PESQUISA */
+/* BARRA RÁPIDA DE PESQUISA (Com Efeito Vidro Premium) */
 .search-bar { 
-    background: var(--white); 
+    /* --- A MÁGICA DO VIDRO COMEÇA AQUI --- */
+    background: rgba(255, 255, 255, 0.65); /* Fundo branco bem translúcido */
+    backdrop-filter: blur(12px); /* O desfoque jateado (o segredo do efeito) */
+    -webkit-backdrop-filter: blur(12px); /* Garante que funcione em iPhones/Macs */
+    border: 1px solid rgba(255, 255, 255, 0.6); /* Bordinha brilhante para dar volume */
+    box-shadow: 0 8px 32px 0 rgba(92, 64, 51, 0.2); /* Sombra suave com o tom marrom do seu site */
+    /* --- A MÁGICA DO VIDRO TERMINA AQUI --- */
+
     padding: 25px; 
     border-radius: 12px; 
-    box-shadow: 0 10px 30px rgba(92, 64, 51, 0.12); 
     display: flex; 
     gap: 15px; 
     flex-wrap: wrap; 
