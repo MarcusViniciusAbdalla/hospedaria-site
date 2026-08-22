@@ -2,6 +2,16 @@ require('dotenv').config();
 const express = require('express');
 const app = express();
 app.set('trust proxy', 1);
+const helmet = require('helmet');
+app.use(helmet({
+    // O CSP (Content-Security-Policy) fica desligado por enquanto: o site usa vários
+    // scripts de CDN (Chart.js, Flatpickr, Google Fonts, SDK do Mercado Pago) e JS
+    // inline, e ativar o CSP padrão bloquearia tudo isso. Habilitar com segurança
+    // exige listar manualmente cada domínio confiável — fica como próximo passo.
+    contentSecurityPolicy: false,
+    // Evita bloquear o carregamento de recursos de terceiros (ex: SDK do Mercado Pago)
+    crossOriginEmbedderPolicy: false,
+}));
 app.use(express.json());
 const https = require('https');
 const { Pool } = require('pg');
