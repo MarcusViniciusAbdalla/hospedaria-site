@@ -20,6 +20,17 @@ const rateLimit = require('express-rate-limit');
 
 // 1. Filtro de Sanitização (XSS Clean)
 // Limpa qualquer tentativa de injetar códigos maliciosos (vírus) nos campos de texto
+function sanitizarTexto(texto) {
+    if (typeof texto !== 'string') return texto;
+    return texto
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;')
+        .trim()
+        .slice(0, 200); // nomes não precisam de mais que 200 caracteres
+}
 
 // 2. A Roleta da Porta (Rate Limiting)
 // Lembra do IP do usuário por 15 minutos
@@ -291,6 +302,9 @@ app.post('/api/reservar', async (req, res) => {
             return res.status(400).json({ erro: 'Dados incompletos para a reserva.' });
         }
 
+        // Limpa o nome antes de usá-lo em qualquer lugar (banco, e-mail, WhatsApp, painel admin)
+        if (cliente.nome) cliente.nome = sanitizarTexto(cliente.nome);
+
         const conflito = await client.query(
             `SELECT id FROM reservas 
              WHERE quarto_id = $1 
@@ -489,7 +503,11 @@ app.post('/api/webhook/mercadopago', async (req, res) => {
 
 
 // ROTAS ADMINISTRATIVAS
-const JWT_SECRET = process.env.JWT_SECRET || 'segredo_chave_mestra_hospedaria';
+const JWT_SECRET = process.env.JWT_SECRET;
+if (!JWT_SECRET) {
+    console.error("❌ ERRO FATAL: a variável de ambiente JWT_SECRET não foi definida. Configure-a no seu .env antes de iniciar o servidor.");
+    process.exit(1);
+}
 
 app.post('/api/admin/login', async (req, res) => {
     const { usuario, senha } = req.body;
@@ -619,7 +637,7 @@ app.post('/api/admin/bloquear', verificarPulseiraVIP, async (req, res) => {
         }
 
         const clienteObj = req.body.cliente || {};
-        const nomeFinal = clienteObj.nome || req.body.nome || 'Atendimento Presencial / Balcão';
+        const nomeFinal = sanitizarTexto(clienteObj.nome || req.body.nome || 'Atendimento Presencial / Balcão');
         const telefoneFinal = clienteObj.telefone || req.body.telefone || '(64) 00000-0000';
         const emailFinal = clienteObj.email || req.body.email || 'balcao@hospedariacentral.com.br';
 
