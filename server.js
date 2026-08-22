@@ -4,42 +4,24 @@ const app = express();
 app.set('trust proxy', 1);
 const helmet = require('helmet');
 app.use(helmet({
-    crossOriginEmbedderPolicy: false, // Evita bloquear o SDK do Mercado Pago (recurso de terceiro)
+    crossOriginEmbedderPolicy: false,
     contentSecurityPolicy: {
         directives: {
-            // Por padrão, só carrega recursos do próprio site
             defaultSrc: ["'self'"],
-
-            // JS: permite scripts inline (o site usa muito onclick="" e <script> direto no HTML,
-            // então bloquear isso quebraria o site) + os CDNs que o projeto realmente usa
             scriptSrc: ["'self'", "'unsafe-inline'", "https://cdn.jsdelivr.net", "https://sdk.mercadopago.com"],
-
-            // CSS: mesma lógica, libera inline + os CDNs de estilo/fontes usados
+            scriptSrcAttr: ["'unsafe-inline'"], // 🔑 A CHAVE MÁGICA: Libera o clique (onclick) dos seus botões!
             styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com", "https://cdnjs.cloudflare.com", "https://cdn.jsdelivr.net"],
-
-            // Fontes (Google Fonts e os ícones do Font Awesome)
             fontSrc: ["'self'", "https://fonts.gstatic.com", "https://cdnjs.cloudflare.com", "data:"],
-
-            // Imagens: as suas próprias + o fallback do Unsplash usado no site
             imgSrc: ["'self'", "data:", "https://images.unsplash.com"],
-
-            // Chamadas de API feitas pelo navegador (fetch/XHR): o próprio site + Mercado Pago
             connectSrc: ["'self'", "https://sdk.mercadopago.com", "https://api.mercadopago.com", "https://*.mercadopago.com", "https://*.mercadolibre.com"],
-
-            // O mapa do Google Maps embutido na página inicial
             frameSrc: ["https://www.google.com"],
-
-            // Ninguém pode colocar o site dentro de um iframe (proteção extra contra clickjacking)
             frameAncestors: ["'none'"],
-
-            // Bloqueia plugins antigos tipo Flash/Java Applet
             objectSrc: ["'none'"],
-
-            // Formulários só podem ser enviados para o próprio site
             formAction: ["'self'"],
         },
     },
 }));
+
 app.use(express.json());
 const https = require('https');
 const { Pool } = require('pg');
