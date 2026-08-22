@@ -428,7 +428,7 @@
         async function carregarDetalhes() {
             if (!quartoId || !start || !end) return;
             try {
-                const resp = await fetch(`/api/quartos-disponiveis?start=${start}&end=${end}&adults=${adults}`);
+                const resp = await fetch(`/api/quartos-disponiveis?start=${encodeURIComponent(start)}&end=${encodeURIComponent(end)}&adults=${encodeURIComponent(adults)}`);
                 const data = await resp.json();
                 const quarto = (data.disponiveis || []).find(q => q.id == quartoId);
 

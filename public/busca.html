@@ -177,22 +177,34 @@
     </footer>
 
     <script>
+        // Evita que parâmetros da URL (start/end/adults) ou dados vindos da API
+        // rodem como código HTML se contiverem símbolos maliciosos
+        function escapeHTML(texto) {
+            if (texto === null || texto === undefined) return '';
+            return String(texto)
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#039;');
+        }
+
         const params = new URLSearchParams(window.location.search);
         const start = params.get('start');
         const end = params.get('end');
         const adults = params.get('adults') || 1;
 
         document.getElementById('search-params-info').innerHTML = `
-            <span><i class="fa-regular fa-calendar-check"></i> <strong>Entrada:</strong> ${start || '--'}</span>
-            <span><i class="fa-regular fa-calendar-xmark"></i> <strong>Saída:</strong> ${end || '--'}</span>
-            <span><i class="fa-solid fa-user-group"></i> <strong>Hóspedes:</strong> ${adults} pessoa(s)</span>
+            <span><i class="fa-regular fa-calendar-check"></i> <strong>Entrada:</strong> ${escapeHTML(start) || '--'}</span>
+            <span><i class="fa-regular fa-calendar-xmark"></i> <strong>Saída:</strong> ${escapeHTML(end) || '--'}</span>
+            <span><i class="fa-solid fa-user-group"></i> <strong>Hóspedes:</strong> ${escapeHTML(adults)} pessoa(s)</span>
             <a href="index.html" style="color: var(--terracotta, #d97757); font-weight: 600; margin-left: auto;">Alterar Pesquisa</a>
         `;
 
         async function carregarQuartos() {
             const container = document.getElementById('rooms-list');
             try {
-                const resp = await fetch(`/api/quartos-disponiveis?start=${start}&end=${end}&adults=${adults}`);
+                const resp = await fetch(`/api/quartos-disponiveis?start=${encodeURIComponent(start)}&end=${encodeURIComponent(end)}&adults=${encodeURIComponent(adults)}`);
                 const data = await resp.json();
 
                 if (!resp.ok || !data.disponiveis || data.disponiveis.length === 0) {
@@ -202,13 +214,13 @@
 
                 container.innerHTML = '';
                 data.disponiveis.forEach(q => {
-                    const checkoutUrl = `checkout.html?quartoId=${q.id}&start=${start}&end=${end}&adults=${adults}`;
+                    const checkoutUrl = `checkout.html?quartoId=${encodeURIComponent(q.id)}&start=${encodeURIComponent(start)}&end=${encodeURIComponent(end)}&adults=${encodeURIComponent(adults)}`;
 
                     container.innerHTML += `
                         <div class="room-card">
                             <div class="room-card-info">
                                 <h4>Quarto 0${q.id} ${q.id === 3 ? '(Suíte Master)' : ''}</h4>
-                                <p style="font-size: 13px; color: #666; margin-bottom: 5px;">${q.descricao || 'Quarto higienizado e confortável para sua estadia.'}</p>
+                                <p style="font-size: 13px; color: #666; margin-bottom: 5px;">${escapeHTML(q.descricao) || 'Quarto higienizado e confortável para sua estadia.'}</p>
                                 <div class="room-amenities">
                                     <span><i class="fa-solid fa-wifi" style="color: var(--terracotta, #d97757);"></i> Wi-Fi Grátis</span>
                                     <span><i class="fa-solid fa-snowflake" style="color: var(--terracotta, #d97757);"></i> Climatizado</span>
