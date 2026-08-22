@@ -273,6 +273,11 @@
                     style="background: var(--terracotta); color: white;">
                     <i class="fa-solid fa-file-csv"></i> Exportar DRE (CSV)
                 </button>
+                <!-- BOTÃO DE MANUTENÇÃO / BLOQUEIO DE QUARTO -->
+                <button class="btn-manutencao" onclick="toggleManutencao(NUMERO_DO_QUARTO)"
+                    style="background: #e67e22; color: white; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-size: 12px; font-weight: 600;">
+                    <i class="fas fa-tools"></i> Alternar Manutenção
+                </button>
             </div>
         </div>
 
@@ -1172,6 +1177,35 @@
                 alert('Erro ao baixar faturamento.');
             }
         }
+        async function toggleManutencao(numeroQuarto) {
+            const token = localStorage.getItem('tokenAdmin');
+            const motivo = prompt("Deseja colocar este quarto em manutenção/limpeza? Digite o motivo (ou deixe em branco):");
+
+            if (motivo === null) return; // Se cancelar
+
+            try {
+                const response = await fetch('/api/admin/quarto/manutencao', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: JSON.stringify({ numeroQuarto, emManutencao: true })
+                });
+
+                const data = await response.json();
+                if (response.ok) {
+                    alert('Quarto marcado como em manutenção! Ele não aparecerá para novas reservas.');
+                    location.reload(); // Recarrega o painel para atualizar o status
+                } else {
+                    alert('Erro: ' + (data.erro || 'Não foi possível alterar o status.'));
+                }
+            } catch (error) {
+                console.error(error);
+                alert('Erro de conexão ao tentar atualizar o quarto.');
+            }
+        }
+
 
     </script>
 </body>

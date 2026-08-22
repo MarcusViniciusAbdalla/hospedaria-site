@@ -295,6 +295,25 @@ app.get('/api/quartos-disponiveis', async (req, res) => {
         res.status(500).json({ erro: 'Erro interno ao buscar quartos.' });
     }
 });
+
+// Rota para alternar o status de manutenção do quarto
+app.post('/api/admin/quarto/manutencao', verificarTokenAdmin, async (req, res) => {
+    const { numeroQuarto, emManutencao } = req.body;
+    try {
+        // Atualiza a tabela de quartos no seu banco de dados PostgreSQL
+        await pool.query(
+            'UPDATE quartos SET em_manutencao = $1 WHERE numero = $2',
+            [emManutencao, numeroQuarto]
+        );
+        res.json({ sucesso: true, mensagem: 'Status de manutenção atualizado com sucesso!' });
+    } catch (error) {
+        console.error('Erro ao atualizar manutenção:', error);
+        res.status(500).json({ erro: 'Erro interno ao atualizar quarto.' });
+    }
+});
+
+
+
 // NOVA ROTA: O SITE PERGUNTA SE O PIX FOI PAGO
 app.get('/api/reservas/:id/status', async (req, res) => {
     try {
