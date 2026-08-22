@@ -383,8 +383,8 @@ app.post('/api/reservar', async (req, res) => {
 
         // 2. AVISO NO WHATSAPP PARA O SEU CELULAR
         try {
-            const numeroWpp = '556484594781';
-            const apiKeyWpp = '5774787';
+            const numeroWpp = process.env.CALLMEBOT_PHONE;
+            const apiKeyWpp = process.env.CALLMEBOT_APIKEY;
             const textoMsg = `🔔 *Nova Reserva!*\nQuarto: 0${quartoId}\nCliente: ${cliente.nome}\nData: ${checkin} a ${checkout}\nValor: R$ ${valorTotal.toFixed(2)}`;
 
             const urlWpp = `https://api.callmebot.com/whatsapp.php?phone=${numeroWpp}&text=${encodeURIComponent(textoMsg)}&apikey=${apiKeyWpp}`;
@@ -472,7 +472,7 @@ app.post('/api/webhook/mercadopago', async (req, res) => {
                                 const telefoneFormatado = telLimpo.startsWith('55') ? telLimpo : `55${telLimpo}`;
                                 const textoConfirmacaoWpp = `✅ *Pagamento Confirmado!*\n\nOlá, *${cliente.nome}*! O seu pagamento foi processado com sucesso. A sua reserva na *Hospedaria Central* está 100% garantida!\n\n🛏️ Quarto: 0${numQ}\n📅 Entrada: ${checkinBR} (a partir das 14h)\n📍 Endereço: Em frente ao Hospital Sylvio de Mello, Morrinhos-GO.\n\n🔐 *Atenção:* As instruções de acesso e a senha do Wi-Fi serão enviadas para você 1 dia antes do seu check-in!\n\n📞 Dúvidas? Fale conosco por aqui!`;
                                 
-                                const urlWppCliente = `https://api.callmebot.com/whatsapp.php?phone=${telefoneFormatado}&text=${encodeURIComponent(textoConfirmacaoWpp)}&apikey=5774787`;
+                                const urlWppCliente = `https://api.callmebot.com/whatsapp.php?phone=${telefoneFormatado}&text=${encodeURIComponent(textoConfirmacaoWpp)}&apikey=${process.env.CALLMEBOT_APIKEY}`;
                                 https.get(urlWppCliente, (resWpp) => { resWpp.on('data', () => {}); }).on('error', () => {});
                             }
                         }
