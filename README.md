@@ -197,7 +197,7 @@ Itens identificados para próximas iterações:
 - [x] Centralizar a tabela de preços por quarto em um único lugar
 - [ ] Modularizar `server.js` em arquivos por domínio (reservas, admin, pagamento)
 - [ ] Testes automatizados
-- [ ] SEO básico (meta description, Open Graph, sitemap.xml)
+- [x] SEO básico (meta description, Open Graph, sitemap.xml)
 
 ---
 
