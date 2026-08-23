@@ -13,7 +13,14 @@ app.use(helmet({
             styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com", "https://cdnjs.cloudflare.com", "https://cdn.jsdelivr.net"],
             fontSrc: ["'self'", "https://fonts.gstatic.com", "https://cdnjs.cloudflare.com", "data:"],
             imgSrc: ["'self'", "data:", "https://images.unsplash.com"],
-            connectSrc: ["'self'", "https://sdk.mercadopago.com", "https://api.mercadopago.com", "https://*.mercadopago.com", "https://*.mercadolibre.com"],
+            connectSrc: [
+                "'self'", 
+                "https://sdk.mercadopago.com", 
+                "https://api.mercadopago.com", 
+                "https://*.mercadopago.com", 
+                "https://*.mercadolibre.com", 
+                "https://cdn.jsdelivr.net"
+            ],
             frameSrc: ["https://www.google.com"],
             frameAncestors: ["'none'"],
             objectSrc: ["'none'"],
