@@ -193,8 +193,8 @@ O deploy é automático: qualquer `push` na branch `main` dispara um novo build 
 
 Itens identificados para próximas iterações:
 
-- [ ] Rate limiting dedicado na rota de login (hoje compartilha o limite geral da API)
-- [ ] Centralizar a tabela de preços por quarto em um único lugar (hoje duplicada entre servidor e painel)
+- [x] Rate limiting dedicado na rota de login
+- [x] Centralizar a tabela de preços por quarto em um único lugar
 - [ ] Modularizar `server.js` em arquivos por domínio (reservas, admin, pagamento)
 - [ ] Testes automatizados
 - [ ] SEO básico (meta description, Open Graph, sitemap.xml)
