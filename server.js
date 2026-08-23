@@ -265,18 +265,25 @@ app.get('/api/quartos-disponiveis', async (req, res) => {
         const numHospedes = parseInt(adults) || 1;
 
         const query = `
-            SELECT q.* 
-            FROM quartos q
-            WHERE q.ativo = TRUE 
-            AND q.capacidade_maxima >= $1
-            AND q.id NOT IN (
-                SELECT quarto_id 
-                FROM reservas 
-                WHERE status_pagamento IN ('pago', 'bloqueado_balcao', 'concluido', 'checkin')
-                AND (data_checkin, data_checkout) OVERLAPS ($2::date, $3::date)
-            )
-            ORDER BY q.id ASC;
-        `;
+    SELECT q.* 
+    FROM quartos q
+    WHERE q.ativo = TRUE
+    AND q.em_manutencao = FALSE
+    AND q.capacidade_maxima >= $1
+    AND q.id NOT IN (
+        SELECT quarto_id 
+        FROM reservas 
+        WHERE status_pagamento IN (
+            'pago',
+            'bloqueado_balcao',
+            'concluido',
+            'checkin'
+        )
+        AND (data_checkin, data_checkout) 
+            OVERLAPS ($2::date, $3::date)
+    )
+    ORDER BY q.id ASC;
+`;
 
         const result = await pool.query(query, [numHospedes, start, end]);
 
