@@ -1,0 +1,8 @@
+User-agent: *
+Allow: /
+Disallow: /admin.html
+Disallow: /login.html
+Disallow: /checkout.html
+Disallow: /api/
+
+Sitemap: https://hospedaria-site.onrender.com/sitemap.xml
