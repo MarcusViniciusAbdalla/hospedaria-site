@@ -84,7 +84,7 @@ pool.query(`
     );
 `).then(async () => {
     console.log("Prancheta do banco de dados atualizada!");
-    
+
     // 1. Cria o seu usuário (Marcus)
     const checkMarcus = await pool.query('SELECT * FROM administradores WHERE usuario = $1', ['marcus']);
     if (checkMarcus.rows.length === 0 && process.env.SENHA_MARCUS) {
@@ -184,7 +184,7 @@ function calcularDiaria(quartoId, hospedes) {
 }
 
 //function calcularDiaria(quartoId, hospedes) {
-  //  return 1.00; // 🛑 VALOR FIXO TEMPORÁRIO PARA O TESTE DE R$ 1,00
+//  return 1.00; // 🛑 VALOR FIXO TEMPORÁRIO PARA O TESTE DE R$ 1,00
 //}
 
 // ROTA: PROCESSAR PAGAMENTO COM CARTÃO
@@ -295,25 +295,6 @@ app.get('/api/quartos-disponiveis', async (req, res) => {
         res.status(500).json({ erro: 'Erro interno ao buscar quartos.' });
     }
 });
-
-// Rota para alternar o status de manutenção do quarto
-app.post('/api/admin/quarto/manutencao', verificarTokenAdmin, async (req, res) => {
-    const { numeroQuarto, emManutencao } = req.body;
-    try {
-        // Atualiza a tabela de quartos no seu banco de dados PostgreSQL
-        await pool.query(
-            'UPDATE quartos SET em_manutencao = $1 WHERE numero = $2',
-            [emManutencao, numeroQuarto]
-        );
-        res.json({ sucesso: true, mensagem: 'Status de manutenção atualizado com sucesso!' });
-    } catch (error) {
-        console.error('Erro ao atualizar manutenção:', error);
-        res.status(500).json({ erro: 'Erro interno ao atualizar quarto.' });
-    }
-});
-
-
-
 // NOVA ROTA: O SITE PERGUNTA SE O PIX FOI PAGO
 app.get('/api/reservas/:id/status', async (req, res) => {
     try {
@@ -473,10 +454,10 @@ app.post('/api/webhook/mercadopago', async (req, res) => {
     try {
         // O Mercado Pago às vezes manda o ID em lugares diferentes da carta
         const pagamentoId = req.body?.data?.id || req.query?.['data.id'] || req.query?.id;
-        
+
         if (pagamentoId) {
             const pagamentoInfo = await payment.get({ id: pagamentoId });
-            
+
             if (pagamentoInfo.status === 'approved') {
                 const result = await pool.query(`
                     UPDATE reservas 
@@ -489,12 +470,12 @@ app.post('/api/webhook/mercadopago', async (req, res) => {
                     const reserva = result.rows[0];
                     // Busca nome, email e TELEFONE para o WhatsApp!
                     const clienteRes = await pool.query('SELECT nome, email, telefone FROM clientes WHERE id = $1', [reserva.cliente_id]);
-                    
+
                     if (clienteRes.rows.length > 0) {
                         const cliente = clienteRes.rows[0];
-                        const checkinBR = new Date(reserva.data_checkin).toLocaleDateString('pt-BR', {timeZone: 'UTC'});
+                        const checkinBR = new Date(reserva.data_checkin).toLocaleDateString('pt-BR', { timeZone: 'UTC' });
                         const numQ = String(reserva.quarto_id).padStart(2, '0');
-                        
+
                         // 1. ENVIA E-MAIL PARA O CLIENTE
                         if (cliente.email && cliente.email.includes('@') && !cliente.email.includes('balcao')) {
                             const htmlConfirmacao = `
@@ -514,7 +495,7 @@ app.post('/api/webhook/mercadopago', async (req, res) => {
                                     <p>Falta pouco para você relaxar! <strong>Um dia antes da sua chegada</strong>, enviaremos outro e-mail com as instruções de acesso e a senha do Wi-Fi.</p>
                                 </div>
                             </div>`;
-                            
+
                             await enviarEmailBrevo(cliente.email, cliente.nome, 'Reserva Confirmada com Sucesso! 🎉', htmlConfirmacao);
                         }
 
@@ -524,9 +505,9 @@ app.post('/api/webhook/mercadopago', async (req, res) => {
                             if (telLimpo.length >= 10) {
                                 const telefoneFormatado = telLimpo.startsWith('55') ? telLimpo : `55${telLimpo}`;
                                 const textoConfirmacaoWpp = `✅ *Pagamento Confirmado!*\n\nOlá, *${cliente.nome}*! O seu pagamento foi processado com sucesso. A sua reserva na *Hospedaria Central* está 100% garantida!\n\n🛏️ Quarto: 0${numQ}\n📅 Entrada: ${checkinBR} (a partir das 14h)\n📍 Endereço: Em frente ao Hospital Sylvio de Mello, Morrinhos-GO.\n\n🔐 *Atenção:* As instruções de acesso e a senha do Wi-Fi serão enviadas para você 1 dia antes do seu check-in!\n\n📞 Dúvidas? Fale conosco por aqui!`;
-                                
+
                                 const urlWppCliente = `https://api.callmebot.com/whatsapp.php?phone=${telefoneFormatado}&text=${encodeURIComponent(textoConfirmacaoWpp)}&apikey=${process.env.CALLMEBOT_APIKEY}`;
-                                https.get(urlWppCliente, (resWpp) => { resWpp.on('data', () => {}); }).on('error', () => {});
+                                https.get(urlWppCliente, (resWpp) => { resWpp.on('data', () => { }); }).on('error', () => { });
                             }
                         }
                     }
@@ -547,6 +528,22 @@ if (!JWT_SECRET) {
     console.error("❌ ERRO FATAL: a variável de ambiente JWT_SECRET não foi definida. Configure-a no seu .env antes de iniciar o servidor.");
     process.exit(1);
 }
+
+// Rota para alternar o status de manutenção do quarto (usando a pulseira VIP correta)
+app.post('/api/admin/quarto/manutencao', verificarPulseiraVIP, async (req, res) => {
+    const { numeroQuarto, emManutencao } = req.body;
+    try {
+        await pool.query(
+            'UPDATE quartos SET em_manutencao = $1 WHERE numero = $2',
+            [emManutencao, numeroQuarto]
+        );
+        res.json({ sucesso: true, mensagem: 'Status de manutenção atualizado com sucesso!' });
+    } catch (error) {
+        console.error('Erro ao atualizar manutenção:', error);
+        res.status(500).json({ erro: 'Erro interno ao atualizar quarto.' });
+    }
+});
+
 
 app.post('/api/admin/login', async (req, res) => {
     const { usuario, senha } = req.body;
