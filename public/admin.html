@@ -153,6 +153,15 @@
             font-weight: bold !important;
         }
 
+        .flatpickr-day.dia-manutencao {
+            background-color: #fff3cd !important;
+            color: #856404 !important;
+            text-decoration: line-through !important;
+            border-color: #ffe69c !important;
+            cursor: not-allowed !important;
+            font-weight: bold !important;
+        }
+
         .calendar-legend {
             display: flex;
             justify-content: center;
@@ -173,6 +182,14 @@
             height: 12px;
             background: #f8d7da;
             border: 1px solid #d9534f;
+            border-radius: 3px;
+        }
+
+        .legend-box-yellow {
+            width: 12px;
+            height: 12px;
+            background: #fff3cd;
+            border: 1px solid #856404;
             border-radius: 3px;
         }
 
@@ -371,6 +388,9 @@
                 <div class="legend-item">
                     <div class="legend-box-red"></div> Ocupado / Riscado
                 </div>
+                <div class="legend-item">
+                    <div class="legend-box-yellow"></div> Em Manutenção
+                </div>
             </div>
         </div>
 
@@ -546,6 +566,7 @@
         }
 
         let checkinBloqueio = '', checkoutBloqueio = '', dataObj1 = null, dataObj2 = null;
+        let manutencoesCache = []; // guarda a última lista de manutenções buscada, pra pintar os calendários sem refazer a busca 4x
         let dashStart = '';
         let dashEnd = '';
 
@@ -776,11 +797,11 @@
         });
 
         // Modificamos a chamada para ela rodar logo que a página abrir
-        function carregarTudo() {
+        async function carregarTudo() {
             carregarDashboard();
             carregarGraficoFaturamento();
             carregarAgenda();
-            carregarManutencoes();
+            await carregarManutencoes(); // espera terminar, pra já ter os dados na hora de pintar os calendários
             [1, 2, 3, 4].forEach(quartoId => carregarCalendarioQuarto(quartoId));
         }
 
@@ -801,20 +822,36 @@
                         to: r.data_checkout.split('T')[0]
                     }));
                 }
+
+                // Filtra do cache só as manutenções deste quarto específico
+                const datasManutencao = manutencoesCache
+                    .filter(m => String(m.quarto_id) === String(quartoId))
+                    .map(m => ({
+                        from: m.data_inicio.split('T')[0],
+                        to: m.data_fim.split('T')[0]
+                    }));
+
                 elem.innerHTML = '';
                 flatpickr(elem, {
                     inline: true,
                     locale: "pt",
                     minDate: "today",
                     defaultDate: "today",
-                    disable: datasOcupadas,
+                    disable: [...datasOcupadas, ...datasManutencao],
                     dateFormat: "Y-m-d",
                     onDayCreate: function (dObj, dStr, fp, dayElem) {
                         const dataFormatada = dayElem.dateObj.toISOString().split('T')[0];
                         const eReserva = datasOcupadas.some(faixa => {
                             return dataFormatada >= faixa.from && dataFormatada < faixa.to;
                         });
-                        if (eReserva) dayElem.classList.add("dia-ocupado");
+                        const eManutencao = datasManutencao.some(faixa => {
+                            return dataFormatada >= faixa.from && dataFormatada <= faixa.to;
+                        });
+                        if (eReserva) {
+                            dayElem.classList.add("dia-ocupado");
+                        } else if (eManutencao) {
+                            dayElem.classList.add("dia-manutencao");
+                        }
                     }
                 });
             } catch (e) { console.error(`Erro ao carregar calendário ${quartoId}:`, e); }
@@ -1192,7 +1229,8 @@
                 const data = await resp.json();
                 if (resp.ok) {
                     fecharModalManutencao();
-                    carregarManutencoes();
+                    await carregarManutencoes();
+                    [1, 2, 3, 4].forEach(quartoId => carregarCalendarioQuarto(quartoId));
                 } else {
                     alert('Erro: ' + (data.erro || 'Não foi possível salvar a manutenção.'));
                 }
@@ -1209,12 +1247,13 @@
                 });
                 if (!resp.ok) throw new Error('Falha ao buscar');
                 const data = await resp.json();
+                manutencoesCache = data.manutencoes || []; // guarda pra pintar os calendários de amarelo
                 container.innerHTML = '';
-                if (!data.manutencoes || data.manutencoes.length === 0) {
+                if (manutencoesCache.length === 0) {
                     container.innerHTML = '<p style="text-align: center; color: #777; padding: 20px;">Nenhum quarto em manutenção no momento.</p>';
                     return;
                 }
-                data.manutencoes.forEach(m => {
+                manutencoesCache.forEach(m => {
                     const numQuarto = String(m.numero_quarto).padStart(2, '0');
                     const inicioBR = formatarDataBR(m.data_inicio);
                     const fimBR = formatarDataBR(m.data_fim);
@@ -1248,7 +1287,8 @@
                     });
                     const data = await resp.json();
                     if (resp.ok) {
-                        carregarManutencoes();
+                        await carregarManutencoes();
+                        [1, 2, 3, 4].forEach(quartoId => carregarCalendarioQuarto(quartoId));
                     } else {
                         alert('Erro: ' + (data.erro || 'Não foi possível remover.'));
                     }
