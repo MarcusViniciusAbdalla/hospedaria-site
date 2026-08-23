@@ -81,17 +81,16 @@ const pool = new Pool({
 // ATUALIZA A PRANCHETA DO BANCO DE DADOS E CRIA OS USUÁRIOS ADMIN
 pool.query(`
     ALTER TABLE quartos ADD COLUMN IF NOT EXISTS em_manutencao BOOLEAN NOT NULL DEFAULT FALSE;
+    
     ALTER TABLE reservas DROP CONSTRAINT IF EXISTS reservas_status_pagamento_check;
     ALTER TABLE reservas ADD CONSTRAINT reservas_status_pagamento_check
-    CHECK (status_pagamento IN ('pendente', 'pago', 'cancelado', 'bloqueado_b...'));
+    CHECK (status_pagamento IN ('pendente', 'pago', 'cancelado', 'bloqueado_balcao', 'concluido'));
 
     CREATE TABLE IF NOT EXISTS administradores (
         id SERIAL PRIMARY KEY,
         usuario VARCHAR(50) UNIQUE NOT NULL,
         senha_hash VARCHAR(255) NOT NULL
     );
-
-    ALTER TABLE quartos ADD COLUMN IF NOT EXISTS em_manutencao BOOLEAN NOT NULL DEFAULT FALSE;
 `).then(async () => {
     console.log("Prancheta do banco de dados atualizada!");
 
