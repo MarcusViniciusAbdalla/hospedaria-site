@@ -1099,86 +1099,8 @@
             }
         }
 
-        // ==========================================
-        // 📊 RELATÓRIOS (EXPORTAR PARA EXCEL/CSV)
-        // ==========================================
-
-        // Função auxiliar que cria o arquivo e força o download
-        function baixarArquivoCSV(conteudo, nomeArquivo) {
-            // O "\uFEFF" mágico garante que o Excel do Windows não quebre a acentuação do português!
-            const blob = new Blob(["\uFEFF" + conteudo], { type: 'text/csv;charset=utf-8;' });
-            const link = document.createElement("a");
-            const url = URL.createObjectURL(blob);
-
-            link.setAttribute("href", url);
-            link.setAttribute("download", nomeArquivo);
-            link.style.visibility = 'hidden';
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
-        }
-
-        // 1. Exportar Leads (Lista de Clientes) - Nome igual ao seu onclick
-        async function exportarLeadsCSV() {
-            try {
-                const token = localStorage.getItem('tokenAdmin');
-                const response = await fetch('/api/admin/exportar-leads', {
-                    headers: { 'Authorization': `Bearer ${token}` }
-                });
-
-                if (!response.ok) throw new Error('Erro ao buscar leads');
-                const data = await response.json();
-
-                if (!data.leads || data.leads.length === 0) {
-                    alert('Nenhum lead encontrado.');
-                    return;
-                }
-
-                let csvContent = "Nome,Telefone,Email,Total Estadias,Total Gasto (R$)\n";
-
-                data.leads.forEach(lead => {
-                    const valorGasto = Number(lead.total_gasto || 0).toFixed(2).replace('.', ',');
-                    csvContent += `"${lead.nome}","${lead.telefone}","${lead.email}",${lead.total_estadias},"${valorGasto}"\n`;
-                });
-
-                baixarArquivoCSV(csvContent, 'Hospedaria_Lista_Clientes.csv');
-            } catch (error) {
-                console.error(error);
-                alert('Erro ao exportar lista de clientes.');
-            }
-        }
-
-        // 2. Exportar Faturamento - Nome igual ao seu onclick
-        async function exportarFaturamentoCSV() {
-            try {
-                const token = localStorage.getItem('tokenAdmin');
-                const response = await fetch('/api/admin/exportar-faturamento', {
-                    headers: { 'Authorization': `Bearer ${token}` }
-                });
-
-                if (!response.ok) throw new Error('Erro ao buscar faturamento');
-                const data = await response.json();
-
-                if (!data.faturamento || data.faturamento.length === 0) {
-                    alert('Nenhum dado financeiro encontrado.');
-                    return;
-                }
-
-                let csvContent = "ID Reserva,Entrada,Saída,Quarto,Cliente,Valor Total (R$),Status\n";
-
-                data.faturamento.forEach(item => {
-                    const valor = Number(item.valor_total || 0).toFixed(2).replace('.', ',');
-                    csvContent += `${item.id},"${item.data_entrada}","${item.data_saida}",Quarto 0${item.numero_quarto},"${item.cliente}","${valor}","${item.status_pagamento.toUpperCase()}"\n`;
-                });
-
-                baixarArquivoCSV(csvContent, 'Hospedaria_Faturamento.csv');
-            } catch (error) {
-                console.error(error);
-                alert('Erro ao baixar faturamento.');
-            }
-        }
         async function toggleManutencao(numeroQuarto) {
-            const token = localStorage.getItem('tokenAdmin') || localStorage.getItem('token') || localStorage.getItem('jwt');
+            const token = localStorage.getItem('tokenHospedaria');
             const motivo = prompt("Deseja colocar este quarto em manutenção/limpeza? Digite o motivo (ou deixe em branco):");
 
             if (motivo === null) return; // Se cancelar
