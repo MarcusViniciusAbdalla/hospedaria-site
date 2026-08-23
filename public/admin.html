@@ -274,7 +274,7 @@
                     <i class="fa-solid fa-file-csv"></i> Exportar DRE (CSV)
                 </button>
                 <!-- BOTÃO DE MANUTENÇÃO / BLOQUEIO DE QUARTO -->
-                <button class="btn-manutencao" onclick="abrirPromptManutencao()"
+                <button class="btn-manutencao" onclick="abrirModalManutencao()"
                     style="background: #e67e22; color: white; border: none; padding: 8px 16px; border-radius: 6px; cursor: pointer; font-size: 12px; font-weight: 700;">
                     <i class="fas fa-tools"></i> Gerenciar Manutenção
                 </button>
@@ -422,6 +422,14 @@
             </form>
         </div>
 
+        <!-- LISTA DE QUARTOS EM MANUTENÇÃO -->
+        <div class="admin-card">
+            <h3><i class="fas fa-tools" style="color: #e67e22;"></i> Quartos em Manutenção</h3>
+            <div id="lista-manutencoes" class="reservation-list">
+                <p style="text-align: center; color: #777;">Carregando...</p>
+            </div>
+        </div>
+
         <!-- LISTA DE OCUPAÇÕES -->
         <div class="admin-card">
             <h3><i class="fa-solid fa-list-check"></i> Detalhes e Status das Reservas</h3>
@@ -485,6 +493,42 @@
                         style="padding: 10px 15px; border: 1px solid #ccc; background: #eee; border-radius: 6px; cursor: pointer;">Cancelar</button>
                     <button type="submit"
                         style="padding: 10px 15px; border: none; background: #28a745; color: white; font-weight: bold; border-radius: 6px; cursor: pointer;">Salvar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div id="modal-manutencao" class="modal-overlay-admin" style="display: none;">
+        <div class="modal-card-admin">
+            <h3 style="font-family: 'Playfair Display', serif; color: var(--brown-dark); margin-bottom: 15px;">
+                <i class="fas fa-tools" style="color: #e67e22;"></i> Colocar Quarto em Manutenção
+            </h3>
+            <form id="form-manutencao">
+                <div style="margin-bottom: 12px;">
+                    <label style="font-size: 12px; font-weight: bold; color: #444;">Quarto:</label>
+                    <select id="manutencao-quarto" required
+                        style="width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 6px; margin-top: 4px;">
+                        <option value="1">Quarto 01 - Padrão</option>
+                        <option value="2">Quarto 02 - Padrão</option>
+                        <option value="3">Quarto 03 - Suíte Master</option>
+                        <option value="4">Quarto 04 - Padrão</option>
+                    </select>
+                </div>
+                <div style="margin-bottom: 12px;">
+                    <label style="font-size: 12px; font-weight: bold; color: #444;">Período de Manutenção:</label>
+                    <input type="text" id="manutencao-datas" placeholder="Data de início e fim" readonly required
+                        style="width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 6px; margin-top: 4px;">
+                </div>
+                <div style="margin-bottom: 20px;">
+                    <label style="font-size: 12px; font-weight: bold; color: #444;">Motivo (opcional):</label>
+                    <input type="text" id="manutencao-motivo" placeholder="Ex: troca do ar-condicionado"
+                        style="width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 6px; margin-top: 4px;">
+                </div>
+                <div style="display: flex; gap: 10px; justify-content: flex-end;">
+                    <button type="button" onclick="fecharModalManutencao()"
+                        style="padding: 10px 15px; border: 1px solid #ccc; background: #eee; border-radius: 6px; cursor: pointer;">Cancelar</button>
+                    <button type="submit"
+                        style="padding: 10px 15px; border: none; background: #e67e22; color: white; font-weight: bold; border-radius: 6px; cursor: pointer;">Salvar Manutenção</button>
                 </div>
             </form>
         </div>
@@ -736,6 +780,7 @@
             carregarDashboard();
             carregarGraficoFaturamento();
             carregarAgenda();
+            carregarManutencoes();
             [1, 2, 3, 4].forEach(quartoId => carregarCalendarioQuarto(quartoId));
         }
 
@@ -1099,38 +1144,117 @@
             }
         }
 
-        async function toggleManutencao(numeroQuarto) {
-            const token = localStorage.getItem('tokenHospedaria');
-            const motivo = prompt("Deseja colocar este quarto em manutenção/limpeza? Digite o motivo (ou deixe em branco):");
+        let manutDataInicio = '', manutDataFim = '';
 
-            if (motivo === null) return; // Se cancelar
+        flatpickr("#manutencao-datas", {
+            mode: "range",
+            locale: "pt",
+            dateFormat: "Y-m-d",
+            onChange: function (selectedDates) {
+                if (selectedDates.length === 2) {
+                    manutDataInicio = selectedDates[0].toISOString().split('T')[0];
+                    manutDataFim = selectedDates[1].toISOString().split('T')[0];
+                } else {
+                    manutDataInicio = ''; manutDataFim = '';
+                }
+            }
+        });
+
+        function abrirModalManutencao() {
+            document.getElementById('form-manutencao').reset();
+            document.getElementById('manutencao-datas').value = '';
+            manutDataInicio = ''; manutDataFim = '';
+            document.getElementById('modal-manutencao').style.display = 'flex';
+        }
+
+        function fecharModalManutencao() {
+            document.getElementById('modal-manutencao').style.display = 'none';
+        }
+
+        document.getElementById('form-manutencao').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            if (!manutDataInicio || !manutDataFim) {
+                alert('Selecione o período de manutenção no calendário.');
+                return;
+            }
+            const quartoId = document.getElementById('manutencao-quarto').value;
+            const motivo = document.getElementById('manutencao-motivo').value.trim();
 
             try {
-                const response = await fetch('/api/admin/quarto/manutencao', {
+                const resp = await fetch('/api/admin/quarto/manutencao', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
-                        'Authorization': `Bearer ${token}`
+                        'Authorization': 'Bearer ' + localStorage.getItem('tokenHospedaria')
                     },
-                    body: JSON.stringify({ numeroQuarto, emManutencao: true })
+                    body: JSON.stringify({ quartoId, dataInicio: manutDataInicio, dataFim: manutDataFim, motivo })
                 });
-
-                const data = await response.json();
-                if (response.ok) {
-                    alert('Quarto marcado como em manutenção! Ele não aparecerá para novas reservas.');
-                    location.reload(); // Recarrega o painel para atualizar o status
+                const data = await resp.json();
+                if (resp.ok) {
+                    fecharModalManutencao();
+                    carregarManutencoes();
                 } else {
-                    alert('Erro: ' + (data.erro || 'Não foi possível alterar o status.'));
+                    alert('Erro: ' + (data.erro || 'Não foi possível salvar a manutenção.'));
                 }
-            } catch (error) {
-                console.error(error);
-                alert('Erro de conexão ao tentar atualizar o quarto.');
+            } catch (err) {
+                alert('Erro de conexão ao salvar a manutenção.');
+            }
+        });
+
+        async function carregarManutencoes() {
+            const container = document.getElementById('lista-manutencoes');
+            try {
+                const resp = await fetch('/api/admin/manutencoes', {
+                    headers: { 'Authorization': 'Bearer ' + localStorage.getItem('tokenHospedaria') }
+                });
+                if (!resp.ok) throw new Error('Falha ao buscar');
+                const data = await resp.json();
+                container.innerHTML = '';
+                if (!data.manutencoes || data.manutencoes.length === 0) {
+                    container.innerHTML = '<p style="text-align: center; color: #777; padding: 20px;">Nenhum quarto em manutenção no momento.</p>';
+                    return;
+                }
+                data.manutencoes.forEach(m => {
+                    const numQuarto = String(m.numero_quarto).padStart(2, '0');
+                    const inicioBR = formatarDataBR(m.data_inicio);
+                    const fimBR = formatarDataBR(m.data_fim);
+                    const motivo = escapeHTML(m.motivo || 'Sem motivo informado');
+                    container.innerHTML += `
+                        <div class="reservation-item" style="display:flex; justify-content:space-between; align-items:center; padding:15px; border-bottom:1px solid #eee; flex-wrap:wrap; gap:10px; background:#fff; margin-bottom:10px; border-radius:8px; border:1px solid #e0e0e0;">
+                            <div class="reservation-info">
+                                <div style="font-size:16px; margin-bottom:4px;"><strong>Quarto ${numQuarto}</strong></div>
+                                <div style="color:#555; font-size:13px; margin-bottom:2px;"><i class="fa-regular fa-calendar" style="color:#e67e22;"></i> <strong>Período:</strong> ${inicioBR} até ${fimBR}</div>
+                                <div style="color:#666; font-size:13px;"><i class="fas fa-comment-dots"></i> <strong>Motivo:</strong> ${motivo}</div>
+                            </div>
+                            <div style="display:flex; gap:8px;">
+                                <button class="btn-status-cancel" onclick="removerManutencao(${m.id})">
+                                <i class="fa-solid fa-xmark"></i> Retirar
+                                </button>
+                            </div>
+                        </div>
+                    `;
+                });
+            } catch (err) {
+                container.innerHTML = '<p style="color: red; text-align: center;">Erro ao carregar manutenções.</p>';
             }
         }
-        function abrirPromptManutencao() {
-            const num = prompt("Digite o número do quarto que deseja alterar o status de manutenção (Ex: 1, 2, 3...):");
-            if (num) {
-                toggleManutencao(num.trim());
+
+        async function removerManutencao(id) {
+            if (confirm('Remover este período de manutenção? O quarto volta a ficar disponível para essas datas.')) {
+                try {
+                    const resp = await fetch(`/api/admin/quarto/manutencao/${id}`, {
+                        method: 'DELETE',
+                        headers: { 'Authorization': 'Bearer ' + localStorage.getItem('tokenHospedaria') }
+                    });
+                    const data = await resp.json();
+                    if (resp.ok) {
+                        carregarManutencoes();
+                    } else {
+                        alert('Erro: ' + (data.erro || 'Não foi possível remover.'));
+                    }
+                } catch (err) {
+                    alert('Erro de conexão ao remover a manutenção.');
+                }
             }
         }
 

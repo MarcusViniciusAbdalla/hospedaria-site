@@ -14,11 +14,11 @@ app.use(helmet({
             fontSrc: ["'self'", "https://fonts.gstatic.com", "https://cdnjs.cloudflare.com", "data:"],
             imgSrc: ["'self'", "data:", "https://images.unsplash.com"],
             connectSrc: [
-                "'self'",
-                "https://sdk.mercadopago.com",
-                "https://api.mercadopago.com",
-                "https://*.mercadopago.com",
-                "https://*.mercadolibre.com",
+                "'self'", 
+                "https://sdk.mercadopago.com", 
+                "https://api.mercadopago.com", 
+                "https://*.mercadopago.com", 
+                "https://*.mercadolibre.com", 
                 "https://cdn.jsdelivr.net"
             ],
             frameSrc: ["https://www.google.com"],
@@ -81,10 +81,19 @@ const pool = new Pool({
 // ATUALIZA A PRANCHETA DO BANCO DE DADOS E CRIA OS USUÁRIOS ADMIN
 pool.query(`
     ALTER TABLE reservas DROP CONSTRAINT IF EXISTS reservas_status_pagamento_check;
-    ALTER TABLE reservas ADD CONSTRAINT reservas_status_pagamento_check
+    ALTER TABLE reservas ADD CONSTRAINT reservas_status_pagamento_check 
     CHECK (status_pagamento IN ('pendente', 'pago', 'cancelado', 'bloqueado_balcao', 'concluido', 'checkin', 'checkout'));
 
     ALTER TABLE quartos ADD COLUMN IF NOT EXISTS em_manutencao BOOLEAN DEFAULT FALSE;
+
+    CREATE TABLE IF NOT EXISTS manutencoes_quarto (
+        id SERIAL PRIMARY KEY,
+        quarto_id INTEGER NOT NULL REFERENCES quartos(id),
+        data_inicio DATE NOT NULL,
+        data_fim DATE NOT NULL,
+        motivo TEXT,
+        criado_em TIMESTAMP DEFAULT NOW()
+    );
 
     CREATE TABLE IF NOT EXISTS administradores (
         id SERIAL PRIMARY KEY,
@@ -267,25 +276,23 @@ app.get('/api/quartos-disponiveis', async (req, res) => {
         const numHospedes = parseInt(adults) || 1;
 
         const query = `
-    SELECT q.* 
-    FROM quartos q
-    WHERE q.ativo = TRUE
-    AND q.em_manutencao = FALSE
-    AND q.capacidade_maxima >= $1
-    AND q.id NOT IN (
-        SELECT quarto_id 
-        FROM reservas 
-        WHERE status_pagamento IN (
-            'pago',
-            'bloqueado_balcao',
-            'concluido',
-            'checkin'
-        )
-        AND (data_checkin, data_checkout) 
-            OVERLAPS ($2::date, $3::date)
-    )
-    ORDER BY q.id ASC;
-`;
+            SELECT q.* 
+            FROM quartos q
+            WHERE q.ativo = TRUE 
+            AND q.capacidade_maxima >= $1
+            AND NOT EXISTS (
+                SELECT 1 FROM manutencoes_quarto m
+                WHERE m.quarto_id = q.id
+                AND (m.data_inicio, m.data_fim) OVERLAPS ($2::date, $3::date)
+            )
+            AND q.id NOT IN (
+                SELECT quarto_id 
+                FROM reservas 
+                WHERE status_pagamento IN ('pago', 'bloqueado_balcao', 'concluido', 'checkin')
+                AND (data_checkin, data_checkout) OVERLAPS ($2::date, $3::date)
+            )
+            ORDER BY q.id ASC;
+        `;
 
         const result = await pool.query(query, [numHospedes, start, end]);
 
@@ -545,18 +552,53 @@ if (!JWT_SECRET) {
     process.exit(1);
 }
 
-// Rota para alternar o status de manutenção do quarto
+// Lista todos os períodos de manutenção ainda válidos (que não terminaram no passado)
+app.get('/api/admin/manutencoes', verificarPulseiraVIP, async (req, res) => {
+    try {
+        const result = await pool.query(`
+            SELECT m.id, m.quarto_id, q.numero_quarto, m.data_inicio, m.data_fim, m.motivo
+            FROM manutencoes_quarto m
+            JOIN quartos q ON q.id = m.quarto_id
+            WHERE m.data_fim >= CURRENT_DATE
+            ORDER BY m.data_inicio ASC
+        `);
+        res.json({ manutencoes: result.rows });
+    } catch (error) {
+        console.error('Erro ao listar manutenções:', error);
+        res.status(500).json({ erro: 'Erro ao buscar períodos de manutenção.' });
+    }
+});
+
+// Cadastra um novo período de manutenção para um quarto
 app.post('/api/admin/quarto/manutencao', verificarPulseiraVIP, async (req, res) => {
-    const { numeroQuarto, emManutencao } = req.body;
+    const { quartoId, dataInicio, dataFim, motivo } = req.body;
+
+    if (!quartoId || !dataInicio || !dataFim) {
+        return res.status(400).json({ erro: 'Selecione o quarto e o período de manutenção.' });
+    }
+
     try {
         await pool.query(
-            'UPDATE quartos SET em_manutencao = $1 WHERE numero_quarto = $2',
-            [emManutencao, numeroQuarto]
+            `INSERT INTO manutencoes_quarto (quarto_id, data_inicio, data_fim, motivo)
+             VALUES ($1, $2::date, $3::date, $4)`,
+            [quartoId, dataInicio, dataFim, sanitizarTexto(motivo || '')]
         );
-        res.json({ sucesso: true, mensagem: 'Status de manutenção atualizado com sucesso!' });
+        res.json({ sucesso: true, mensagem: 'Período de manutenção cadastrado com sucesso!' });
     } catch (error) {
-        console.error('Erro ao atualizar manutenção:', error);
-        res.status(500).json({ erro: 'Erro interno ao atualizar quarto.' });
+        console.error('Erro ao cadastrar manutenção:', error);
+        res.status(500).json({ erro: 'Erro interno ao cadastrar manutenção.' });
+    }
+});
+
+// Remove um período de manutenção (o quarto volta a ficar disponível nessas datas)
+app.delete('/api/admin/quarto/manutencao/:id', verificarPulseiraVIP, async (req, res) => {
+    const { id } = req.params;
+    try {
+        await pool.query('DELETE FROM manutencoes_quarto WHERE id = $1', [id]);
+        res.json({ sucesso: true, mensagem: 'Período de manutenção removido.' });
+    } catch (error) {
+        console.error('Erro ao remover manutenção:', error);
+        res.status(500).json({ erro: 'Erro interno ao remover manutenção.' });
     }
 });
 
