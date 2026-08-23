@@ -539,7 +539,7 @@ if (!JWT_SECRET) {
     process.exit(1);
 }
 
-// Rota para alternar o status de manutenção do quarto (usando a pulseira VIP correta)
+// Rota para alternar o status de manutenção do quarto
 app.post('/api/admin/quarto/manutencao', verificarPulseiraVIP, async (req, res) => {
     const { numeroQuarto, emManutencao } = req.body;
     try {
