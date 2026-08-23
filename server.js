@@ -82,7 +82,9 @@ const pool = new Pool({
 pool.query(`
     ALTER TABLE reservas DROP CONSTRAINT IF EXISTS reservas_status_pagamento_check;
     ALTER TABLE reservas ADD CONSTRAINT reservas_status_pagamento_check
-    CHECK (status_pagamento IN ('pendente', 'pago', 'cancelado', 'bloqueado_balcao', 'concluido'));
+    CHECK (status_pagamento IN ('pendente', 'pago', 'cancelado', 'bloqueado_balcao', 'concluido', 'checkin', 'checkout'));
+
+    ALTER TABLE quartos ADD COLUMN IF NOT EXISTS em_manutencao BOOLEAN DEFAULT FALSE;
 
     CREATE TABLE IF NOT EXISTS administradores (
         id SERIAL PRIMARY KEY,
