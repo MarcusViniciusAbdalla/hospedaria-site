@@ -1068,7 +1068,7 @@ setInterval(async () => {
             console.log(`[LIMPEZA AUTOMÁTICA] Cancelou ${limpeza.rowCount} reserva(s) não paga(s).`);
         }
     } catch (err) { }
-}, 5 * 60 * 1000);
+}, 5 * 60 * 1000).unref(); // unref: nao mantem o processo vivo sozinho (importante pros testes automatizados)
 
 app.post('/api/admin/reservas/:id/estender', verificarPulseiraVIP, async (req, res) => {
     const { id } = req.params;
@@ -1252,4 +1252,12 @@ cron.schedule('0 13 * * *', async () => {
 
 
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => console.log(`Servidor rodando na porta ${PORT}`));
+
+// So sobe o servidor de verdade quando o arquivo roda direto (node server.js / npm start).
+// Quando os testes automatizados dao require('./server'), isso fica de fora,
+// e usam o app exportado abaixo sem ocupar a porta.
+if (require.main === module) {
+    app.listen(PORT, () => console.log(`Servidor rodando na porta ${PORT}`));
+}
+
+module.exports = { app, calcularDiaria };

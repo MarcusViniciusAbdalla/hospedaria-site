@@ -166,6 +166,16 @@ O servidor sobe por padrão na porta `3000` (configurável via `PORT`).
 
 ---
 
+## Testes
+
+```bash
+npm test
+```
+
+Cobre hoje os pontos mais sensíveis da aplicação: a rota de login administrativo (`/api/admin/login`) e o cálculo de preço das diárias (função pura `calcularDiaria` e as rotas `/api/quartos-disponiveis` e `/api/admin/calcular-diaria`, que dependem dela). O banco de dados é mockado (`jest.mock('pg')`) — os testes não tocam no Postgres real e rodam em segundos.
+
+---
+
 ## Variáveis de ambiente
 
 | Variável | Descrição |
@@ -196,7 +206,7 @@ Itens identificados para próximas iterações:
 - [x] Rate limiting dedicado na rota de login
 - [x] Centralizar a tabela de preços por quarto em um único lugar
 - [ ] Modularizar `server.js` em arquivos por domínio (reservas, admin, pagamento)
-- [ ] Testes automatizados
+- [ ] Testes automatizados (começado: login e cálculo de preço já cobertos, falta o restante das rotas)
 - [x] SEO básico (meta description, Open Graph, sitemap.xml)
 
 ---
