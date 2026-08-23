@@ -555,6 +555,33 @@
         </div>
     </div>
 
+    <!-- MODAL DE AVISO (substitui o alert() feio do navegador) -->
+    <div id="modal-alerta" class="modal-overlay-admin" style="display: none;">
+        <div class="modal-card-admin" style="text-align: center;">
+            <div id="alerta-icone" style="font-size: 40px; margin-bottom: 12px;">
+                <i class="fa-solid fa-circle-info" style="color: #007bff;"></i>
+            </div>
+            <p id="alerta-mensagem" style="font-size: 15px; color: #333; margin-bottom: 22px; line-height: 1.5;"></p>
+            <button onclick="fecharAlerta()"
+                style="padding: 10px 34px; border: none; background: var(--terracotta); color: white; font-weight: bold; border-radius: 6px; cursor: pointer;">OK</button>
+        </div>
+    </div>
+
+    <!-- MODAL DE CONFIRMAÇÃO (substitui o confirm() feio do navegador) -->
+    <div id="modal-confirmar" class="modal-overlay-admin" style="display: none;">
+        <div class="modal-card-admin" style="text-align: center;">
+            <div style="font-size: 36px; margin-bottom: 12px; color: #e67e22;">
+                <i class="fa-solid fa-circle-question"></i>
+            </div>
+            <p id="confirmar-mensagem" style="font-size: 15px; color: #333; margin-bottom: 22px; line-height: 1.5;"></p>
+            <div style="display: flex; gap: 10px; justify-content: center;">
+                <button id="btn-confirmar-nao"
+                    style="padding: 10px 20px; border: 1px solid #ccc; background: #eee; color: #555; border-radius: 6px; cursor: pointer; font-weight: bold;">Cancelar</button>
+                <button id="btn-confirmar-sim" class="btn-status-confirm" style="padding: 10px 20px;">Confirmar</button>
+            </div>
+        </div>
+    </div>
+
     <footer>
         <p>&copy; 2026 Hospedaria Central Morrinhos - Painel Restrito</p>
     </footer>
@@ -564,6 +591,50 @@
         function sairDoPainel() {
             localStorage.removeItem('tokenHospedaria'); // Joga a pulseira no lixo
             window.location.href = '/login.html'; // Volta pra porta da rua
+        }
+
+        // ==========================================
+        // 🔔 AVISO E CONFIRMAÇÃO (substituem alert()/confirm() do navegador)
+        // ==========================================
+
+        // Mostra um aviso simples com botão OK. tipo muda o ícone: 'sucesso', 'erro', 'aviso' ou 'info' (padrão)
+        function mostrarAlerta(mensagem, tipo = 'info') {
+            const icones = {
+                sucesso: '<i class="fa-solid fa-circle-check" style="color: #28a745;"></i>',
+                erro: '<i class="fa-solid fa-circle-xmark" style="color: #d9534f;"></i>',
+                aviso: '<i class="fa-solid fa-triangle-exclamation" style="color: #e67e22;"></i>',
+                info: '<i class="fa-solid fa-circle-info" style="color: #007bff;"></i>'
+            };
+            document.getElementById('alerta-icone').innerHTML = icones[tipo] || icones.info;
+            document.getElementById('alerta-mensagem').textContent = mensagem;
+            document.getElementById('modal-alerta').style.display = 'flex';
+        }
+
+        function fecharAlerta() {
+            document.getElementById('modal-alerta').style.display = 'none';
+        }
+
+        // Substitui o confirm(). Use assim: if (await confirmarAcao("...")) { ... }
+        // perigo=true deixa o botão de confirmar vermelho (pra ações tipo cancelar/excluir)
+        function confirmarAcao(mensagem, perigo = false) {
+            return new Promise((resolve) => {
+                document.getElementById('confirmar-mensagem').textContent = mensagem;
+                const btnSim = document.getElementById('btn-confirmar-sim');
+                const btnNao = document.getElementById('btn-confirmar-nao');
+                btnSim.className = perigo ? 'btn-status-cancel' : 'btn-status-confirm';
+                document.getElementById('modal-confirmar').style.display = 'flex';
+
+                function limpar() {
+                    document.getElementById('modal-confirmar').style.display = 'none';
+                    btnSim.removeEventListener('click', onSim);
+                    btnNao.removeEventListener('click', onNao);
+                }
+                function onSim() { limpar(); resolve(true); }
+                function onNao() { limpar(); resolve(false); }
+
+                btnSim.addEventListener('click', onSim);
+                btnNao.addEventListener('click', onNao);
+            });
         }
 
         let checkinBloqueio = '', checkoutBloqueio = '', dataObj1 = null, dataObj2 = null;
@@ -588,7 +659,7 @@
 
         function aplicarFiltroDashboard() {
             if (!dashStart || !dashEnd) {
-                alert("Por favor, selecione as duas datas no calendário para filtrar.");
+                mostrarAlerta("Por favor, selecione as duas datas no calendário para filtrar.", 'aviso');
                 return;
             }
             carregarDashboard(dashStart, dashEnd);
@@ -693,7 +764,7 @@
                 const data = await resp.json();
 
                 if (!data.faturamento || data.faturamento.length === 0) {
-                    alert("Nenhum faturamento encontrado para exportar.");
+                    mostrarAlerta("Nenhum faturamento encontrado para exportar.", 'aviso');
                     return;
                 }
 
@@ -721,7 +792,7 @@
                 document.body.removeChild(link);
 
             } catch (e) {
-                alert("Erro ao gerar a planilha de faturamento.");
+                mostrarAlerta("Erro ao gerar a planilha de faturamento.", 'erro');
             }
         }
 
@@ -958,7 +1029,7 @@
                 });
                 const data = await resp.json();
                 if (!data.leads || data.leads.length === 0) {
-                    alert("Nenhum lead encontrado para exportar.");
+                    mostrarAlerta("Nenhum lead encontrado para exportar.", 'aviso');
                     return;
                 }
                 let csvContent = "data:text/csv;charset=utf-8,\uFEFF";
@@ -978,18 +1049,18 @@
                 document.body.appendChild(link);
                 link.click();
                 document.body.removeChild(link);
-            } catch (e) { alert("Erro ao gerar arquivo de leads."); }
+            } catch (e) { mostrarAlerta("Erro ao gerar arquivo de leads.", 'erro'); }
         }
 
         document.getElementById('form-bloqueio').addEventListener('submit', (e) => {
             e.preventDefault();
             if (!checkinBloqueio || !checkoutBloqueio) {
-                alert("Selecione o período de entrada e saída.");
+                mostrarAlerta("Selecione o período de entrada e saída.", 'aviso');
                 return;
             }
             const valorCobrado = document.getElementById('bloqueio-valor').value;
             if (!valorCobrado || parseFloat(valorCobrado) <= 0) {
-                alert("Informe o valor cobrado.");
+                mostrarAlerta("Informe o valor cobrado.", 'aviso');
                 return;
             }
             document.getElementById('modal-lead-bloqueio').style.display = 'flex';
@@ -1004,7 +1075,7 @@
             const email = document.getElementById('lead-email').value.trim();
 
             if (telefone.length < 10 || telefone.length > 11) {
-                alert("O telefone deve conter DDD e o número completo.");
+                mostrarAlerta("O telefone deve conter DDD e o número completo.", 'aviso');
                 return;
             }
 
@@ -1028,7 +1099,7 @@
                 });
                 const resData = await resp.json();
                 if (resp.ok) {
-                    alert(resData.mensagem);
+                    mostrarAlerta(resData.mensagem, 'sucesso');
                     fecharModalLead();
                     document.getElementById('form-lead-bloqueio').reset();
                     document.getElementById('bloqueio-datas').value = '';
@@ -1036,8 +1107,8 @@
                     document.getElementById('bloqueio-valor-sugerido').value = 'R$ 0,00';
                     checkinBloqueio = ''; checkoutBloqueio = ''; dataObj1 = null; dataObj2 = null;
                     carregarTudo();
-                } else { alert(resData.erro || "Erro ao efetuar bloqueio."); }
-            } catch (err) { alert("Erro ao comunicar com o servidor."); }
+                } else { mostrarAlerta(resData.erro || "Erro ao efetuar bloqueio.", 'erro'); }
+            } catch (err) { mostrarAlerta("Erro ao comunicar com o servidor.", 'erro'); }
         });
 
         function abrirModalEfetivar(id) {
@@ -1069,12 +1140,12 @@
                 if (resp.ok) {
                     fecharModalEfetivar();
                     carregarTudo();
-                } else { alert("Erro ao editar os dados da reserva."); }
-            } catch (e) { alert("Erro ao conectar com o servidor."); }
+                } else { mostrarAlerta("Erro ao editar os dados da reserva.", 'erro'); }
+            } catch (e) { mostrarAlerta("Erro ao conectar com o servidor.", 'erro'); }
         });
 
         async function cancelarReserva(id) {
-            if (confirm("Tem certeza que deseja CANCELAR esta reserva e liberar a data no calendário?")) {
+            if (await confirmarAcao("Tem certeza que deseja CANCELAR esta reserva e liberar a data no calendário?", true)) {
                 try {
                     const resp = await fetch(`/api/admin/reservas/${id}`, {
                         method: 'DELETE',
@@ -1082,36 +1153,36 @@
                     });
                     const data = await resp.json();
                     if (resp.ok) {
-                        alert(data.mensagem);
+                        mostrarAlerta(data.mensagem, 'sucesso');
                         carregarTudo();
-                    } else { alert(data.erro || "Erro ao cancelar."); }
-                } catch (e) { alert("Erro de conexão ao cancelar."); }
+                    } else { mostrarAlerta(data.erro || "Erro ao cancelar.", 'erro'); }
+                } catch (e) { mostrarAlerta("Erro de conexão ao cancelar.", 'erro'); }
             }
         }
 
         async function fazerCheckin(id) {
-            if (confirm("Confirmar a entrada do hóspede (Check-in)?")) {
+            if (await confirmarAcao("Confirmar a entrada do hóspede (Check-in)?")) {
                 try {
                     const resp = await fetch(`/api/admin/reservas/${id}/checkin`, {
                         method: 'PUT',
                         headers: { 'Authorization': 'Bearer ' + localStorage.getItem('tokenHospedaria') }
                     });
                     if (resp.ok) carregarTudo();
-                    else alert("Erro ao registrar Check-in.");
-                } catch (e) { alert("Erro de conexão."); }
+                    else mostrarAlerta("Erro ao registrar Check-in.", 'erro');
+                } catch (e) { mostrarAlerta("Erro de conexão.", 'erro'); }
             }
         }
 
         async function fazerCheckout(id) {
-            if (confirm("Confirmar a saída do hóspede (Check-out)? A reserva sairá da lista principal.")) {
+            if (await confirmarAcao("Confirmar a saída do hóspede (Check-out)? A reserva sairá da lista principal.")) {
                 try {
                     const resp = await fetch(`/api/admin/reservas/${id}/checkout`, {
                         method: 'PUT',
                         headers: { 'Authorization': 'Bearer ' + localStorage.getItem('tokenHospedaria') }
                     });
                     if (resp.ok) carregarTudo();
-                    else alert("Erro ao registrar Check-out.");
-                } catch (e) { alert("Erro de conexão."); }
+                    else mostrarAlerta("Erro ao registrar Check-out.", 'erro');
+                } catch (e) { mostrarAlerta("Erro de conexão.", 'erro'); }
             }
         }
 
@@ -1129,7 +1200,7 @@
         document.getElementById('efetivar-telefone').addEventListener('input', aplicarMascaraTelefone);
 
         async function estenderReserva(id) {
-            if (confirm('Deseja estender a diária deste quarto por mais 1 dia?')) {
+            if (await confirmarAcao('Deseja estender a diária deste quarto por mais 1 dia?')) {
                 try {
                     const res = await fetch(`/api/admin/reservas/${id}/estender`, {
                         method: 'POST',
@@ -1138,21 +1209,22 @@
                     const data = await res.json();
 
                     if (res.ok) {
-                        alert('Sucesso: ' + data.mensagem);
+                        mostrarAlerta('Sucesso: ' + data.mensagem, 'sucesso');
                         carregarTudo(); // Recarrega a tela instantaneamente
                     } else {
-                        alert('Aviso: ' + data.erro);
+                        mostrarAlerta('Aviso: ' + data.erro, 'aviso');
                     }
                 } catch (err) {
-                    alert('Erro de conexão ao tentar estender a reserva.');
+                    mostrarAlerta('Erro de conexão ao tentar estender a reserva.', 'erro');
                 }
             }
         }
 
         async function enviarLembrete(idReserva) {
-            if (!confirm("Deseja disparar o e-mail e abrir o WhatsApp de lembrete para este hóspede?")) return;
+            if (!(await confirmarAcao("Deseja disparar o e-mail e abrir o WhatsApp de lembrete para este hóspede?"))) return;
 
-            // TRUQUE: Abre a aba imediatamente na hora do clique para o navegador não bloquear
+            // A aba abre logo aqui, ainda "colada" no clique do botão Confirmar do modal,
+            // antes do fetch (que demora) — assim o navegador não bloqueia o popup
             const whatsappTab = window.open('about:blank', '_blank');
 
             try {
@@ -1169,16 +1241,16 @@
                         whatsappTab.location.href = url;
                     } else {
                         whatsappTab.close(); // Fecha a aba se não tiver telefone
-                        alert("O cliente não possui um telefone válido no cadastro.");
+                        mostrarAlerta("O cliente não possui um telefone válido no cadastro.", 'aviso');
                     }
                 } else {
                     whatsappTab.close();
-                    alert("Erro: " + (data.erro || "Não foi possível processar."));
+                    mostrarAlerta("Erro: " + (data.erro || "Não foi possível processar."), 'erro');
                 }
             } catch (error) {
                 whatsappTab.close();
                 console.error("Erro:", error);
-                alert("Erro de conexão ao tentar processar o lembrete.");
+                mostrarAlerta("Erro de conexão ao tentar processar o lembrete.", 'erro');
             }
         }
 
@@ -1213,7 +1285,7 @@
             if (id !== null) {
                 const item = manutencoesCache.find(m => String(m.id) === String(id));
                 if (!item) {
-                    alert('Não foi possível carregar os dados desta manutenção. Tente recarregar a página.');
+                    mostrarAlerta('Não foi possível carregar os dados desta manutenção. Tente recarregar a página.', 'erro');
                     return;
                 }
                 document.getElementById('manutencao-id').value = item.id;
@@ -1239,7 +1311,7 @@
         document.getElementById('form-manutencao').addEventListener('submit', async (e) => {
             e.preventDefault();
             if (!manutDataInicio || !manutDataFim) {
-                alert('Selecione o período de manutenção no calendário.');
+                mostrarAlerta('Selecione o período de manutenção no calendário.', 'aviso');
                 return;
             }
             const idEdicao = document.getElementById('manutencao-id').value;
@@ -1265,10 +1337,10 @@
                     await carregarManutencoes();
                     [1, 2, 3, 4].forEach(quartoId => carregarCalendarioQuarto(quartoId));
                 } else {
-                    alert('Erro: ' + (data.erro || 'Não foi possível salvar a manutenção.'));
+                    mostrarAlerta('Erro: ' + (data.erro || 'Não foi possível salvar a manutenção.'), 'erro');
                 }
             } catch (err) {
-                alert('Erro de conexão ao salvar a manutenção.');
+                mostrarAlerta('Erro de conexão ao salvar a manutenção.', 'erro');
             }
         });
 
@@ -1315,7 +1387,7 @@
         }
 
         async function removerManutencao(id) {
-            if (confirm('Remover este período de manutenção? O quarto volta a ficar disponível para essas datas.')) {
+            if (await confirmarAcao('Remover este período de manutenção? O quarto volta a ficar disponível para essas datas.', true)) {
                 try {
                     const resp = await fetch(`/api/admin/quarto/manutencao/${id}`, {
                         method: 'DELETE',
@@ -1326,10 +1398,10 @@
                         await carregarManutencoes();
                         [1, 2, 3, 4].forEach(quartoId => carregarCalendarioQuarto(quartoId));
                     } else {
-                        alert('Erro: ' + (data.erro || 'Não foi possível remover.'));
+                        mostrarAlerta('Erro: ' + (data.erro || 'Não foi possível remover.'), 'erro');
                     }
                 } catch (err) {
-                    alert('Erro de conexão ao remover a manutenção.');
+                    mostrarAlerta('Erro de conexão ao remover a manutenção.', 'erro');
                 }
             }
         }
