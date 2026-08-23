@@ -801,8 +801,10 @@ app.post('/api/admin/bloquear', verificarPulseiraVIP, async (req, res) => {
         res.json({ mensagem: 'Bloqueio e reserva salvos com sucesso!' });
 
     } catch (err) {
+        // O erro completo continua no log do servidor (visível no Render) para você debugar depois.
+        // O navegador só recebe uma mensagem genérica — o detalhe técnico do banco não é assunto do cliente.
         console.error("ERRO DETALHADO DO BANCO (admin/bloquear):", err);
-        res.status(500).json({ erro: 'Erro interno ao salvar no banco.', detalhe: err.message });
+        res.status(500).json({ erro: 'Erro interno ao salvar no banco. Tente novamente ou consulte o log do servidor.' });
     }
 });
 
