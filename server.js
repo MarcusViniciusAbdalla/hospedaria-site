@@ -953,6 +953,17 @@ app.put('/api/admin/reservas/:id/checkout', verificarPulseiraVIP, async (req, re
     }
 });
 
+// Devolve o preço da diária usando a MESMA função (calcularDiaria) que calcula os preços reais das reservas.
+// Existe pra o painel admin não precisar ter sua própria cópia da tabela de preços.
+app.get('/api/admin/calcular-diaria', verificarPulseiraVIP, (req, res) => {
+    const { quartoId, hospedes } = req.query;
+    if (!quartoId) {
+        return res.status(400).json({ erro: 'Parâmetro quartoId é obrigatório.' });
+    }
+    const valorDiaria = calcularDiaria(quartoId, hospedes);
+    res.json({ valorDiaria });
+});
+
 app.get('/api/admin/dashboard', verificarPulseiraVIP, async (req, res) => {
     try {
         const { start, end } = req.query;

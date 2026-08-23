@@ -796,29 +796,29 @@
             }
         }
 
-        function obterDiariaReferencia(quartoId, hospedes) {
-            const id = parseInt(quartoId);
-            const numHospedes = parseInt(hospedes) || 1;
-            if (id === 3) {
-                if (numHospedes === 1) return 100.00;
-                if (numHospedes === 2) return 150.00;
-                if (numHospedes === 3) return 200.00;
-            } else {
-                if (numHospedes === 1) return 75.00;
-                if (numHospedes === 2) return 130.00;
-                if (numHospedes === 3) return 180.00;
+        // Pergunta pro servidor o valor da diária (mesma função que calcula reservas de verdade),
+        // em vez de ter uma segunda tabela de preços aqui no painel.
+        async function obterDiariaReferencia(quartoId, hospedes) {
+            try {
+                const resp = await fetch(`/api/admin/calcular-diaria?quartoId=${quartoId}&hospedes=${hospedes}`, {
+                    headers: { 'Authorization': 'Bearer ' + localStorage.getItem('tokenHospedaria') }
+                });
+                if (!resp.ok) return 75.00; // fallback caso a chamada falhe
+                const data = await resp.json();
+                return data.valorDiaria;
+            } catch (e) {
+                return 75.00; // fallback caso a conexão falhe
             }
-            return 75.00;
         }
 
-        function calcularValorSugerido() {
+        async function calcularValorSugerido() {
             if (dataObj1 && dataObj2) {
                 const diffTempo = dataObj2.getTime() - dataObj1.getTime();
                 const dias = Math.ceil(diffTempo / (1000 * 3600 * 24)) || 1;
                 const quartoId = document.getElementById('bloqueio-quarto').value;
                 const hospedes = document.getElementById('bloqueio-hospedes').value;
 
-                const valorDiaria = obterDiariaReferencia(quartoId, hospedes);
+                const valorDiaria = await obterDiariaReferencia(quartoId, hospedes);
                 const valorTotalCalculado = (dias * valorDiaria).toFixed(2);
 
                 document.getElementById('bloqueio-valor-sugerido').value = `R$ ${valorTotalCalculado} (${dias} diária/s)`;
