@@ -1178,7 +1178,7 @@
             }
         }
         async function toggleManutencao(numeroQuarto) {
-            const token = localStorage.getItem('tokenAdmin');
+            const token = localStorage.getItem('tokenAdmin') || localStorage.getItem('token') || localStorage.getItem('jwt');
             const motivo = prompt("Deseja colocar este quarto em manutenção/limpeza? Digite o motivo (ou deixe em branco):");
 
             if (motivo === null) return; // Se cancelar
