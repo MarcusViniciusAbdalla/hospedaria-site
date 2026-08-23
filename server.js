@@ -70,6 +70,15 @@ const limiter = rateLimit({
 // Aplica a roleta de segurança em TODAS as portas de entrada da nossa API
 app.use('/api/', limiter);
 
+// Roleta específica do login: bem mais apertada, só nessa rota.
+// skipSuccessfulRequests conta só as tentativas que ERRARAM a senha — login certo nunca soma pro limite.
+const loginLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000, // 15 minutos
+    max: 10, // 10 tentativas erradas por IP a cada 15 minutos
+    skipSuccessfulRequests: true,
+    message: { erro: "Muitas tentativas de login sem sucesso. Aguarde 15 minutos antes de tentar novamente." }
+});
+
 // ==========================================
 app.use(express.static('public'));
 
@@ -629,7 +638,7 @@ app.delete('/api/admin/quarto/manutencao/:id', verificarPulseiraVIP, async (req,
 });
 
 
-app.post('/api/admin/login', async (req, res) => {
+app.post('/api/admin/login', loginLimiter, async (req, res) => {
     const { usuario, senha } = req.body;
     try {
         const result = await pool.query('SELECT * FROM administradores WHERE usuario = $1', [usuario]);
