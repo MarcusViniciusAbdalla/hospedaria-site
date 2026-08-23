@@ -1,86 +1,206 @@
-# 🏨 Hospedaria Central — Sistema de Gestão & Reservas
+# Hospedaria Central Morrinhos
 
-> Sistema web full-stack desenvolvido sob medida para a **Hospedaria Central**, localizado no coração de Morrinhos (GO). Uma solução completa que integra um portal público de reservas automatizadas via Pix e Cartões de Crédito e Débito com um painel administrativo voltado para a alta performance operacional da gestão hoteleira.
+Sistema completo de reservas e gestão hoteleira, com site público de busca e checkout, e painel administrativo integrado para operação do dia a dia.
 
----
-
-## 🚀 Diferenciais do Projeto & Visão de Negócio
-
-* **Gestão Ágil Mobile-First:** Desenvolvido pensando na rotina real de operação, contando com um painel responsivo adaptado para toque ("Modo Klessia") para agilizar check-ins, check-outs e bloqueios rápidos pelo celular.
-* **Progressive Web App (PWA):** O sistema se comporta como um aplicativo nativo. Pode ser instalado diretamente na tela inicial do celular do gestor, rodando em tela cheia e sem barras de navegação.
-* **Matéria de Datas Inteligente (Dia Compartilhado):** O motor de reservas gerencia transições fluidas de hóspedes no mesmo dia (permitindo check-out pela manhã e check-in à tarde no mesmo quarto).
-* **Segurança e Blindagem Ativa:** Servidor protegido com limitação de requisições por IP (*Rate Limiting*) para mitigar ataques de força bruta e robôs, além de rotas blindadas contra acessos não autorizados.
+🔗 **Demo ao vivo:** [hospedaria-site.onrender.com](https://hospedaria-site.onrender.com)
 
 ---
 
-## 🛠️ Tecnologias Utilizadas
+## Sobre o projeto
 
-Este projeto foi construído utilizando tecnologias modernas de mercado, focando em robustez, escalabilidade e manutenibilidade:
+A Hospedaria Central é uma pousada localizada no centro de Morrinhos-GO. Este sistema resolve o fluxo completo do negócio: um visitante busca disponibilidade por data, reserva um quarto, paga via Pix ou cartão, e recebe confirmação automática por e-mail e WhatsApp — enquanto a administração acompanha tudo em um painel próprio, sem depender de planilhas ou anotações manuais.
 
-* **Backend:** Node.js, Express.js
-* **Banco de Dados Relacional:** PostgreSQL (com conexões parametrizadas e controle transacional via `pg` pool)
-* **Frontend:** HTML5, CSS3 Customizado (Design System próprio), JavaScript Vanilla (ES6+)
-* **Integrações de Pagamento:** API do Mercado Pago (Geração de Pix automatizada)
-* **Ferramentas e Padrões:** Git/GitHub, PWA (Service Workers, Web App Manifest), Flatpickr (Calendários dinâmicos)
+O projeto foi construído para rodar com custo operacional mínimo: sem serviços pagos além do essencial (banco de dados, gateway de pagamento e hospedagem), usando APIs HTTP diretas em vez de bibliotecas pesadas onde fazia sentido.
 
 ---
 
-## 📂 Arquitetura do Projeto
+## Funcionalidades
 
-```text
+### Site público
+
+- Busca de quartos por data de entrada/saída e número de hóspedes
+- Cálculo automático de disponibilidade em tempo real, considerando reservas ativas **e** períodos de manutenção
+- Checkout com **Pix** (QR Code dinâmico) ou **cartão de crédito**, via Mercado Pago
+- Tokenização de cartão feita no navegador — o número do cartão nunca trafega pelo servidor
+- Aceite de termos (LGPD) obrigatório antes de finalizar a reserva
+- Confirmação automática por e-mail e WhatsApp assim que o pagamento é aprovado
+- Lembrete automático (e-mail + WhatsApp) um dia antes do check-in
+- Progressive Web App (PWA) — instalável como aplicativo, com ícone e service worker próprios
+
+### Painel administrativo
+
+- Login protegido por usuário/senha com autenticação JWT
+- Dashboard com faturamento e taxa de ocupação, filtrável por período
+- Gráfico de evolução do faturamento dos últimos 12 meses
+- Gestão completa de reservas: check-in, check-out, cancelamento, extensão de diária, edição de dados do hóspede
+- Bloqueio manual de datas para reservas feitas no balcão/presencial
+- **Gestão de manutenção por quarto:** cadastro de períodos (com motivo), visualização colorida no calendário de disponibilidade (vermelho = reservado, amarelo = manutenção), edição e remoção
+- Envio de lembrete manual (e-mail + link direto de WhatsApp) para qualquer reserva
+- Exportação em CSV de lista de clientes (leads) e relatório de faturamento (DRE)
+- Calendário de disponibilidade por quarto, com legenda visual
+- Interface com modais customizados (sem uso de `alert()`/`confirm()` nativos do navegador)
+
+---
+
+## Stack tecnológica
+
+| Camada | Tecnologia | Uso |
+|---|---|---|
+| Backend | Node.js + Express 5 | API REST e servidor de arquivos estáticos |
+| Banco de dados | PostgreSQL | Persistência de quartos, clientes, reservas e manutenções |
+| Autenticação | JSON Web Token (JWT) + bcrypt | Login e proteção de rotas administrativas |
+| Pagamentos | Mercado Pago SDK | Pix e cartão de crédito |
+| E-mail transacional | API HTTP da Brevo | Confirmações e lembretes |
+| WhatsApp | API HTTP do CallMeBot | Notificações automáticas e manuais |
+| Segurança de headers | Helmet (CSP) | Content Security Policy contra XSS/clickjacking |
+| Rate limiting | express-rate-limit | Proteção contra abuso da API |
+| Agendamento | node-cron | Rotinas automáticas (lembretes, checkout, limpeza) |
+| Frontend | HTML/CSS/JS puro | Sem framework — foco em simplicidade e performance |
+| Calendários | Flatpickr | Seleção e visualização de datas |
+| Gráficos | Chart.js | Gráfico de faturamento |
+| Hospedagem | Render | Deploy automático a partir do `main` |
+
+---
+
+## Segurança
+
+- Autenticação de administradores via **JWT**, com expiração de 8 horas, exigida em toda rota administrativa (`verificarPulseiraVIP`)
+- Senhas de administrador armazenadas com hash **bcrypt** — nunca em texto puro
+- Segredos (chaves de API, credenciais de banco, chave JWT) mantidos fora do código-fonte, via variáveis de ambiente
+- Sanitização de entrada no servidor e escape de saída no painel, prevenindo **XSS**
+- **Content Security Policy** (via Helmet), restringindo quais domínios podem carregar scripts, estilos e imagens
+- **Rate limiting** nas rotas da API
+- Consultas SQL 100% parametrizadas — sem concatenação de string em nenhuma query
+- Verificação de pagamento feita diretamente com a API do Mercado Pago ao receber o webhook, sem confiar cegamente no payload recebido
+- Tokenização de cartão feita no navegador via SDK oficial do Mercado Pago
+
+---
+
+## Estrutura do projeto
+
+```
 hospedaria-site/
-├── public/                # Arquivos estáticos do Frontend
-│   ├── css/               # Estilos modularizados (global.css, home.css, admin.css)
-│   ├── images/            # Identidade visual e mídias das acomodações
-│   ├── js/                # Scripts de interação e consumo de rotas
-│   ├── admin.html         # Painel administrativo de controle de leitos
-│   ├── login.html         # Tela de autenticação restrita
-│   ├── manifest.json      # Configuração do PWA (Aplicativo mobile)
-│   └── sw.js              # Service Worker para cache e ciclo de vida do app
-├── server.js              # Servidor principal (API REST, rotas e regras de negócio)
-├── package.json           # Dependências e scripts do Node.js
-└── README.md              # Documentação oficial do projeto
-⚙️ Principais Funcionalidades
-Canal de Reservas Direto (Público):
+├── server.js              # API completa (rotas públicas + administrativas)
+├── package.json
+├── .env.example           # Referência de variáveis de ambiente necessárias
+└── public/
+    ├── index.html          # Página inicial / busca
+    ├── busca.html          # Resultados de disponibilidade
+    ├── checkout.html        # Checkout (Pix / cartão)
+    ├── admin.html          # Painel administrativo
+    ├── login.html          # Login do admin
+    ├── manifest.json       # Configuração do PWA
+    ├── sw.js               # Service worker
+    ├── css/
+    └── images/
+```
 
-Consulta de vagas em tempo real com calendário integrado.
+---
 
-Cálculo automático de diárias e valor total com base no número de hóspedes e tipo de acomodação.
+## Rotas da API
 
-Geração instantânea de pagamento via Pix.
+### Públicas
 
-Painel Administrativo Restrito (Privado):
+| Método | Rota | Descrição |
+|---|---|---|
+| `GET` | `/api/disponibilidade` | Datas ocupadas de um quarto (para o calendário) |
+| `GET` | `/api/quartos-disponiveis` | Busca de quartos disponíveis por data/hóspedes |
+| `GET` | `/api/reservas/:id/status` | Status de pagamento de uma reserva |
+| `POST` | `/api/reservar` | Cria uma reserva (Pix) |
+| `POST` | `/api/processar-cartao` | Processa pagamento com cartão |
+| `POST` | `/api/webhook/mercadopago` | Webhook de confirmação de pagamento |
 
-Visão geral de ocupação e faturamento.
+### Administrativas — protegidas por JWT
 
-Controles rápidos para marcação de Check-in, Check-out, cancelamentos e bloqueios manuais de balcão.
+| Método | Rota | Descrição |
+|---|---|---|
+| `POST` | `/api/admin/login` | Autenticação, retorna o token |
+| `GET` | `/api/admin/reservas` | Lista reservas ativas |
+| `GET` | `/api/admin/dashboard` | Faturamento e ocupação do período |
+| `GET` | `/api/admin/grafico-faturamento` | Série histórica de faturamento (12 meses) |
+| `GET` | `/api/admin/exportar-leads` | Exporta lista de clientes |
+| `GET` | `/api/admin/exportar-faturamento` | Exporta relatório de faturamento (DRE) |
+| `POST` | `/api/admin/bloquear` | Bloqueio manual de data (balcão) |
+| `PUT` | `/api/admin/reservas/:id/efetivar` | Edita dados do hóspede |
+| `DELETE` | `/api/admin/reservas/:id` | Cancela uma reserva |
+| `PUT` | `/api/admin/reservas/:id/checkin` | Registra check-in |
+| `PUT` | `/api/admin/reservas/:id/checkout` | Registra check-out |
+| `POST` | `/api/admin/reservas/:id/estender` | Estende a diária em +1 dia |
+| `POST` | `/api/admin/reservas/:id/lembrete` | Dispara lembrete manual |
+| `GET` | `/api/admin/manutencoes` | Lista períodos de manutenção |
+| `POST` | `/api/admin/quarto/manutencao` | Cadastra período de manutenção |
+| `PUT` | `/api/admin/quarto/manutencao/:id` | Edita período de manutenção |
+| `DELETE` | `/api/admin/quarto/manutencao/:id` | Remove período de manutenção |
 
-Tratamento de conflitos de datas integrado ao banco de dados PostgreSQL.
+---
 
-💻 Como Executar o Projeto Localmente
-Se você deseja clonar e rodar este repositório em sua máquina de desenvolvimento:
+## Automações (cron jobs)
 
-Clone o repositório:
+| Frequência | Rotina |
+|---|---|
+| Diariamente às 08h | Envia lembrete (e-mail) para check-ins do dia seguinte |
+| Diariamente às 13h | Auto-checkout de reservas com data de saída vencida |
+| A cada 5 minutos | Cancela reservas pendentes de pagamento há mais de 30 minutos |
 
-Bash
-git clone [https://github.com/SEU-USUARIO/hospedaria-site.git](https://github.com/SEU-USUARIO/hospedaria-site.git)
+---
+
+## Como rodar localmente
+
+```bash
+# Clonar o repositório
+git clone <url-do-repositorio>
 cd hospedaria-site
-Instale as dependências:
 
-Bash
+# Instalar dependências
 npm install
-Configure as Variáveis de Ambiente:
-Crie um arquivo .env na raiz do projeto contendo as credenciais do seu banco de dados PostgreSQL e as chaves da API de pagamento:
 
-Snippet de código
-DATABASE_URL=sua_string_de_conexao_postgres
-PORT=3000
-MP_ACCESS_TOKEN=seu_token_mercado_pago
-Inicie o servidor:
+# Configurar variáveis de ambiente
+cp .env.example .env
+# preencher o .env com suas próprias credenciais
 
-Bash
-npm run dev
-👨‍💻 Desenvolvedor
-Desenvolvido por Marcus Vinicius Abdalla Teixeira e Silva.
+# Rodar
+npm start
+```
 
-Administrador de Empresas e Estudante de Análise e Desenvolvimento de Sistemas.
+O servidor sobe por padrão na porta `3000` (configurável via `PORT`).
+
+---
+
+## Variáveis de ambiente
+
+| Variável | Descrição |
+|---|---|
+| `DATABASE_URL` | String de conexão do PostgreSQL |
+| `JWT_SECRET` | Chave secreta para assinatura dos tokens de admin |
+| `SENHA_MARCUS` / `SENHA_KLESSIA` | Senhas iniciais dos usuários administradores |
+| `MP_ACCESS_TOKEN` | Token de acesso do Mercado Pago |
+| `BREVO_API_KEY` | Chave da API da Brevo (e-mail transacional) |
+| `EMAIL_USER` | E-mail remetente das notificações |
+| `CALLMEBOT_PHONE` / `CALLMEBOT_APIKEY` | Credenciais do CallMeBot (WhatsApp) |
+| `PORT` | Porta do servidor (opcional, padrão `3000`) |
+
+Veja `.env.example` para o modelo completo.
+
+---
+
+## Deploy
+
+O deploy é automático: qualquer `push` na branch `main` dispara um novo build e deploy no [Render](https://render.com). As variáveis de ambiente de produção são configuradas diretamente no painel do Render, não a partir do `.env` local.
+
+---
+
+## Roadmap
+
+Itens identificados para próximas iterações:
+
+- [ ] Rate limiting dedicado na rota de login (hoje compartilha o limite geral da API)
+- [ ] Centralizar a tabela de preços por quarto em um único lugar (hoje duplicada entre servidor e painel)
+- [ ] Modularizar `server.js` em arquivos por domínio (reservas, admin, pagamento)
+- [ ] Testes automatizados
+- [ ] SEO básico (meta description, Open Graph, sitemap.xml)
+
+---
+
+## Licença
+
+Projeto privado — todos os direitos reservados.
