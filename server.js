@@ -14,11 +14,11 @@ app.use(helmet({
             fontSrc: ["'self'", "https://fonts.gstatic.com", "https://cdnjs.cloudflare.com", "data:"],
             imgSrc: ["'self'", "data:", "https://images.unsplash.com"],
             connectSrc: [
-                "'self'", 
-                "https://sdk.mercadopago.com", 
-                "https://api.mercadopago.com", 
-                "https://*.mercadopago.com", 
-                "https://*.mercadolibre.com", 
+                "'self'",
+                "https://sdk.mercadopago.com",
+                "https://api.mercadopago.com",
+                "https://*.mercadopago.com",
+                "https://*.mercadolibre.com",
                 "https://cdn.jsdelivr.net"
             ],
             frameSrc: ["https://www.google.com"],
@@ -80,6 +80,7 @@ const pool = new Pool({
 
 // ATUALIZA A PRANCHETA DO BANCO DE DADOS E CRIA OS USUÁRIOS ADMIN
 pool.query(`
+    ALTER TABLE quartos ADD COLUMN IF NOT EXISTS em_manutencao BOOLEAN NOT NULL DEFAULT FALSE;
     ALTER TABLE reservas DROP CONSTRAINT IF EXISTS reservas_status_pagamento_check;
     ALTER TABLE reservas ADD CONSTRAINT reservas_status_pagamento_check
     CHECK (status_pagamento IN ('pendente', 'pago', 'cancelado', 'bloqueado_b...'));
@@ -548,7 +549,7 @@ app.post('/api/admin/quarto/manutencao', verificarPulseiraVIP, async (req, res) 
             [emManutencao, numeroQuarto]
         );
         res.json({ sucesso: true, mensagem: 'Status de manutenção atualizado com sucesso!' });
-    } catch (error){
+    } catch (error) {
         console.error('Erro ao atualizar manutenção:', error);
         res.status(500).json({ erro: 'Erro interno ao atualizar quarto.' });
     }
