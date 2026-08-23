@@ -520,10 +520,11 @@
 
     <div id="modal-manutencao" class="modal-overlay-admin" style="display: none;">
         <div class="modal-card-admin">
-            <h3 style="font-family: 'Playfair Display', serif; color: var(--brown-dark); margin-bottom: 15px;">
+            <h3 id="modal-manutencao-titulo" style="font-family: 'Playfair Display', serif; color: var(--brown-dark); margin-bottom: 15px;">
                 <i class="fas fa-tools" style="color: #e67e22;"></i> Colocar Quarto em Manutenção
             </h3>
             <form id="form-manutencao">
+                <input type="hidden" id="manutencao-id">
                 <div style="margin-bottom: 12px;">
                     <label style="font-size: 12px; font-weight: bold; color: #444;">Quarto:</label>
                     <select id="manutencao-quarto" required
@@ -547,7 +548,7 @@
                 <div style="display: flex; gap: 10px; justify-content: flex-end;">
                     <button type="button" onclick="fecharModalManutencao()"
                         style="padding: 10px 15px; border: 1px solid #ccc; background: #eee; border-radius: 6px; cursor: pointer;">Cancelar</button>
-                    <button type="submit"
+                    <button type="submit" id="btn-manutencao-submit"
                         style="padding: 10px 15px; border: none; background: #e67e22; color: white; font-weight: bold; border-radius: 6px; cursor: pointer;">Salvar Manutenção</button>
                 </div>
             </form>
@@ -1183,7 +1184,8 @@
 
         let manutDataInicio = '', manutDataFim = '';
 
-        flatpickr("#manutencao-datas", {
+        // Guardamos a instância (não só o seletor) pra poder preencher as datas na hora de editar
+        const manutencaoPicker = flatpickr("#manutencao-datas", {
             mode: "range",
             locale: "pt",
             dateFormat: "Y-m-d",
@@ -1197,10 +1199,36 @@
             }
         });
 
-        function abrirModalManutencao() {
+        // Sem argumento: abre em branco pra criar uma manutenção nova.
+        // Com um id: busca os dados no cache e abre já preenchido pra editar.
+        function abrirModalManutencao(id = null) {
             document.getElementById('form-manutencao').reset();
-            document.getElementById('manutencao-datas').value = '';
+            document.getElementById('manutencao-id').value = '';
+            manutencaoPicker.clear();
             manutDataInicio = ''; manutDataFim = '';
+
+            const titulo = document.getElementById('modal-manutencao-titulo');
+            const botao = document.getElementById('btn-manutencao-submit');
+
+            if (id !== null) {
+                const item = manutencoesCache.find(m => String(m.id) === String(id));
+                if (!item) {
+                    alert('Não foi possível carregar os dados desta manutenção. Tente recarregar a página.');
+                    return;
+                }
+                document.getElementById('manutencao-id').value = item.id;
+                document.getElementById('manutencao-quarto').value = item.quarto_id;
+                document.getElementById('manutencao-motivo').value = item.motivo || '';
+                const inicio = item.data_inicio.split('T')[0];
+                const fim = item.data_fim.split('T')[0];
+                manutencaoPicker.setDate([inicio, fim], true); // true = já dispara onChange e preenche manutDataInicio/Fim
+                titulo.innerHTML = '<i class="fas fa-tools" style="color: #e67e22;"></i> Editar Período de Manutenção';
+                botao.textContent = 'Salvar Alterações';
+            } else {
+                titulo.innerHTML = '<i class="fas fa-tools" style="color: #e67e22;"></i> Colocar Quarto em Manutenção';
+                botao.textContent = 'Salvar Manutenção';
+            }
+
             document.getElementById('modal-manutencao').style.display = 'flex';
         }
 
@@ -1214,12 +1242,17 @@
                 alert('Selecione o período de manutenção no calendário.');
                 return;
             }
+            const idEdicao = document.getElementById('manutencao-id').value;
             const quartoId = document.getElementById('manutencao-quarto').value;
             const motivo = document.getElementById('manutencao-motivo').value.trim();
 
+            // Se tem ID, é edição de uma manutenção que já existe (PUT). Sem ID, é uma nova (POST).
+            const url = idEdicao ? `/api/admin/quarto/manutencao/${idEdicao}` : '/api/admin/quarto/manutencao';
+            const method = idEdicao ? 'PUT' : 'POST';
+
             try {
-                const resp = await fetch('/api/admin/quarto/manutencao', {
-                    method: 'POST',
+                const resp = await fetch(url, {
+                    method,
                     headers: {
                         'Content-Type': 'application/json',
                         'Authorization': 'Bearer ' + localStorage.getItem('tokenHospedaria')
@@ -1266,6 +1299,9 @@
                                 <div style="color:#666; font-size:13px;"><i class="fas fa-comment-dots"></i> <strong>Motivo:</strong> ${motivo}</div>
                             </div>
                             <div style="display:flex; gap:8px;">
+                                <button class="btn-status-confirm" onclick="abrirModalManutencao(${m.id})">
+                                <i class="fa-solid fa-pen"></i> Editar
+                                </button>
                                 <button class="btn-status-cancel" onclick="removerManutencao(${m.id})">
                                 <i class="fa-solid fa-xmark"></i> Retirar
                                 </button>

@@ -591,6 +591,32 @@ app.post('/api/admin/quarto/manutencao', verificarPulseiraVIP, async (req, res) 
 });
 
 // Remove um período de manutenção (o quarto volta a ficar disponível nessas datas)
+// Edita um período de manutenção já existente (muda quarto, datas e/ou motivo)
+app.put('/api/admin/quarto/manutencao/:id', verificarPulseiraVIP, async (req, res) => {
+    const { id } = req.params;
+    const { quartoId, dataInicio, dataFim, motivo } = req.body;
+
+    if (!quartoId || !dataInicio || !dataFim) {
+        return res.status(400).json({ erro: 'Selecione o quarto e o período de manutenção.' });
+    }
+
+    try {
+        const result = await pool.query(
+            `UPDATE manutencoes_quarto
+             SET quarto_id = $1, data_inicio = $2::date, data_fim = $3::date, motivo = $4
+             WHERE id = $5`,
+            [quartoId, dataInicio, dataFim, sanitizarTexto(motivo || ''), id]
+        );
+        if (result.rowCount === 0) {
+            return res.status(404).json({ erro: 'Período de manutenção não encontrado.' });
+        }
+        res.json({ sucesso: true, mensagem: 'Período de manutenção atualizado com sucesso!' });
+    } catch (error) {
+        console.error('Erro ao editar manutenção:', error);
+        res.status(500).json({ erro: 'Erro interno ao editar manutenção.' });
+    }
+});
+
 app.delete('/api/admin/quarto/manutencao/:id', verificarPulseiraVIP, async (req, res) => {
     const { id } = req.params;
     try {
