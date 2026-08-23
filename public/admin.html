@@ -274,9 +274,9 @@
                     <i class="fa-solid fa-file-csv"></i> Exportar DRE (CSV)
                 </button>
                 <!-- BOTÃO DE MANUTENÇÃO / BLOQUEIO DE QUARTO -->
-                <button class="btn-manutencao" onclick="toggleManutencao(NUMERO_DO_QUARTO)"
-                    style="background: #e67e22; color: white; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-size: 12px; font-weight: 600;">
-                    <i class="fas fa-tools"></i> Alternar Manutenção
+                <button class="btn-manutencao" onclick="abrirPromptManutencao()"
+                    style="background: #e67e22; color: white; border: none; padding: 8px 16px; border-radius: 6px; cursor: pointer; font-size: 12px; font-weight: 700;">
+                    <i class="fas fa-tools"></i> Gerenciar Manutenção
                 </button>
             </div>
         </div>
@@ -1203,6 +1203,12 @@
             } catch (error) {
                 console.error(error);
                 alert('Erro de conexão ao tentar atualizar o quarto.');
+            }
+        }
+        function abrirPromptManutencao() {
+            const num = prompt("Digite o número do quarto que deseja alterar o status de manutenção (Ex: 1, 2, 3...):");
+            if (num) {
+                toggleManutencao(num.trim());
             }
         }
 
