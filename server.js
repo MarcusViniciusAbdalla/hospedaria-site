@@ -541,11 +541,11 @@ app.post('/api/admin/quarto/manutencao', verificarPulseiraVIP, async (req, res) 
     const { numeroQuarto, emManutencao } = req.body;
     try {
         await pool.query(
-            'UPDATE quartos SET em_manutencao = $1 WHERE numero = $2',
+            'UPDATE quartos SET em_manutencao = $1 WHERE numero_quarto = $2',
             [emManutencao, numeroQuarto]
         );
         res.json({ sucesso: true, mensagem: 'Status de manutenção atualizado com sucesso!' });
-    } catch (error) {
+    } catch (error){
         console.error('Erro ao atualizar manutenção:', error);
         res.status(500).json({ erro: 'Erro interno ao atualizar quarto.' });
     }
