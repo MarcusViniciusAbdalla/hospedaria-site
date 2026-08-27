@@ -342,6 +342,8 @@ app.get('/api/reservas/:id/status', async (req, res) => {
 });
 
 app.post('/api/reservar', async (req, res) => {
+    const ip = req.ip;
+    console.log(`[RESERVA] Tentativa recebida - IP: ${ip}`);
     const client = await pool.connect();
     try {
         const { quartoId, hospedes, cliente, checkin, checkout, aceiteLgpd } = req.body;
@@ -422,6 +424,8 @@ app.post('/api/reservar', async (req, res) => {
 
         await client.query('COMMIT');
 
+        console.log(`[RESERVA] Reserva #${reservaRes.rows[0].id} criada com sucesso - IP: ${ip} - Quarto: ${quartoId} - Cliente: ${cliente.nome}`);
+
         // 1. AVISO POR E-MAIL PARA O ADMINISTRADOR (VOCÊ)
         try {
             const adminEmail = process.env.EMAIL_USER;
@@ -474,7 +478,7 @@ app.post('/api/reservar', async (req, res) => {
 
     } catch (error) {
         await client.query('ROLLBACK');
-        console.error('ERRO DETALHADO NA RESERVA:', error);
+        console.error(`ERRO DETALHADO NA RESERVA (IP: ${ip}):`, error);
         res.status(500).json({ erro: 'Erro interno ao criar reserva.' });
     } finally {
         client.release();
