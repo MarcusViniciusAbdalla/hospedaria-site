@@ -14,11 +14,11 @@ app.use(helmet({
             fontSrc: ["'self'", "https://fonts.gstatic.com", "https://cdnjs.cloudflare.com", "data:"],
             imgSrc: ["'self'", "data:", "https://images.unsplash.com"],
             connectSrc: [
-                "'self'", 
-                "https://sdk.mercadopago.com", 
-                "https://api.mercadopago.com", 
-                "https://*.mercadopago.com", 
-                "https://*.mercadolibre.com", 
+                "'self'",
+                "https://sdk.mercadopago.com",
+                "https://api.mercadopago.com",
+                "https://*.mercadopago.com",
+                "https://*.mercadolibre.com",
                 "https://cdn.jsdelivr.net"
             ],
             frameSrc: ["https://www.google.com"],
@@ -90,7 +90,7 @@ const pool = new Pool({
 // ATUALIZA A PRANCHETA DO BANCO DE DADOS E CRIA OS USUÁRIOS ADMIN
 pool.query(`
     ALTER TABLE reservas DROP CONSTRAINT IF EXISTS reservas_status_pagamento_check;
-    ALTER TABLE reservas ADD CONSTRAINT reservas_status_pagamento_check 
+    ALTER TABLE reservas ADD CONSTRAINT reservas_status_pagamento_check
     CHECK (status_pagamento IN ('pendente', 'pago', 'cancelado', 'bloqueado_balcao', 'concluido', 'checkin', 'checkout'));
 
     ALTER TABLE quartos ADD COLUMN IF NOT EXISTS em_manutencao BOOLEAN DEFAULT FALSE;
@@ -260,8 +260,8 @@ app.get('/api/disponibilidade', async (req, res) => {
 
     try {
         const reservas = await pool.query(
-            `SELECT data_checkin, data_checkout FROM reservas 
-             WHERE quarto_id = $1 
+            `SELECT data_checkin, data_checkout FROM reservas
+             WHERE quarto_id = $1
              AND status_pagamento IN ('pago', 'bloqueado_balcao', 'concluido', 'checkin')
              ORDER BY data_checkin ASC`,
             [quartoId]
@@ -285,9 +285,9 @@ app.get('/api/quartos-disponiveis', async (req, res) => {
         const numHospedes = parseInt(adults) || 1;
 
         const query = `
-            SELECT q.* 
+            SELECT q.*
             FROM quartos q
-            WHERE q.ativo = TRUE 
+            WHERE q.ativo = TRUE
             AND q.capacidade_maxima >= $1
             AND NOT EXISTS (
                 SELECT 1 FROM manutencoes_quarto m
@@ -295,8 +295,8 @@ app.get('/api/quartos-disponiveis', async (req, res) => {
                 AND (m.data_inicio, m.data_fim) OVERLAPS ($2::date, $3::date)
             )
             AND q.id NOT IN (
-                SELECT quarto_id 
-                FROM reservas 
+                SELECT quarto_id
+                FROM reservas
                 WHERE status_pagamento IN ('pago', 'bloqueado_balcao', 'concluido', 'checkin')
                 AND (data_checkin, data_checkout) OVERLAPS ($2::date, $3::date)
             )
@@ -360,10 +360,10 @@ app.post('/api/reservar', async (req, res) => {
         if (cliente.nome) cliente.nome = sanitizarTexto(cliente.nome);
 
         const conflito = await client.query(
-            `SELECT id FROM reservas 
-             WHERE quarto_id = $1 
+            `SELECT id FROM reservas
+             WHERE quarto_id = $1
              AND status_pagamento IN ('pago', 'bloqueado_balcao', 'concluido', 'checkin')
-             AND data_checkin < $3::date 
+             AND data_checkin < $3::date
              AND data_checkout > $2::date`,
             [quartoId, checkin, checkout]
         );
@@ -417,7 +417,7 @@ app.post('/api/reservar', async (req, res) => {
         });
 
         const reservaRes = await client.query(
-            `INSERT INTO reservas (quarto_id, cliente_id, quantidade_hospedes, data_checkin, data_checkout, valor_total, status_pagamento, mp_payment_id) 
+            `INSERT INTO reservas (quarto_id, cliente_id, quantidade_hospedes, data_checkin, data_checkout, valor_total, status_pagamento, mp_payment_id)
              VALUES ($1, $2, $3, $4::date, $5::date, $6, 'pendente', $7) RETURNING id`,
             [quartoId, clienteId, hospedes || 1, checkin, checkout, valorTotal, String(paymentResponse.id)]
         );
@@ -496,8 +496,8 @@ app.post('/api/webhook/mercadopago', async (req, res) => {
 
             if (pagamentoInfo.status === 'approved') {
                 const result = await pool.query(`
-                    UPDATE reservas 
-                    SET status_pagamento = 'pago' 
+                    UPDATE reservas
+                    SET status_pagamento = 'pago'
                     WHERE mp_payment_id = $1 AND status_pagamento != 'pago'
                     RETURNING id, quarto_id, cliente_id, data_checkin, valor_total
                 `, [String(pagamentoId)]);
@@ -683,7 +683,7 @@ app.get('/api/admin/reservas', verificarPulseiraVIP, async (req, res) => {
     try {
         const query = `
             SELECT r.id, r.quarto_id, q.numero_quarto, r.quantidade_hospedes,
-                   COALESCE(c.nome, 'Atendimento Presencial / Balcão') AS cliente_nome, 
+                   COALESCE(c.nome, 'Atendimento Presencial / Balcão') AS cliente_nome,
                    COALESCE(c.telefone, 'Sem Telefone') AS telefone,
                    r.data_checkin, r.data_checkout, r.status_pagamento, r.valor_total
             FROM reservas r
@@ -703,10 +703,10 @@ app.get('/api/admin/reservas', verificarPulseiraVIP, async (req, res) => {
 app.get('/api/admin/exportar-leads', verificarPulseiraVIP, async (req, res) => {
     try {
         const query = `
-            SELECT 
-                c.nome, 
-                c.telefone, 
-                c.email, 
+            SELECT
+                c.nome,
+                c.telefone,
+                c.email,
                 COUNT(r.id) AS total_estadias,
                 SUM(CASE WHEN r.status_pagamento IN ('pago', 'bloqueado_balcao', 'concluido', 'checkin', 'checkout') THEN r.valor_total ELSE 0 END) AS total_gasto
             FROM clientes c
@@ -726,7 +726,7 @@ app.get('/api/admin/exportar-leads', verificarPulseiraVIP, async (req, res) => {
 app.get('/api/admin/exportar-faturamento', verificarPulseiraVIP, async (req, res) => {
     try {
         const query = `
-            SELECT 
+            SELECT
                 r.id,
                 TO_CHAR(r.data_checkin, 'DD/MM/YYYY') as data_entrada,
                 TO_CHAR(r.data_checkout, 'DD/MM/YYYY') as data_saida,
@@ -757,10 +757,10 @@ app.post('/api/admin/bloquear', verificarPulseiraVIP, async (req, res) => {
 
     try {
         const conflito = await pool.query(
-            `SELECT id FROM reservas 
-             WHERE quarto_id = $1 
+            `SELECT id FROM reservas
+             WHERE quarto_id = $1
              AND status_pagamento IN ('pago', 'bloqueado_balcao', 'concluido', 'checkin')
-             AND data_checkin < $3::date 
+             AND data_checkin < $3::date
              AND data_checkout > $2::date`,
             [quartoId, checkin, checkout]
         );
@@ -785,8 +785,8 @@ app.post('/api/admin/bloquear', verificarPulseiraVIP, async (req, res) => {
         } else {
             const cpfCurtoBalcao = `B-${Date.now().toString().slice(-11)}`;
             const novoCliente = await pool.query(
-                `INSERT INTO clientes (nome, cpf, telefone, email) 
-                 VALUES ($1, $2, $3, $4) 
+                `INSERT INTO clientes (nome, cpf, telefone, email)
+                 VALUES ($1, $2, $3, $4)
                  RETURNING id`,
                 [nomeFinal, cpfCurtoBalcao, telefoneFinal, emailFinal]
             );
@@ -797,7 +797,7 @@ app.post('/api/admin/bloquear', verificarPulseiraVIP, async (req, res) => {
         const numHospedes = parseInt(hospedes) || 1;
 
         await pool.query(
-            `INSERT INTO reservas (quarto_id, cliente_id, quantidade_hospedes, data_checkin, data_checkout, valor_total, status_pagamento, mp_payment_id) 
+            `INSERT INTO reservas (quarto_id, cliente_id, quantidade_hospedes, data_checkin, data_checkout, valor_total, status_pagamento, mp_payment_id)
              VALUES ($1, $2, $3, $4::date, $5::date, $6, 'bloqueado_balcao', 'balcao_presencial')`,
             [quartoId, clienteId, numHospedes, checkin, checkout, valorSalvar]
         );
@@ -848,7 +848,7 @@ app.post('/api/admin/reservas/:id/lembrete', verificarPulseiraVIP, async (req, r
 
     try {
         const query = `
-            SELECT r.id, r.quarto_id, r.data_checkin, c.nome AS cliente_nome, c.email, c.telefone 
+            SELECT r.id, r.quarto_id, r.data_checkin, c.nome AS cliente_nome, c.email, c.telefone
             FROM reservas r
             JOIN clientes c ON c.id = r.cliente_id
             WHERE r.id = $1
@@ -907,9 +907,9 @@ app.put('/api/admin/reservas/:id/checkin', verificarPulseiraVIP, async (req, res
         await client.query('BEGIN');
 
         const result = await client.query(`
-            UPDATE reservas 
-            SET status_pagamento = 'checkin' 
-            WHERE id = $1 
+            UPDATE reservas
+            SET status_pagamento = 'checkin'
+            WHERE id = $1
             RETURNING quarto_id, data_checkout, cliente_id
         `, [id]);
 
@@ -1027,7 +1027,7 @@ app.get('/api/admin/dashboard', verificarPulseiraVIP, async (req, res) => {
 app.get('/api/admin/grafico-faturamento', verificarPulseiraVIP, async (req, res) => {
     try {
         const query = `
-            SELECT 
+            SELECT
                 TO_CHAR(data_checkin, 'YYYY-MM') as mes_ano,
                 SUM(valor_total) as total_faturado
             FROM reservas
@@ -1062,9 +1062,9 @@ app.get('/api/admin/grafico-faturamento', verificarPulseiraVIP, async (req, res)
 setInterval(async () => {
     try {
         const limpeza = await pool.query(`
-            UPDATE reservas 
-            SET status_pagamento = 'cancelado' 
-            WHERE status_pagamento = 'pendente' 
+            UPDATE reservas
+            SET status_pagamento = 'cancelado'
+            WHERE status_pagamento = 'pendente'
             AND created_at < NOW() - INTERVAL '30 minutes'
         `);
 
@@ -1092,8 +1092,8 @@ app.post('/api/admin/reservas/:id/estender', verificarPulseiraVIP, async (req, r
         const novaDataCheckout = novaDataRes.rows[0].nova_data;
 
         const conflito = await client.query(`
-            SELECT id FROM reservas 
-            WHERE quarto_id = $1 
+            SELECT id FROM reservas
+            WHERE quarto_id = $1
             AND id != $2
             AND status_pagamento IN ('pago', 'bloqueado_balcao', 'concluido', 'checkin')
             AND (data_checkin, data_checkout) OVERLAPS ($3::date, $4::date)
@@ -1107,7 +1107,7 @@ app.post('/api/admin/reservas/:id/estender', verificarPulseiraVIP, async (req, r
         const valorDiariaExtra = calcularDiaria(quarto_id, quantidade_hospedes);
 
         await client.query(`
-            UPDATE reservas 
+            UPDATE reservas
             SET data_checkout = $1::date,
                 valor_total = valor_total + $2
             WHERE id = $3
@@ -1134,21 +1134,21 @@ function htmlEmailCheckin(nome, quarto, checkout) {
         <div style="padding: 20px;">
             <p>Olá, <strong>${nome}</strong>!</p>
             <p>É um prazer receber você. Seu check-in foi realizado com sucesso no nosso sistema.</p>
-            
+
             <div style="background-color: #f9f9f9; padding: 15px; border-left: 4px solid #d97757; margin: 20px 0;">
                 <p style="margin: 0; font-size: 16px;">🛏️ Quarto: <strong>${quarto}</strong><br>
                 📅 Data de Saída: <strong>${checkout}</strong></p>
             </div>
-            
+
             <p><strong>Informações Úteis:</strong><br>
             📶 <strong>Wi-Fi:</strong> Hospedagem | Senha: <em>84594781</em><br>
             ☕ Aproveite também para conhecer a nossa cafeteria, a <strong>Cafeteria Central</strong>, anexa à nossa estrutura! Estamos localizados em frente ao Hospital Sylvio de Mello para sua maior conveniência.</p>
-            
+
             <hr style="border: none; border-top: 1px solid #eee; margin: 30px 0;">
-            
+
             <h3 style="color: #d97757; text-align: center;">🏠 REGRAS DA HOSPEDARIA CENTRAL MORRINHOS</h3>
             <p style="text-align: center; font-size: 13px; color: #666;"><em>Seja bem-vindo! Bom senso é a base da boa convivência.</em></p>
-            
+
             <ul style="font-size: 13px; line-height: 1.6; padding-left: 20px;">
                 <li>📞 <strong>Emergências e Contato:</strong> (64) 9 8459-4781 ou (64) 9 9236-2298. (Não há recepcionista 24h).</li>
                 <li>🕒 <strong>Check-in / Check-out:</strong> Check-in a partir das 14h | Check-out até as 12h. Apresente documento na chegada.</li>
@@ -1173,10 +1173,10 @@ function htmlEmailLembrete(nome, quarto, checkin) {
         <div style="padding: 20px;">
             <p>Olá, <strong>${nome}</strong>!</p>
             <p>Estamos passando para lembrar que a sua estadia conosco começa amanhã, dia <strong>${checkin}</strong>. O seu <strong>Quarto ${quarto}</strong> já está sendo preparado para te receber com muito conforto!</p>
-            
+
             <p>📍 <strong>Nosso Endereço:</strong> Centro de Morrinhos (em frente ao Hospital e Maternidade Sylvio de Mello).</p>
             <p>Para que você já chegue por dentro de como funcionamos, adiantamos abaixo as nossas diretrizes de convivência:</p>
-            
+
             <hr style="border: none; border-top: 1px solid #eee; margin: 20px 0;">
             <h3 style="color: #5c4033; text-align: center;">🏠 REGRAS DA HOSPEDARIA CENTRAL MORRINHOS</h3>
             <ul style="font-size: 13px; line-height: 1.6; padding-left: 20px;">
@@ -1201,12 +1201,12 @@ cron.schedule('0 8 * * *', async () => {
         const dataIso = amanha.toISOString().split('T')[0];
 
         const result = await pool.query(`
-            SELECT r.id, c.nome AS cliente_nome, c.email, r.quarto_id, r.data_checkin 
+            SELECT r.id, c.nome AS cliente_nome, c.email, r.quarto_id, r.data_checkin
             FROM reservas r
             JOIN clientes c ON c.id = r.cliente_id
-            WHERE r.data_checkin = $1 
-            AND r.status_pagamento = 'pago' 
-            AND c.email IS NOT NULL 
+            WHERE r.data_checkin = $1
+            AND r.status_pagamento = 'pago'
+            AND c.email IS NOT NULL
             AND c.email LIKE '%@%'
             AND c.email NOT IN ('balcao@hospedariacentral.com.br', 'cliente@hospedariacentral.com.br')
         `, [dataIso]);
@@ -1230,28 +1230,68 @@ cron.schedule('0 8 * * *', async () => {
 // ==========================================
 // 🤖 ROBÔ DE AUTO CHECK-OUT (Todos os dias às 13:00)
 // ==========================================
+async function executarAutoCheckout() {
+    // Pega a data de hoje certinha, já no fuso de Brasília/Goiás (não em UTC)
+    const dataHojeIso = new Date().toLocaleDateString('en-CA', { timeZone: 'America/Sao_Paulo' });
+
+    // Manda o banco de dados liberar os quartos cuja data de saída é hoje (ou antes de hoje)
+    const limpeza = await pool.query(`
+        UPDATE reservas
+        SET status_pagamento = 'checkout'
+        WHERE status_pagamento IN ('checkin', 'pago', 'concluido', 'bloqueado_balcao')
+        AND data_checkout <= $1
+    `, [dataHojeIso]);
+
+    if (limpeza.rowCount > 0) {
+        console.log(`[AUTO CHECK-OUT] ${limpeza.rowCount} quarto(s) liberado(s) automaticamente!`);
+    }
+
+    return limpeza.rowCount;
+}
+
 cron.schedule('0 13 * * *', async () => {
     try {
-        // Pega a data de hoje certinha
-        const dataHojeIso = new Date().toISOString().split('T')[0];
-
-        // Manda o banco de dados liberar os quartos cuja data de saída é hoje (ou antes de hoje)
-        const limpeza = await pool.query(`
-            UPDATE reservas 
-            SET status_pagamento = 'checkout' 
-            WHERE status_pagamento IN ('checkin', 'pago', 'concluido', 'bloqueado_balcao') 
-            AND data_checkout <= $1
-        `, [dataHojeIso]);
-
-        if (limpeza.rowCount > 0) {
-            console.log(`[AUTO CHECK-OUT] ${limpeza.rowCount} quarto(s) liberado(s) automaticamente às 13h!`);
-        }
+        await executarAutoCheckout();
     } catch (err) {
-        console.error('Erro no robô de auto check-out:', err);
+        console.error('Erro no robô de auto check-out (cron interno):', err);
     }
 }, {
     scheduled: true,
     timezone: "America/Sao_Paulo" // Garante que será às 13h no horário de Brasília/Goiás!
+});
+
+// ==========================================
+// 🔔 PORTA DE SERVIÇO: dispara o check-out automático quando chamada de fora
+// ==========================================
+// Por que essa rota existe: o Render (plano grátis) "dorme" o site depois de um
+// tempo sem visitas. Se ele estiver dormindo bem às 13h, o robô de cima (cron
+// interno) nunca chega a acordar sozinho pra rodar — e os quartos não são
+// liberados. Essa rota resolve isso: um serviço gratuito externo (tipo o
+// cron-job.org) acessa este link todo dia, um pouco depois das 13h. Só de ser
+// "visitada", ela já acorda o Render — e, de quebra, ela roda o check-out na
+// mão, sem depender do robô interno ter disparado sozinho.
+//
+// Proteção: só funciona se quem chamar souber o "segredo" (CRON_SECRET), passado
+// na própria URL (?secret=...). Sem o segredo certo, a porta fica trancada (403).
+app.get('/api/cron/checkout-diario', async (req, res) => {
+    const segredoConfigurado = process.env.CRON_SECRET;
+
+    if (!segredoConfigurado) {
+        console.error("❌ ERRO: a rota /api/cron/checkout-diario foi chamada, mas CRON_SECRET não está configurada no servidor.");
+        return res.status(500).json({ erro: 'CRON_SECRET não configurada no servidor.' });
+    }
+
+    if (req.query.secret !== segredoConfigurado) {
+        return res.status(403).json({ erro: 'Acesso negado. Segredo inválido.' });
+    }
+
+    try {
+        const quartosLiberados = await executarAutoCheckout();
+        res.json({ sucesso: true, quartosLiberados });
+    } catch (err) {
+        console.error('Erro no robô de auto check-out (disparo externo):', err);
+        res.status(500).json({ erro: 'Erro interno ao processar o check-out automático.' });
+    }
 });
 
 
